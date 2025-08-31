@@ -16,7 +16,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 type WalletData = {
     deposit: number;
@@ -41,28 +41,26 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       setUser(currentUser);
       
       if (currentUser) {
         const userDocRef = doc(db, "users", currentUser.uid);
-        const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
-          if (doc.exists()) {
-            setProfile(doc.data() as UserProfile);
-          } else {
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+            setProfile(docSnap.data() as UserProfile);
+        } else {
             setProfile(null);
-          }
-          setLoading(false);
-        });
-        return () => unsubscribeSnapshot();
+        }
       } else {
         setProfile(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
-  }, []);
+  }, [pathname]); // Re-fetch on path change to keep data fresh
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
