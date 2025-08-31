@@ -7,28 +7,57 @@ import type { User } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Edit, Trash2 } from 'lucide-react';
+import { Search, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+
+type Transaction = {
+    id: string;
+    userId: string;
+    type: 'deposit';
+    amount: number;
+    transactionId: string;
+    status: 'Pending' | 'Completed' | 'Failed';
+    date: any;
+};
 
 export default function AdminPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState<User[]>([]);
     const [banners, setBanners] = useState(MOCK_BANNERS);
-    const [loading, setLoading] = useState(true);
+    const [deposits, setDeposits] = useState<Transaction[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [loadingDeposits, setLoadingDeposits] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+        const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
             const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
             setUsers(usersData);
-            setLoading(false);
+            setLoadingUsers(false);
+        });
+        
+        const depositsQuery = query(
+            collection(db, "transactions"), 
+            where("type", "==", "deposit"), 
+            where("status", "==", "Pending"), 
+            orderBy("date", "desc")
+        );
+        const unsubscribeDeposits = onSnapshot(depositsQuery, (snapshot) => {
+            const depositsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            setDeposits(depositsData);
+            setLoadingDeposits(false);
         });
 
-        return () => unsubscribe();
+
+        return () => {
+            unsubscribeUsers();
+            unsubscribeDeposits();
+        };
     }, []);
 
     const filteredUsers = users.filter(user => 
@@ -40,7 +69,7 @@ export default function AdminPage() {
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
-        return format(date, 'PPP');
+        return format(date, 'PPp');
     };
     
     const calculateTotalBalance = (wallet: User['wallet']) => {
@@ -53,6 +82,49 @@ export default function AdminPage() {
             <h1 className="text-4xl font-bold tracking-tight mb-8">Admin Panel</h1>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-3 space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Pending Deposits</CardTitle>
+                            <CardDescription>Review and approve or reject deposit requests.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>User ID</TableHead>
+                                            <TableHead>Amount</TableHead>
+                                            <TableHead>Transaction ID</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loadingDeposits ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center">Loading deposits...</TableCell>
+                                            </TableRow>
+                                        ) : deposits.map(deposit => (
+                                            <TableRow key={deposit.id}>
+                                                <TableCell className="font-mono text-xs">{deposit.userId}</TableCell>
+                                                <TableCell className="font-medium">₹{deposit.amount.toFixed(2)}</TableCell>
+                                                <TableCell>{deposit.transactionId}</TableCell>
+                                                <TableCell>{formatDate(deposit.date)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon"><CheckCircle className="h-4 w-4 text-green-500" /></Button>
+                                                    <Button variant="ghost" size="icon"><XCircle className="h-4 w-4 text-red-500" /></Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                             {deposits.length === 0 && !loadingDeposits && (
+                                <p className="text-center text-muted-foreground py-8">No pending deposits.</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                    
                     <Card>
                         <CardHeader>
                             <CardTitle>User Management</CardTitle>
@@ -79,7 +151,7 @@ export default function AdminPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {loading ? (
+                                        {loadingUsers ? (
                                             <TableRow>
                                                 <TableCell colSpan={4} className="text-center">Loading users...</TableCell>
                                             </TableRow>
@@ -94,7 +166,7 @@ export default function AdminPage() {
                                     </TableBody>
                                 </Table>
                             </div>
-                             {filteredUsers.length === 0 && !loading && (
+                             {filteredUsers.length === 0 && !loadingUsers && (
                                 <p className="text-center text-muted-foreground py-8">No users found.</p>
                             )}
                         </CardContent>

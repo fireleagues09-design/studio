@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Copy } from 'lucide-react';
 import Link from 'next/link';
+import { auth, db } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 export default function DepositPage() {
     const [amount, setAmount] = useState('');
@@ -28,6 +30,16 @@ export default function DepositPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) {
+            toast({
+                title: 'Error',
+                description: 'You must be logged in to make a deposit.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         if (!amount || !transactionId) {
             toast({
                 title: 'Error',
@@ -38,17 +50,32 @@ export default function DepositPage() {
         }
 
         setLoading(true);
-        // In a real app, you would send this data to your backend to be verified by an admin.
-        // For now, we'll just simulate a successful submission.
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            await addDoc(collection(db, 'transactions'), {
+                userId: user.uid,
+                type: 'deposit',
+                amount: Number(amount),
+                transactionId: transactionId,
+                status: 'Pending',
+                date: serverTimestamp(),
+            });
 
-        setLoading(false);
-        setAmount('');
-        setTransactionId('');
-        toast({
-            title: 'Request Submitted',
-            description: 'Your deposit request has been received. It will be processed within 24 hours after verification.',
-        });
+            setAmount('');
+            setTransactionId('');
+            toast({
+                title: 'Request Submitted',
+                description: 'Your deposit request has been received. It will be processed within 24 hours after verification.',
+            });
+        } catch (error) {
+            console.error("Error submitting deposit request:", error);
+            toast({
+                title: 'Error',
+                description: 'Failed to submit deposit request. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
