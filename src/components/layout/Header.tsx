@@ -89,19 +89,6 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-           {user && (
-              <Link
-                href="/admin"
-                className={cn(
-                  "transition-colors hover:text-foreground/80",
-                  pathname === "/admin"
-                    ? "text-foreground"
-                    : "text-foreground/60"
-                )}
-              >
-                Admin
-              </Link>
-           )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end">
@@ -166,9 +153,6 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
-                  {user && (
-                    <Link href="/admin" className="text-lg font-medium">Admin</Link>
-                  )}
                   <div className="border-t pt-4 flex flex-col space-y-3">
                     {loading ? null : user ? (
                        <div className="space-y-2">
