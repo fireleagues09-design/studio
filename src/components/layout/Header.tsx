@@ -92,41 +92,37 @@ export function Header() {
 
         <div className="flex flex-1 items-center justify-end">
           <div className="hidden md:flex items-center space-x-2">
-            {!loading && (
+            {loading ? null : user ? (
               <>
-                {user ? (
-                  <>
-                    {wallet !== null && (
-                      <Button variant="outline" size="sm" asChild>
-                         <Link href="/wallet">
-                          <Wallet className="mr-2 h-4 w-4 text-primary" />
-                          ₹{totalBalance.toFixed(2)}
-                        </Link>
-                      </Button>
-                    )}
-                     <Button variant="secondary" size="sm" asChild>
-                      <Link href="/profile">
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
-                      </Link>
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" asChild>
-                      <Link href="/login">
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Login
-                      </Link>
-                    </Button>
-                    <Button asChild>
-                      <Link href="/register">
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Register
-                      </Link>
-                    </Button>
-                  </>
+                {wallet !== null && (
+                  <Button variant="outline" size="sm" asChild>
+                     <Link href="/wallet">
+                      <Wallet className="mr-2 h-4 w-4 text-primary" />
+                      ₹{totalBalance.toFixed(2)}
+                    </Link>
+                  </Button>
                 )}
+                 <Button variant="secondary" size="sm" asChild>
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Register
+                  </Link>
+                </Button>
               </>
             )}
           </div>
@@ -157,35 +153,31 @@ export function Header() {
                     </Link>
                   ))}
                   <div className="border-t pt-4 flex flex-col space-y-3">
-                    {!loading && (
-                      <>
-                        {user ? (
-                           <div className="space-y-2">
-                            {wallet !== null && (
-                              <Button variant="outline" asChild>
-                                  <Link href="/wallet">
-                                    <Wallet className="mr-2 h-4 w-4 text-primary" />
-                                    ₹{totalBalance.toFixed(2)}
-                                  </Link>
-                              </Button>
-                            )}
-                             <Button variant="secondary" asChild>
-                                <Link href="/profile">
-                                  <User className="mr-2 h-4 w-4" />
-                                  Profile
-                                </Link>
-                              </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <Button variant="outline" asChild>
-                              <Link href="/login">Login</Link>
-                            </Button>
-                            <Button asChild>
-                              <Link href="/register">Register</Link>
-                            </Button>
-                          </>
+                    {loading ? null : user ? (
+                       <div className="space-y-2">
+                        {wallet !== null && (
+                          <Button variant="outline" asChild>
+                              <Link href="/wallet">
+                                <Wallet className="mr-2 h-4 w-4 text-primary" />
+                                ₹{totalBalance.toFixed(2)}
+                              </Link>
+                          </Button>
                         )}
+                         <Button variant="secondary" asChild>
+                            <Link href="/profile">
+                              <User className="mr-2 h-4 w-4" />
+                              Profile
+                            </Link>
+                          </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button variant="outline" asChild>
+                          <Link href="/login">Login</Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href="/register">Register</Link>
+                        </Button>
                       </>
                     )}
                   </div>
