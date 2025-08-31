@@ -100,7 +100,7 @@ export default function LoginPage() {
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="flex items-center">
                     <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
-                    <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-l-none" />
+                    <Input id="phone" type="tel" placeholder="00000 00000" required value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-l-none" />
                 </div>
             </div>
           ) : (
