@@ -51,8 +51,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
+        const phoneNumber = `+91${phone}`;
         const appVerifier = setupRecaptcha();
-        const confirmationResult = await signInWithPhoneNumber(auth, `+${phone}`, appVerifier);
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
         window.confirmationResult = confirmationResult;
         setOtpSent(true);
         toast({ title: "Success", description: "OTP sent to your phone!" });
@@ -95,9 +96,12 @@ export default function LoginPage() {
         <CardContent className="grid gap-4">
           <div id="recaptcha-container"></div>
           {!otpSent ? (
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" type="tel" placeholder="+91" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+             <div className="grid gap-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="flex items-center">
+                    <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
+                    <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-l-none" />
+                </div>
             </div>
           ) : (
             <div className="grid gap-2">

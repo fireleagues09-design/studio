@@ -51,8 +51,9 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
+        const phoneNumber = `+91${phone}`;
         const appVerifier = setupRecaptcha();
-        const confirmationResult = await signInWithPhoneNumber(auth, `+${phone}`, appVerifier);
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
         window.confirmationResult = confirmationResult;
         setOtpSent(true);
         toast({ title: "Success", description: "OTP sent to your phone!" });
@@ -84,7 +85,7 @@ export default function RegisterPage() {
       
       await setDoc(doc(db, "users", user.uid), {
         inGameName: inGameName,
-        phone,
+        phone: `+91${phone}`,
         email: `${phone}@fireleagues.com`, // Use phone as a fake email
         walletBalance: 0,
         registeredOn: serverTimestamp(),
@@ -126,7 +127,10 @@ export default function RegisterPage() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" placeholder="+91" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent}/>
+               <div className="flex items-center">
+                    <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
+                    <Input id="phone" type="tel" placeholder="9876543210" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
+                </div>
             </div>
 
           {otpSent && (
