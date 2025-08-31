@@ -96,7 +96,11 @@ export default function RegisterPage() {
           inGameName: inGameName,
           phone: `+91${phone}`,
           email: `${phone}@fireleagues.com`,
-          walletBalance: 0,
+          wallet: {
+            deposit: 0,
+            winning: 0,
+            bonus: 0,
+          },
           registeredOn: serverTimestamp(),
         });
         

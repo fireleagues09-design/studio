@@ -18,6 +18,12 @@ import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
+type WalletData = {
+    deposit: number;
+    winning: number;
+    bonus: number;
+}
+
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/tournaments", label: "Tournaments" },
@@ -29,7 +35,7 @@ export function Header() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [wallet, setWallet] = useState<WalletData | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -40,14 +46,14 @@ export function Header() {
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
-            setWalletBalance(doc.data().walletBalance);
+            setWallet(doc.data().wallet as WalletData);
           } else {
             console.log("No such user document!");
           }
         });
         return () => unsubscribeSnapshot();
       } else {
-        setWalletBalance(null);
+        setWallet(null);
       }
     });
 
@@ -58,6 +64,8 @@ export function Header() {
     await signOut(auth);
     router.push('/');
   };
+  
+  const totalBalance = wallet ? wallet.deposit + wallet.winning + wallet.bonus : 0;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -95,11 +103,11 @@ export function Header() {
               <>
                 {user ? (
                   <>
-                    {walletBalance !== null && (
+                    {wallet !== null && (
                       <Button variant="outline" size="sm" asChild>
                          <Link href="/profile">
                           <Wallet className="mr-2 h-4 w-4 text-primary" />
-                          ₹{walletBalance.toFixed(2)}
+                          ₹{totalBalance.toFixed(2)}
                         </Link>
                       </Button>
                     )}
@@ -163,11 +171,11 @@ export function Header() {
                       <>
                         {user ? (
                            <>
-                            {walletBalance !== null && (
+                            {wallet !== null && (
                               <Button variant="outline" asChild>
                                   <Link href="/profile">
                                     <Wallet className="mr-2 h-4 w-4 text-primary" />
-                                    ₹{walletBalance.toFixed(2)}
+                                    ₹{totalBalance.toFixed(2)}
                                   </Link>
                               </Button>
                             )}

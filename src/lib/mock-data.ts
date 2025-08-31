@@ -163,5 +163,9 @@ export type User = {
         seconds: number;
         nanoseconds: number;
     } | Date;
-    walletBalance: number;
+    wallet: {
+        deposit: number;
+        winning: number;
+        bonus: number;
+    };
 }

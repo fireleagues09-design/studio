@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -41,6 +42,11 @@ export default function AdminPage() {
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
         return format(date, 'PPP');
     };
+    
+    const calculateTotalBalance = (wallet: User['wallet']) => {
+        if (!wallet) return 0;
+        return (wallet.deposit || 0) + (wallet.winning || 0) + (wallet.bonus || 0);
+    }
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">
@@ -68,7 +74,7 @@ export default function AdminPage() {
                                         <TableRow>
                                             <TableHead>In-Game Name</TableHead>
                                             <TableHead>Phone</TableHead>
-                                            <TableHead>Wallet Balance</TableHead>
+                                            <TableHead>Total Balance</TableHead>
                                             <TableHead>Registered</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -81,7 +87,7 @@ export default function AdminPage() {
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium">{user.inGameName}</TableCell>
                                                 <TableCell>{user.phone}</TableCell>
-                                                <TableCell>₹{user.walletBalance.toFixed(2)}</TableCell>
+                                                <TableCell>₹{calculateTotalBalance(user.wallet).toFixed(2)}</TableCell>
                                                 <TableCell>{formatDate(user.registeredOn)}</TableCell>
                                             </TableRow>
                                         ))}
