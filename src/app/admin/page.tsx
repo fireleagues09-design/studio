@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 function CreateTournamentDialog() {
@@ -131,9 +132,23 @@ function CreateTournamentDialog() {
                             <Input id="create-prize" value={prize} onChange={e => setPrize(e.target.value)} required/>
                         </div>
                     </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="create-slots">Total Slots</Label>
-                        <Input id="create-slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} required/>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="create-slots">Total Slots</Label>
+                            <Input id="create-slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} required/>
+                        </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="create-category">Category</Label>
+                            <Select value={category} onValueChange={setCategory}>
+                                <SelectTrigger id="create-category">
+                                    <SelectValue placeholder="Select format" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Clash Squad 4v4">Clash Squad 4v4</SelectItem>
+                                    <SelectItem value="Classic Full Map">Classic Full Map</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="create-banner">Tournament Banner</Label>
