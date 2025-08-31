@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+
 
 // Add a global declaration for the confirmationResult
 declare global {
@@ -75,7 +77,24 @@ export default function LoginPage() {
     setLoading(true);
     try {
         if (window.confirmationResult) {
-          await window.confirmationResult.confirm(otp);
+          const userCredential = await window.confirmationResult.confirm(otp);
+          const user = userCredential.user;
+
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (!userDoc.exists()) {
+            // User is not registered, sign them out and redirect
+            await auth.signOut();
+            toast({
+                title: "Login Failed",
+                description: "User not registered. Please sign up first.",
+                variant: "destructive"
+            });
+            router.push('/register');
+            return;
+          }
+
           toast({ title: "Success", description: "Logged in successfully!" });
           router.push("/");
         } else {
@@ -85,7 +104,7 @@ export default function LoginPage() {
         console.error("Error verifying OTP:", error);
         // Clear confirmation result on failure to prevent unintended session state
         window.confirmationResult = undefined;
-        toast({ title: "Verification Error", description: error.message || "Invalid OTP. Please try again.", variant: "destructive" });
+        toast({ title: "Verification Error", description: error.message || "Invalid OTP or user not registered. Please try again.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
