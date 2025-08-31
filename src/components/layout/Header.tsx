@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, UserPlus, LogOut, Wallet } from "lucide-react";
+import { Flame, LogIn, Menu, UserPlus, Wallet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,9 +14,9 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 
 type WalletData = {
     deposit: number;
@@ -61,11 +61,6 @@ export function Header() {
     // Return the unsubscribe function for the auth state listener
     return () => unsubscribeAuth();
   }, []);
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
-  };
   
   const currentWallet = wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = currentWallet.deposit + currentWallet.winning + currentWallet.bonus;
@@ -114,10 +109,6 @@ export function Header() {
                         </Link>
                       </Button>
                     )}
-                    <Button variant="ghost" onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </Button>
                   </>
                 ) : (
                   <>
@@ -182,9 +173,6 @@ export function Header() {
                                   </Link>
                               </Button>
                             )}
-                            <Button variant="outline" onClick={handleLogout}>
-                              Logout
-                            </Button>
                           </>
                         ) : (
                           <>
