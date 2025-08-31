@@ -217,8 +217,11 @@ export default function WalletPage() {
      useEffect(() => {
         if (user) {
             fetchTransactions();
+        } else if (!loading) {
+            // If the auth state is resolved and there's no user, don't attempt to load transactions.
+            setLoadingTransactions(false);
         }
-     }, [user, dateRange]);
+     }, [user, dateRange, loading]);
 
 
     const fetchTransactions = async () => {
@@ -443,3 +446,5 @@ export default function WalletPage() {
         </div>
     );
 }
+
+    
