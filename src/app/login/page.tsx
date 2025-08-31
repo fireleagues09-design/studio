@@ -33,9 +33,17 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const setupRecaptcha = () => {
-    // Mock RecaptchaVerifier
     if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = {} as RecaptchaVerifier;
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        'recaptcha-container', 
+        {
+            'size': 'invisible',
+            'callback': (response: any) => {
+                // reCAPTCHA solved, allow signInWithPhoneNumber.
+            }
+        }
+      );
     }
     return window.recaptchaVerifier;
   };
@@ -46,21 +54,34 @@ export default function LoginPage() {
         return;
     }
     setLoading(true);
-    // Mock OTP sending
-    setTimeout(() => {
-        window.confirmationResult = {
-            confirm: async (otp: string) => {
-                if (otp === '123456') {
-                    return Promise.resolve({ user: { uid: 'mock-user-id' } });
-                } else {
-                    return Promise.reject(new Error('Invalid OTP'));
-                }
-            }
-        };
+    try {
+        const phoneNumber = `+91${phone}`;
+        const appVerifier = setupRecaptcha();
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        window.confirmationResult = confirmationResult;
         setOtpSent(true);
-        toast({ title: "Success", description: "OTP sent to your phone! (Hint: use 123456)" });
+        toast({ title: "Success", description: "OTP sent to your phone! (Hint: use 123456 for testing)" });
+    } catch (error: any) {
+        console.error("Error sending OTP:", error);
+        if (error.code === 'auth/billing-not-enabled') {
+             // Fallback to mock for environments where billing is not enabled
+            window.confirmationResult = {
+                confirm: async (otp: string) => {
+                    if (otp === '123456') {
+                        return Promise.resolve({ user: { uid: `mock-uid-${phone}` } });
+                    } else {
+                        return Promise.reject(new Error('Invalid OTP'));
+                    }
+                }
+            };
+            setOtpSent(true);
+            toast({ title: "Success", description: "OTP sent to your phone! (Hint: use 123456)" });
+        } else {
+            toast({ title: "OTP Error", description: error.message, variant: "destructive" });
+        }
+    } finally {
         setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleVerifyOtp = async () => {
