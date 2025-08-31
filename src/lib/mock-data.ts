@@ -154,11 +154,14 @@ export const tournaments: Tournament[] = [
 ];
 
 
-export const MOCK_USERS = [
-    { id: 'user-001', name: 'PlayerOne', email: 'playerone@example.com', phone: '1234567890', registeredOn: '2024-01-15' },
-    { id: 'user-002', name: 'ProGamer', email: 'progamer@example.com', phone: '0987654321', registeredOn: '2024-02-20' },
-    { id: 'user-003', name: 'NoobMaster69', email: 'noobmaster@example.com', phone: '1122334455', registeredOn: '2024-03-10' },
-    { id: 'user-004', name: 'ShadowStriker', email: 'shadow@example.com', phone: '5566778899', registeredOn: '2024-04-05' },
-    { id: 'user-005', name: 'PhoenixFire', email: 'phoenix@example.com', phone: '9988776655', registeredOn: '2024-05-25' },
-    { id: 'user-006', name: 'ViperX', email: 'viper@example.com', phone: '3344556677', registeredOn: '2024-06-18' },
-];
+export type User = {
+    id: string;
+    inGameName: string;
+    email: string;
+    phone: string;
+    registeredOn: {
+        seconds: number;
+        nanoseconds: number;
+    } | Date;
+    walletBalance: number;
+}

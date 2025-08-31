@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { MOCK_USERS, MOCK_BANNERS, tournaments } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { MOCK_BANNERS, tournaments } from '@/lib/mock-data';
+import type { User } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,17 +10,37 @@ import { Search, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 export default function AdminPage() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [users, setUsers] = useState(MOCK_USERS);
+    const [users, setUsers] = useState<User[]>([]);
     const [banners, setBanners] = useState(MOCK_BANNERS);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            setUsers(usersData);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const filteredUsers = users.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.inGameName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.phone.includes(searchTerm)
     );
+    
+    const formatDate = (timestamp: any) => {
+        if (!timestamp) return 'N/A';
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
+        return format(date, 'PPP');
+    };
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">
@@ -45,25 +66,31 @@ export default function AdminPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Name</TableHead>
+                                            <TableHead>In-Game Name</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Phone</TableHead>
+                                            <TableHead>Wallet Balance</TableHead>
                                             <TableHead>Registered</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredUsers.map(user => (
+                                        {loading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                                            </TableRow>
+                                        ) : filteredUsers.map(user => (
                                             <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{user.name}</TableCell>
+                                                <TableCell className="font-medium">{user.inGameName}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
                                                 <TableCell>{user.phone}</TableCell>
-                                                <TableCell>{user.registeredOn}</TableCell>
+                                                <TableCell>₹{user.walletBalance.toFixed(2)}</TableCell>
+                                                <TableCell>{formatDate(user.registeredOn)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             </div>
-                             {filteredUsers.length === 0 && (
+                             {filteredUsers.length === 0 && !loading && (
                                 <p className="text-center text-muted-foreground py-8">No users found.</p>
                             )}
                         </CardContent>
