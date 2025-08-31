@@ -51,12 +51,14 @@ export function Header() {
             console.log("No such user document!");
           }
         });
+        // Return the unsubscribe function for the snapshot listener
         return () => unsubscribeSnapshot();
       } else {
         setWallet(null);
       }
     });
 
+    // Return the unsubscribe function for the auth state listener
     return () => unsubscribeAuth();
   }, []);
 
