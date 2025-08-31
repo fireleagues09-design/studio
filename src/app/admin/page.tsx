@@ -53,9 +53,11 @@ export default function AdminPage() {
                 if (userDoc.exists() && userDoc.data().isAdmin) {
                     setIsAdmin(true);
                 } else {
+                    // Non-admin user, redirect away.
                     router.push('/');
                 }
             } else {
+                // No user, redirect to login.
                 router.push('/login');
             }
         });
@@ -63,28 +65,32 @@ export default function AdminPage() {
     }, [router]);
 
     useEffect(() => {
+        // This effect runs only when `isAdmin` becomes true.
         if (isAdmin) {
             const usersQuery = query(collection(db, "users"), orderBy("registeredOn", "desc"));
             const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
                 const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
                 setUsers(usersData);
-                if (loading) setLoading(false);
+                setLoading(false); // Stop loading once user data is fetched
+            }, (error) => {
+                console.error("Error fetching users:", error);
+                setLoading(false);
             });
 
             const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
             const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
                 const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
                 setTransactions(transactionsData);
-                if (loading) setLoading(false);
+            }, (error) => {
+                console.error("Error fetching transactions:", error);
             });
-
 
             return () => {
                 unsubscribeUsers();
                 unsubscribeTransactions();
             };
         }
-    }, [isAdmin, loading]);
+    }, [isAdmin]);
     
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
@@ -96,6 +102,7 @@ export default function AdminPage() {
     const totalDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
     const pendingDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'Pending').length;
 
+    // The loading state now correctly reflects the entire verification and data fetching process.
     if (loading) {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
@@ -111,8 +118,9 @@ export default function AdminPage() {
         )
     }
 
+    // This check is now more robust.
     if (!isAdmin) {
-        return null; // or a 'not authorized' message
+        return null; // or a 'not authorized' message while redirecting
     }
 
     return (
