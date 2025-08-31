@@ -98,7 +98,7 @@ export function Header() {
                   <>
                     {wallet !== null && (
                       <Button variant="outline" size="sm" asChild>
-                         <Link href="/profile/deposit">
+                         <Link href="/wallet">
                           <Wallet className="mr-2 h-4 w-4 text-primary" />
                           ₹{totalBalance.toFixed(2)}
                         </Link>
@@ -163,7 +163,7 @@ export function Header() {
                            <div className="space-y-2">
                             {wallet !== null && (
                               <Button variant="outline" asChild>
-                                  <Link href="/profile/deposit">
+                                  <Link href="/wallet">
                                     <Wallet className="mr-2 h-4 w-4 text-primary" />
                                     ₹{totalBalance.toFixed(2)}
                                   </Link>
