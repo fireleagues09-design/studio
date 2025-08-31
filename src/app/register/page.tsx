@@ -13,39 +13,80 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: any;
+  }
+}
 
 export default function RegisterPage() {
   const [inGameName, setInGameName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleRegister = async () => {
-    if (!inGameName || !phone || !email || !password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields.",
-        variant: "destructive",
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {}
       });
+    }
+    return window.recaptchaVerifier;
+  };
+
+  const handleSendOtp = async () => {
+    if (!inGameName || !phone) {
+      toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+        const appVerifier = setupRecaptcha();
+        const confirmationResult = await signInWithPhoneNumber(auth, `+${phone}`, appVerifier);
+        window.confirmationResult = confirmationResult;
+        setOtpSent(true);
+        toast({ title: "Success", description: "OTP sent to your phone!" });
+    } catch (error: any) {
+        console.error("Error sending OTP:", error);
+        toast({ title: "OTP Error", description: error.message || "Failed to send OTP.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
+  };
 
+
+  const handleRegister = async () => {
+    if (!otp) {
+      toast({ title: "Error", description: "Please enter the OTP.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await window.confirmationResult.confirm(otp);
+      const user = result.user;
+
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+          toast({ title: "Registration Error", description: "This phone number is already registered.", variant: "destructive" });
+          router.push('/login');
+          return;
+      }
+      
       await setDoc(doc(db, "users", user.uid), {
         inGameName: inGameName,
         phone,
-        email,
-        walletBalance: 0, // Initial wallet balance
+        email: `${phone}@fireleagues.com`, // Use phone as a fake email
+        walletBalance: 0,
         registeredOn: serverTimestamp(),
       });
       
@@ -78,34 +119,27 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div id="recaptcha-container"></div>
             <div className="grid gap-2">
               <Label htmlFor="in-game-name">In-Game Name</Label>
-              <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} />
+              <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" placeholder="+91" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <Input id="phone" placeholder="+91" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent}/>
             </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="m@example.com"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
-          <Button onClick={handleRegister} className="w-full" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Create an account'}
+
+          {otpSent && (
+            <div className="grid gap-2">
+              <Label htmlFor="otp">One-Time Password (OTP)</Label>
+              <Input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
+            </div>
+          )}
+
+          <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading}>
+            {loading ? 'Processing...' : (otpSent ? 'Create Account' : 'Send OTP')}
           </Button>
+
            <div className="mt-4 text-center text-sm">
             By signing up, you agree to our{' '}
             <Link href="/terms" className="underline">

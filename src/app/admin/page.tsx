@@ -32,7 +32,7 @@ export default function AdminPage() {
 
     const filteredUsers = users.filter(user => 
         user.inGameName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         user.phone.includes(searchTerm)
     );
     
@@ -56,7 +56,7 @@ export default function AdminPage() {
                             <div className="relative mb-4">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input 
-                                    placeholder="Search by name, email, or phone..."
+                                    placeholder="Search by name or phone..."
                                     className="pl-9"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -67,7 +67,6 @@ export default function AdminPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>In-Game Name</TableHead>
-                                            <TableHead>Email</TableHead>
                                             <TableHead>Phone</TableHead>
                                             <TableHead>Wallet Balance</TableHead>
                                             <TableHead>Registered</TableHead>
@@ -76,12 +75,11 @@ export default function AdminPage() {
                                     <TableBody>
                                         {loading ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                                                <TableCell colSpan={4} className="text-center">Loading users...</TableCell>
                                             </TableRow>
                                         ) : filteredUsers.map(user => (
                                             <TableRow key={user.id}>
                                                 <TableCell className="font-medium">{user.inGameName}</TableCell>
-                                                <TableCell>{user.email}</TableCell>
                                                 <TableCell>{user.phone}</TableCell>
                                                 <TableCell>₹{user.walletBalance.toFixed(2)}</TableCell>
                                                 <TableCell>{formatDate(user.registeredOn)}</TableCell>
