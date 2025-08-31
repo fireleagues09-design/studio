@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, UserPlus } from "lucide-react";
+import { Flame, LogIn, Menu, UserPlus, LogOut } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -21,6 +24,22 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -49,18 +68,31 @@ export function Header() {
 
         <div className="flex flex-1 items-center justify-end space-x-4">
           <div className="hidden md:flex items-center space-x-2">
-            <Button variant="ghost" asChild>
-              <Link href="/login">
-                <LogIn className="mr-2 h-4 w-4" />
-                Login
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Register
-              </Link>
-            </Button>
+            {!loading && (
+              <>
+                {user ? (
+                  <Button variant="ghost" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" asChild>
+                      <Link href="/login">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                      </Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/register">
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Register
+                      </Link>
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
           </div>
           <div className="md:hidden">
             <Sheet>
@@ -89,12 +121,24 @@ export function Header() {
                     </Link>
                   ))}
                   <div className="border-t pt-4 flex flex-col space-y-3">
-                    <Button variant="outline" asChild>
-                      <Link href="/login">Login</Link>
-                    </Button>
-                    <Button asChild>
-                      <Link href="/register">Register</Link>
-                    </Button>
+                    {!loading && (
+                      <>
+                        {user ? (
+                          <Button variant="outline" onClick={handleLogout}>
+                            Logout
+                          </Button>
+                        ) : (
+                          <>
+                            <Button variant="outline" asChild>
+                              <Link href="/login">Login</Link>
+                            </Button>
+                            <Button asChild>
+                              <Link href="/register">Register</Link>
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
