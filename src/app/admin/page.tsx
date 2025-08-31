@@ -28,6 +28,7 @@ function CreateTournamentDialog() {
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
     const [entryFee, setEntryFee] = useState('');
+    const [prize, setPrize] = useState('');
     const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
@@ -54,8 +55,6 @@ function CreateTournamentDialog() {
         setPrizeDistribution(newDistribution);
     };
 
-    const totalPrizePool = prizeDistribution.reduce((sum, item) => sum + (Number(item.prize) || 0), 0);
-
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -68,6 +67,7 @@ function CreateTournamentDialog() {
         setDate('');
         setTime('');
         setEntryFee('');
+        setPrize('');
         setSlots('');
         setCategory('Clash Squad 4v4');
         setTeamType('Squad');
@@ -101,7 +101,7 @@ function CreateTournamentDialog() {
                 date,
                 time,
                 entryFee,
-                prize: totalPrizePool.toString(),
+                prize: prize,
                 slots: Number(slots),
                 category,
                 teamType,
@@ -162,8 +162,13 @@ function CreateTournamentDialog() {
                     </div>
                     
                     <div className="space-y-2">
-                        <Label>Prize Distribution</Label>
+                        <Label>Prize Details</Label>
                         <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                             <div className="grid gap-2">
+                                <Label htmlFor="create-prize">Total Prize Pool (INR)</Label>
+                                <Input id="create-prize" type="number" value={prize} onChange={e => setPrize(e.target.value)} placeholder="e.g. 50000" required/>
+                            </div>
+                            <Label>Prize Distribution</Label>
                             {prizeDistribution.map((dist, index) => (
                                 <div key={index} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-center">
                                     <Input placeholder="Place (e.g., 1st)" value={dist.place} onChange={e => handlePrizeChange(index, 'place', e.target.value)} />
@@ -176,15 +181,9 @@ function CreateTournamentDialog() {
                              <Button type="button" variant="outline" size="sm" onClick={addPrizeRow}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Rank
                             </Button>
-                            <div className="grid grid-cols-2 gap-4 pt-3 border-t">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="prize-per-kill">Prize Per Kill (INR)</Label>
-                                    <Input id="prize-per-kill" type="number" value={prizePerKill} onChange={e => setPrizePerKill(e.target.value)} placeholder="e.g. 50" />
-                                </div>
-                                <div className="grid gap-2">
-                                     <Label>Total Prize Pool</Label>
-                                     <p className="h-10 flex items-center px-3 rounded-md border border-input bg-background/50 font-bold text-primary">₹{totalPrizePool.toLocaleString()}</p>
-                                </div>
+                            <div className="grid gap-2 pt-3 border-t">
+                                <Label htmlFor="prize-per-kill">Prize Per Kill (INR)</Label>
+                                <Input id="prize-per-kill" type="number" value={prizePerKill} onChange={e => setPrizePerKill(e.target.value)} placeholder="e.g. 50" />
                             </div>
                         </div>
                     </div>
