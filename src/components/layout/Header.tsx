@@ -156,14 +156,14 @@ export function Header() {
                     {loading ? null : user ? (
                        <div className="space-y-2">
                         {wallet !== null && (
-                          <Button variant="outline" asChild>
+                          <Button variant="outline" asChild className="w-full justify-start">
                               <Link href="/wallet">
                                 <Wallet className="mr-2 h-4 w-4 text-primary" />
                                 ₹{totalBalance.toFixed(2)}
                               </Link>
                           </Button>
                         )}
-                         <Button variant="secondary" asChild>
+                         <Button variant="secondary" asChild className="w-full justify-start">
                             <Link href="/profile">
                               <User className="mr-2 h-4 w-4" />
                               Profile
@@ -172,11 +172,17 @@ export function Header() {
                       </div>
                     ) : (
                       <>
-                        <Button variant="outline" asChild>
-                          <Link href="/login">Login</Link>
+                        <Button variant="outline" asChild className="w-full justify-start">
+                          <Link href="/login">
+                            <LogIn className="mr-2 h-4 w-4" />
+                            Login
+                          </Link>
                         </Button>
-                        <Button asChild>
-                          <Link href="/register">Register</Link>
+                        <Button asChild className="w-full justify-start">
+                          <Link href="/register">
+                             <UserPlus className="mr-2 h-4 w-4" />
+                             Register
+                          </Link>
                         </Button>
                       </>
                     )}
