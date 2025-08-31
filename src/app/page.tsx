@@ -54,8 +54,8 @@ export default function Home() {
             tournaments, prove your skill, and win exciting prizes.
           </p>
           <div className="mt-8 flex gap-4">
-            <Button asChild size="lg" className="font-semibold">
-              <Link href="/tournaments">Browse Tournaments</Link>
+            <Button asChild size="lg" className="font-semibold" disabled={loading}>
+              <Link href={!loading && !user ? "/register" : "/tournaments"}>Browse Tournaments</Link>
             </Button>
           </div>
         </div>
