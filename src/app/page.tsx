@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { tournaments, MOCK_BANNERS } from "@/lib/mock-data";
 import TournamentCard from "@/components/TournamentCard";
-import RecommendedTournaments from "@/components/RecommendedTournaments";
 import { Card } from "@/components/ui/card";
 
 export default function Home() {
@@ -101,7 +100,6 @@ export default function Home() {
           </div>
         </section>
 
-        <RecommendedTournaments />
       </main>
     </div>
   );
