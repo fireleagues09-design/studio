@@ -35,11 +35,9 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const setupRecaptcha = () => {
+    // Mock RecaptchaVerifier
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {}
-      });
+        window.recaptchaVerifier = {} as RecaptchaVerifier;
     }
     return window.recaptchaVerifier;
   };
@@ -50,19 +48,22 @@ export default function RegisterPage() {
       return;
     }
     setLoading(true);
-    try {
-        const phoneNumber = `+91${phone}`;
-        const appVerifier = setupRecaptcha();
-        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-        window.confirmationResult = confirmationResult;
+    // Mock OTP sending
+    setTimeout(() => {
+        window.confirmationResult = {
+            confirm: async (otp: string) => {
+                if (otp === '123456') {
+                    const mockUid = `mock-uid-${phone}`;
+                    return Promise.resolve({ user: { uid: mockUid } });
+                } else {
+                    return Promise.reject(new Error('Invalid OTP'));
+                }
+            }
+        };
         setOtpSent(true);
-        toast({ title: "Success", description: "OTP sent to your phone!" });
-    } catch (error: any) {
-        console.error("Error sending OTP:", error);
-        toast({ title: "OTP Error", description: error.message || "Failed to send OTP.", variant: "destructive" });
-    } finally {
+        toast({ title: "Success", description: "OTP sent to your phone! (Hint: use 123456)" });
         setLoading(false);
-    }
+    }, 1000);
   };
 
 
