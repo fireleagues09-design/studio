@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, UserPlus, LogOut } from "lucide-react";
+import { Flame, LogIn, Menu, UserPlus, LogOut, Wallet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -27,13 +29,29 @@ export function Header() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
+          if (doc.exists()) {
+            setWalletBalance(doc.data().walletBalance);
+          } else {
+            console.log("No such user document!");
+          }
+        });
+        return () => unsubscribeSnapshot();
+      } else {
+        setWalletBalance(null);
+      }
     });
-    return () => unsubscribe();
+
+    return () => unsubscribeAuth();
   }, []);
 
   const handleLogout = async () => {
@@ -64,6 +82,11 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+           {user && (
+            <Link href="/profile" className={cn("transition-colors hover:text-foreground/80", pathname === "/profile" ? "text-foreground" : "text-foreground/60")}>
+              Profile
+            </Link>
+          )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -71,10 +94,20 @@ export function Header() {
             {!loading && (
               <>
                 {user ? (
-                  <Button variant="ghost" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </Button>
+                  <>
+                    {walletBalance !== null && (
+                      <Button variant="outline" size="sm" asChild>
+                         <Link href="/profile">
+                          <Wallet className="mr-2 h-4 w-4 text-primary" />
+                          ₹{walletBalance.toFixed(2)}
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button variant="ghost" asChild>
@@ -120,13 +153,28 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
+                   {user && (
+                    <Link href="/profile" className="text-lg font-medium">
+                      Profile
+                    </Link>
+                  )}
                   <div className="border-t pt-4 flex flex-col space-y-3">
                     {!loading && (
                       <>
                         {user ? (
-                          <Button variant="outline" onClick={handleLogout}>
-                            Logout
-                          </Button>
+                           <>
+                            {walletBalance !== null && (
+                              <Button variant="outline" asChild>
+                                  <Link href="/profile">
+                                    <Wallet className="mr-2 h-4 w-4 text-primary" />
+                                    ₹{walletBalance.toFixed(2)}
+                                  </Link>
+                              </Button>
+                            )}
+                            <Button variant="outline" onClick={handleLogout}>
+                              Logout
+                            </Button>
+                          </>
                         ) : (
                           <>
                             <Button variant="outline" asChild>
