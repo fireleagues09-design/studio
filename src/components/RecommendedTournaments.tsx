@@ -62,18 +62,6 @@ export default function RecommendedTournaments() {
         Recommended For You
       </h2>
 
-      {data.reasoning && (
-        <div className="mb-6 flex items-start gap-4 rounded-lg border border-primary/20 bg-card p-4">
-          <Lightbulb className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-          <div>
-            <h3 className="font-semibold text-primary">AI Recommendation</h3>
-            <p className="text-sm text-muted-foreground">
-              {data.reasoning}
-            </p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {data.recommendations.map((tournament) => (
           <TournamentCard key={tournament.id} tournament={tournament} />
