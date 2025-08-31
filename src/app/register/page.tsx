@@ -12,18 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-
-declare global {
-  interface Window {
-    recaptchaVerifier?: RecaptchaVerifier;
-    confirmationResult?: any;
-  }
-}
 
 export default function RegisterPage() {
   const [inGameName, setInGameName] = useState("");
@@ -34,39 +26,18 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const setupRecaptcha = () => {
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-    }
-    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response: any) => {
-        console.log("reCAPTCHA verified");
-      }
-    });
-    window.recaptchaVerifier = recaptchaVerifier;
-    return recaptchaVerifier;
-  };
-
   const handleSendOtp = async () => {
     if (!inGameName || !phone) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
     setLoading(true);
-    try {
-      const phoneNumber = `+91${phone}`;
-      const appVerifier = setupRecaptcha();
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      window.confirmationResult = confirmationResult;
-      setOtpSent(true);
-      toast({ title: "Success", description: "OTP sent to your phone!" });
-    } catch (error: any) {
-      console.error("Error sending OTP:", error);
-      toast({ title: "Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    // Mock OTP sending
+    setTimeout(() => {
+        setOtpSent(true);
+        toast({ title: "Success", description: "OTP sent to your phone! (Test Mode)" });
+        setLoading(false);
+    }, 1000);
   };
 
 
@@ -77,10 +48,10 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-        const userCredential = await window.confirmationResult.confirm(otp);
-        const user = userCredential.user;
+        // Mock user creation for the purpose of getting a UID
+        const mockUserId = `mock_${phone}_${new Date().getTime()}`;
 
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(db, "users", mockUserId);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
@@ -127,7 +98,6 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div id="recaptcha-container"></div>
             <div className="grid gap-2">
               <Label htmlFor="in-game-name">In-Game Name</Label>
               <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
