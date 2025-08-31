@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Phone, Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Save, Gift, PiggyBank, CircleDollarSign } from 'lucide-react';
+import { User as UserIcon, Phone, Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Save, Gift, PiggyBank, CircleDollarSign, CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from "@/hooks/use-toast";
 import Link from 'next/link';
+import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, subMonths, startOfDay, endOfDay } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 type UserProfile = {
@@ -30,13 +35,13 @@ type UserProfile = {
     email: string;
 };
 
-const mockTransactions = [
-    { id: 'txn1', type: 'deposit', amount: 500, date: '2024-07-28', status: 'Completed' },
-    { id: 'txn2', type: 'entry_fee', amount: -100, date: '2024-07-28', status: 'Completed' },
-    { id: 'txn3', type: 'withdrawal', amount: -200, date: '2024-07-27', status: 'Pending' },
-    { id: 'txn4', type: 'prize', amount: 1000, date: '2024-07-26', status: 'Completed' },
-    { id: 'txn5', type: 'deposit', amount: 250, date: '2024-07-25', status: 'Completed' },
-];
+type Transaction = {
+    id: string;
+    type: 'deposit' | 'entry_fee' | 'withdrawal' | 'prize';
+    amount: number;
+    date: Timestamp;
+    status: 'Completed' | 'Pending' | 'Failed';
+};
 
 
 export default function ProfilePage() {
@@ -45,6 +50,12 @@ export default function ProfilePage() {
     const [inGameName, setInGameName] = useState('');
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loadingTransactions, setLoadingTransactions] = useState(true);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: subMonths(new Date(), 1),
+        to: new Date(),
+    });
     const router = useRouter();
     const { toast } = useToast();
 
@@ -60,6 +71,7 @@ export default function ProfilePage() {
                     setInGameName(profileData.inGameName);
                 } else {
                     console.error("User profile not found in Firestore.");
+                    router.push('/login');
                 }
             } else {
                 router.push('/login');
@@ -69,6 +81,43 @@ export default function ProfilePage() {
 
         return () => unsubscribe();
     }, [router]);
+    
+     useEffect(() => {
+        if (user) {
+            fetchTransactions();
+        }
+    }, [user, dateRange]);
+
+
+    const fetchTransactions = async () => {
+        if (!user || !dateRange?.from || !dateRange?.to) return;
+        setLoadingTransactions(true);
+        try {
+            const transactionsRef = collection(db, "transactions");
+            const q = query(
+                transactionsRef,
+                where("userId", "==", user.uid),
+                where("date", ">=", startOfDay(dateRange.from)),
+                where("date", "<=", endOfDay(dateRange.to)),
+                orderBy("date", "desc")
+            );
+            const querySnapshot = await getDocs(q);
+            const userTransactions = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Transaction));
+            setTransactions(userTransactions);
+        } catch (error) {
+            console.error("Error fetching transactions:", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch transaction history.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoadingTransactions(false);
+        }
+    };
 
     const handleUpdateName = async () => {
         if (!user || !inGameName.trim()) {
@@ -218,8 +267,49 @@ export default function ProfilePage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Transaction History</CardTitle>
-                        <CardDescription>View your recent wallet activity.</CardDescription>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <CardTitle>Transaction History</CardTitle>
+                                <CardDescription>View your recent wallet activity.</CardDescription>
+                            </div>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-full sm:w-[300px] justify-start text-left font-normal",
+                                    !dateRange && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>
+                                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                                        {format(dateRange.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="end">
+                                    <Calendar
+                                        initialFocus
+                                        mode="range"
+                                        defaultMonth={dateRange?.from}
+                                        selected={dateRange}
+                                        onSelect={setDateRange}
+                                        numberOfMonths={2}
+                                        disabled={(date) => date > new Date() || date < subMonths(new Date(), 3)}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-md">
@@ -233,7 +323,14 @@ export default function ProfilePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {mockTransactions.map(tx => (
+                                    {loadingTransactions ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">
+                                                Loading transactions...
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : transactions.length > 0 ? (
+                                        transactions.map(tx => (
                                         <TableRow key={tx.id}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
@@ -241,7 +338,7 @@ export default function ProfilePage() {
                                                     <span className="capitalize font-medium">{tx.type.replace('_', ' ')}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground">{tx.date}</TableCell>
+                                            <TableCell className="text-muted-foreground">{format(tx.date.toDate(), 'PP')}</TableCell>
                                             <TableCell>
                                                 <Badge variant={tx.status === 'Completed' ? 'secondary' : 'default'} className={tx.status === 'Pending' ? 'bg-primary/80' : ''}>
                                                     {tx.status}
@@ -251,7 +348,14 @@ export default function ProfilePage() {
                                                 {tx.amount > 0 ? `+₹${tx.amount.toFixed(2)}` : `₹${tx.amount.toFixed(2)}`}
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="h-24 text-center">
+                                                No transactions found for the selected period.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -261,3 +365,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    
