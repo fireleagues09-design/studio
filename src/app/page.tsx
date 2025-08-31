@@ -57,16 +57,6 @@ export default function Home() {
             <Button asChild size="lg" className="font-semibold">
               <Link href="/tournaments">Browse Tournaments</Link>
             </Button>
-            {!loading && !user && (
-               <>
-                <Button asChild size="lg" variant="secondary" className="font-semibold">
-                  <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="font-semibold border-white text-white hover:bg-white hover:text-black">
-                  <Link href="/register">Register</Link>
-                </Button>
-              </>
-            )}
           </div>
         </div>
       </section>
