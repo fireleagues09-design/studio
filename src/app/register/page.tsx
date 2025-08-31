@@ -34,41 +34,18 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        {
-            'size': 'invisible',
-            'callback': (response: any) => {
-                // reCAPTCHA solved, allow signInWithPhoneNumber.
-            }
-        }
-      );
-    }
-    return window.recaptchaVerifier;
-  };
-
   const handleSendOtp = async () => {
     if (!inGameName || !phone) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
     setLoading(true);
-    try {
-        const phoneNumber = `+91${phone}`;
-        const appVerifier = setupRecaptcha();
-        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-        window.confirmationResult = confirmationResult;
-        setOtpSent(true);
-        toast({ title: "Success", description: "OTP sent to your phone!" });
-    } catch (error: any) {
-        console.error("Error sending OTP:", error);
-        toast({ title: "OTP Error", description: error.message, variant: "destructive" });
-    } finally {
-        setLoading(false);
-    }
+    // Mock OTP flow
+    setTimeout(() => {
+      setOtpSent(true);
+      toast({ title: "Success", description: "OTP sent to your phone!" });
+      setLoading(false);
+    }, 1000);
   };
 
 
@@ -78,42 +55,46 @@ export default function RegisterPage() {
       return;
     }
     setLoading(true);
-    try {
-      const result = await window.confirmationResult.confirm(otp);
-      const user = result.user;
+    // Mock registration
+    setTimeout(async () => {
+      try {
+        const mockUid = `mock_${Date.now()}`;
+        const userDocRef = doc(db, "users", mockUid);
+        const userDoc = await getDoc(userDocRef);
 
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-          toast({ title: "Registration Error", description: "This phone number is already registered.", variant: "destructive" });
-          router.push('/login');
-          return;
+        if (userDoc.exists()) {
+            toast({ title: "Registration Error", description: "This phone number is already registered.", variant: "destructive" });
+            router.push('/login');
+            setLoading(false);
+            return;
+        }
+        
+        await setDoc(userDocRef, {
+          inGameName: inGameName,
+          phone: `+91${phone}`,
+          email: `${phone}@fireleagues.com`,
+          walletBalance: 0,
+          registeredOn: serverTimestamp(),
+        });
+        
+        toast({
+          title: "Success",
+          description: "Account created successfully! Please login.",
+        });
+
+        router.push("/login");
+
+      } catch (error: any) {
+        console.error("Error creating account:", error);
+        toast({
+          title: "Registration Error",
+          description: error.message || "Failed to create account. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      await setDoc(doc(db, "users", user.uid), {
-        inGameName: inGameName,
-        phone: `+91${phone}`,
-        email: `${phone}@fireleagues.com`, // Use phone as a fake email
-        walletBalance: 0,
-        registeredOn: serverTimestamp(),
-      });
-      
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please login.",
-      });
-
-      router.push("/login");
-
-    } catch (error: any) {
-      console.error("Error creating account:", error);
-      toast({
-        title: "Registration Error",
-        description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    }, 1000);
   };
 
   return (
