@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -82,6 +83,8 @@ export default function LoginPage() {
         }
       } catch (error: any) {
         console.error("Error verifying OTP:", error);
+        // Clear confirmation result on failure to prevent unintended session state
+        window.confirmationResult = undefined;
         toast({ title: "Verification Error", description: error.message || "Invalid OTP. Please try again.", variant: "destructive" });
       } finally {
         setLoading(false);
