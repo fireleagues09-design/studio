@@ -12,24 +12,44 @@ import {
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { tournaments, MOCK_BANNERS } from "@/lib/mock-data";
+import { MOCK_BANNERS } from "@/lib/mock-data";
 import TournamentCard from "@/components/TournamentCard";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { collection, query, limit, onSnapshot } from 'firebase/firestore';
+import type { Tournament } from '@/lib/mock-data';
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export default function Home() {
-  const upcomingTournaments = tournaments.slice(0, 4);
+  const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
+  const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      setLoadingAuth(false);
     });
-    return () => unsubscribe();
+
+    const tournamentsQuery = query(collection(db, "tournaments"), limit(4));
+    const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
+        const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
+        setUpcomingTournaments(tournamentsData);
+        setLoadingTournaments(false);
+    }, (error) => {
+        console.error("Error fetching tournaments:", error);
+        setLoadingTournaments(false);
+    });
+
+
+    return () => {
+        unsubscribeAuth();
+        unsubscribeTournaments();
+    };
   }, []);
 
 
@@ -54,8 +74,8 @@ export default function Home() {
             tournaments, prove your skill, and win exciting prizes.
           </p>
           <div className="mt-8 flex gap-4">
-            <Button asChild size="lg" className="font-semibold" disabled={loading}>
-              <Link href={!loading && !user ? "/register" : "/tournaments"}>Browse Tournaments</Link>
+            <Button asChild size="lg" className="font-semibold" disabled={loadingAuth}>
+              <Link href={!loadingAuth && !user ? "/register" : "/tournaments"}>Browse Tournaments</Link>
             </Button>
           </div>
         </div>
@@ -107,14 +127,30 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {upcomingTournaments.map((tournament) => (
-              <TournamentCard key={tournament.id} tournament={tournament} />
-            ))}
-          </div>
+          {loadingTournaments ? (
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-4">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {upcomingTournaments.map((tournament) => (
+                <TournamentCard key={tournament.id} tournament={tournament} />
+                ))}
+            </div>
+          )}
+
         </section>
 
       </main>
     </div>
   );
 }
+
+    

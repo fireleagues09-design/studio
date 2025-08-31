@@ -1,4 +1,8 @@
-import { tournaments } from "@/lib/mock-data";
+
+
+'use client';
+
+import { useEffect, useState } from 'react';
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +32,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Tournament } from '@/lib/mock-data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type TournamentPageProps = {
   params: {
@@ -36,7 +44,43 @@ type TournamentPageProps = {
 };
 
 export default function TournamentPage({ params }: TournamentPageProps) {
-  const tournament = tournaments.find((t) => t.id === params.id);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const tournamentDocRef = doc(db, 'tournaments', params.id);
+    const unsubscribe = onSnapshot(tournamentDocRef, (doc) => {
+        if (doc.exists()) {
+            setTournament({ id: doc.id, ...doc.data() } as Tournament);
+        } else {
+            console.error("Tournament not found!");
+            setTournament(null);
+        }
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching tournament:", error);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [params.id]);
+
+
+  if (loading) {
+      return (
+        <div className="container mx-auto px-4 py-8 md:py-12">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                    <Skeleton className="h-96 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                </div>
+                <div className="lg:col-span-1">
+                    <Skeleton className="h-[500px] w-full" />
+                </div>
+            </div>
+        </div>
+      )
+  }
 
   if (!tournament) {
     notFound();
@@ -95,7 +139,7 @@ export default function TournamentPage({ params }: TournamentPageProps) {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {rules.map((rule, index) => (
+                    {rules?.map((rule, index) => (
                       <li key={index} className="flex items-start gap-3">
                         <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                         <span>{rule}</span>
@@ -119,7 +163,7 @@ export default function TournamentPage({ params }: TournamentPageProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {prizeDistribution.map((p, index) => (
+                      {prizeDistribution?.map((p, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">
                             {p.place}
@@ -190,3 +234,5 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
+
+    
