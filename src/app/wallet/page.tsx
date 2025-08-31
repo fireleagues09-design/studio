@@ -3,12 +3,12 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon } from 'lucide-react';
+import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 
 type UserProfile = {
@@ -39,6 +42,141 @@ type Transaction = {
     date: Timestamp;
     status: 'Completed' | 'Pending' | 'Failed';
 };
+
+function AddFundsDialog() {
+    const [amount, setAmount] = useState('');
+    const [transactionId, setTransactionId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+
+    const upiId = 'fireleagues@examplebank';
+
+    const handleCopyUpi = () => {
+        navigator.clipboard.writeText(upiId);
+        toast({
+            title: "Copied!",
+            description: "UPI ID copied to clipboard.",
+        });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) {
+            toast({
+                title: 'Error',
+                description: 'You must be logged in to make a deposit.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (!amount || !transactionId) {
+            toast({
+                title: 'Error',
+                description: 'Please fill out all fields.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await addDoc(collection(db, 'transactions'), {
+                userId: user.uid,
+                type: 'deposit',
+                amount: Number(amount),
+                transactionId: transactionId,
+                status: 'Pending',
+                date: serverTimestamp(),
+            });
+
+            setAmount('');
+            setTransactionId('');
+            setOpen(false);
+            toast({
+                title: 'Request Submitted',
+                description: 'Your deposit request has been received. It will be processed within 24 hours after verification.',
+            });
+        } catch (error) {
+            console.error("Error submitting deposit request:", error);
+            toast({
+                title: 'Error',
+                description: 'Failed to submit deposit request. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Funds
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Add Funds to Wallet</DialogTitle>
+                    <DialogDescription>
+                        Complete an offline payment and submit the details here.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                    <div className="p-4 bg-secondary rounded-lg">
+                        <h3 className="font-semibold mb-2">Payment Instructions</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Transfer the desired amount to the UPI ID below. After the transfer, enter the amount and the transaction ID from your payment app.
+                        </p>
+                        <div className="flex items-center justify-between p-3 bg-background rounded-md">
+                            <p className="text-lg font-mono text-primary">{upiId}</p>
+                            <Button variant="ghost" size="icon" onClick={handleCopyUpi}>
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4 px-1">
+                        <div className="grid gap-2">
+                            <Label htmlFor="amount">Amount (INR)</Label>
+                            <Input 
+                                id="amount"
+                                type="number"
+                                placeholder="e.g., 500"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                required 
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="transactionId">Transaction ID / UTR</Label>
+                            <Input 
+                                id="transactionId"
+                                type="text"
+                                placeholder="Enter the 12-digit reference number"
+                                value={transactionId}
+                                onChange={(e) => setTransactionId(e.target.value)}
+                                required 
+                            />
+                        </div>
+                         <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={loading}>
+                                {loading ? 'Submitting...' : 'Submit Request'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 
 export default function WalletPage() {
@@ -80,7 +218,7 @@ export default function WalletPage() {
         if (user) {
             fetchTransactions();
         }
-    }, [user, dateRange]);
+     }, [user, dateRange]);
 
 
     const fetchTransactions = async () => {
@@ -171,12 +309,7 @@ export default function WalletPage() {
                                     <p className="text-4xl font-bold text-primary">₹{totalBalance.toFixed(2)}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button asChild>
-                                        <Link href="/profile/deposit">
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Add Funds
-                                        </Link>
-                                    </Button>
+                                    <AddFundsDialog />
                                      <Button variant="outline">
                                         <MinusCircle className="mr-2 h-4 w-4" />
                                         Withdraw
@@ -279,18 +412,18 @@ export default function WalletPage() {
                                         <TableRow key={tx.id}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    {tx.amount > 0 ? <ArrowDownLeft className="h-4 w-4 text-green-500"/> : <ArrowUpRight className="h-4 w-4 text-red-500" />}
+                                                    {tx.type === 'deposit' || tx.type === 'prize' ? <ArrowDownLeft className="h-4 w-4 text-green-500"/> : <ArrowUpRight className="h-4 w-4 text-red-500" />}
                                                     <span className="capitalize font-medium">{tx.type.replace('_', ' ')}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">{format(tx.date.toDate(), 'PP')}</TableCell>
                                             <TableCell>
-                                                <Badge variant={tx.status === 'Completed' ? 'secondary' : 'default'} className={tx.status === 'Pending' ? 'bg-primary/80' : ''}>
+                                                <Badge variant={tx.status === 'Completed' ? 'secondary' : tx.status === 'Failed' ? 'destructive' : 'default'} className={tx.status === 'Pending' ? 'bg-primary/80' : ''}>
                                                     {tx.status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className={`text-right font-semibold ${tx.amount > 0 ? 'text-green-500' : ''}`}>
-                                                {tx.amount > 0 ? `+₹${tx.amount.toFixed(2)}` : `₹${tx.amount.toFixed(2)}`}
+                                            <TableCell className={`text-right font-semibold ${tx.type === 'deposit' || tx.type === 'prize' ? 'text-green-500' : 'text-red-500'}`}>
+                                                {tx.type === 'deposit' || tx.type === 'prize' ? `+₹${tx.amount.toFixed(2)}` : `-₹${Math.abs(tx.amount).toFixed(2)}`}
                                             </TableCell>
                                         </TableRow>
                                     ))

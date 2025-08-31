@@ -102,12 +102,6 @@ export function Header() {
                     </Link>
                   </Button>
                 )}
-                 <Button variant="secondary" size="sm" asChild>
-                  <Link href="/profile">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </Link>
-                </Button>
               </>
             ) : (
               <>
@@ -163,12 +157,6 @@ export function Header() {
                               </Link>
                           </Button>
                         )}
-                         <Button variant="secondary" asChild className="w-full justify-start">
-                            <Link href="/profile">
-                              <User className="mr-2 h-4 w-4" />
-                              Profile
-                            </Link>
-                          </Button>
                       </div>
                     ) : (
                       <>
