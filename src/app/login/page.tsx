@@ -32,18 +32,40 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const setupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+    }
+    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response: any) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+        console.log("reCAPTCHA verified");
+      }
+    });
+    window.recaptchaVerifier = recaptchaVerifier;
+    return recaptchaVerifier;
+  };
+
   const handleSendOtp = async () => {
     if (!phone) {
         toast({ title: "Error", description: "Please enter a phone number.", variant: "destructive" });
         return;
     }
     setLoading(true);
-    // Mock OTP flow
-    setTimeout(() => {
+    try {
+        const phoneNumber = `+91${phone}`;
+        const appVerifier = setupRecaptcha();
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        window.confirmationResult = confirmationResult;
         setOtpSent(true);
         toast({ title: "Success", description: "OTP sent to your phone!" });
+    } catch (error: any) {
+        console.error("Error sending OTP:", error);
+        toast({ title: "Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
+    } finally {
         setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -52,12 +74,16 @@ export default function LoginPage() {
         return;
     }
     setLoading(true);
-    // Mock verification
-    setTimeout(() => {
+    try {
+        await window.confirmationResult.confirm(otp);
         toast({ title: "Success", description: "Logged in successfully!" });
         router.push("/");
+    } catch (error: any) {
+        console.error("Error verifying OTP:", error);
+        toast({ title: "Verification Error", description: "Invalid OTP or an error occurred.", variant: "destructive" });
+    } finally {
         setLoading(false);
-    }, 1000);
+    }
   };
 
 

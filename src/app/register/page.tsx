@@ -34,18 +34,39 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const setupRecaptcha = () => {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+    }
+    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response: any) => {
+        console.log("reCAPTCHA verified");
+      }
+    });
+    window.recaptchaVerifier = recaptchaVerifier;
+    return recaptchaVerifier;
+  };
+
   const handleSendOtp = async () => {
     if (!inGameName || !phone) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
     setLoading(true);
-    // Mock OTP flow
-    setTimeout(() => {
+    try {
+      const phoneNumber = `+91${phone}`;
+      const appVerifier = setupRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      window.confirmationResult = confirmationResult;
       setOtpSent(true);
       toast({ title: "Success", description: "OTP sent to your phone!" });
+    } catch (error: any) {
+      console.error("Error sending OTP:", error);
+      toast({ title: "Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
 
@@ -55,11 +76,11 @@ export default function RegisterPage() {
       return;
     }
     setLoading(true);
-    // Mock registration
-    setTimeout(async () => {
-      try {
-        const mockUid = `mock_${Date.now()}`;
-        const userDocRef = doc(db, "users", mockUid);
+    try {
+        const userCredential = await window.confirmationResult.confirm(otp);
+        const user = userCredential.user;
+
+        const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
@@ -94,7 +115,6 @@ export default function RegisterPage() {
       } finally {
         setLoading(false);
       }
-    }, 1000);
   };
 
   return (
