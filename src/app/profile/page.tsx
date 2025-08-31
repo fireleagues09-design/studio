@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,10 +52,7 @@ export default function ProfilePage() {
     const [updating, setUpdating] = useState(false);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(true);
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: subMonths(new Date(), 1),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const router = useRouter();
     const { toast } = useToast();
 
@@ -90,17 +87,30 @@ export default function ProfilePage() {
 
 
     const fetchTransactions = async () => {
-        if (!user || !dateRange?.from || !dateRange?.to) return;
+        if (!user) return;
         setLoadingTransactions(true);
         try {
             const transactionsRef = collection(db, "transactions");
-            const q = query(
-                transactionsRef,
-                where("userId", "==", user.uid),
-                where("date", ">=", startOfDay(dateRange.from)),
-                where("date", "<=", endOfDay(dateRange.to)),
-                orderBy("date", "desc")
-            );
+            let q;
+
+            if (dateRange?.from && dateRange?.to) {
+                 q = query(
+                    transactionsRef,
+                    where("userId", "==", user.uid),
+                    where("date", ">=", startOfDay(dateRange.from)),
+                    where("date", "<=", endOfDay(dateRange.to)),
+                    orderBy("date", "desc")
+                );
+            } else {
+                // Default query: last 10 transactions
+                q = query(
+                    transactionsRef,
+                    where("userId", "==", user.uid),
+                    orderBy("date", "desc"),
+                    limit(10)
+                );
+            }
+            
             const querySnapshot = await getDocs(q);
             const userTransactions = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -270,7 +280,7 @@ export default function ProfilePage() {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <CardTitle>Transaction History</CardTitle>
-                                <CardDescription>View your recent wallet activity.</CardDescription>
+                                <CardDescription>Your last 10 transactions. Use the filter to see more.</CardDescription>
                             </div>
                             <Popover>
                                 <PopoverTrigger asChild>
@@ -293,7 +303,7 @@ export default function ProfilePage() {
                                         format(dateRange.from, "LLL dd, y")
                                     )
                                     ) : (
-                                    <span>Pick a date</span>
+                                    <span>Pick a date range</span>
                                     )}
                                 </Button>
                                 </PopoverTrigger>
@@ -366,4 +376,3 @@ export default function ProfilePage() {
     );
 }
 
-    
