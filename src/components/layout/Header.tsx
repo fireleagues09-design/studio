@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, UserPlus, Wallet } from "lucide-react";
+import { Flame, LogIn, Menu, User, UserPlus, Wallet } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 
@@ -33,7 +33,7 @@ const navLinks = [
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [wallet, setWallet] = useState<WalletData | null>(null);
 
@@ -88,11 +88,6 @@ export function Header() {
               {link.label}
             </Link>
           ))}
-           {user && (
-            <Link href="/profile" className={cn("transition-colors hover:text-foreground/80", pathname === "/profile" ? "text-foreground" : "text-foreground/60")}>
-              Profile
-            </Link>
-          )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -103,12 +98,18 @@ export function Header() {
                   <>
                     {wallet !== null && (
                       <Button variant="outline" size="sm" asChild>
-                         <Link href="/profile">
+                         <Link href="/profile/deposit">
                           <Wallet className="mr-2 h-4 w-4 text-primary" />
                           ₹{totalBalance.toFixed(2)}
                         </Link>
                       </Button>
                     )}
+                     <Button variant="secondary" size="sm" asChild>
+                      <Link href="/profile">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                    </Button>
                   </>
                 ) : (
                   <>
@@ -155,25 +156,26 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
-                   {user && (
-                    <Link href="/profile" className="text-lg font-medium">
-                      Profile
-                    </Link>
-                  )}
                   <div className="border-t pt-4 flex flex-col space-y-3">
                     {!loading && (
                       <>
                         {user ? (
-                           <>
+                           <div className="space-y-2">
                             {wallet !== null && (
                               <Button variant="outline" asChild>
-                                  <Link href="/profile">
+                                  <Link href="/profile/deposit">
                                     <Wallet className="mr-2 h-4 w-4 text-primary" />
                                     ₹{totalBalance.toFixed(2)}
                                   </Link>
                               </Button>
                             )}
-                          </>
+                             <Button variant="secondary" asChild>
+                                <Link href="/profile">
+                                  <User className="mr-2 h-4 w-4" />
+                                  Profile
+                                </Link>
+                              </Button>
+                          </div>
                         ) : (
                           <>
                             <Button variant="outline" asChild>
