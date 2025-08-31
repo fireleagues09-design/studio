@@ -12,10 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+
+// Add a global declaration for the confirmationResult
+declare global {
+    interface Window {
+      recaptchaVerifier?: RecaptchaVerifier;
+      confirmationResult?: ConfirmationResult;
+    }
+  }
 
 export default function RegisterPage() {
   const [inGameName, setInGameName] = useState("");
@@ -26,18 +35,37 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
 
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
+    }
+    return window.recaptchaVerifier;
+  };
+
   const handleSendOtp = async () => {
     if (!inGameName || !phone) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
     setLoading(true);
-    // Mock OTP sending
-    setTimeout(() => {
-        setOtpSent(true);
-        toast({ title: "Success", description: "OTP sent to your phone! (Test Mode)" });
-        setLoading(false);
-    }, 1000);
+    try {
+      const phoneNumber = `+91${phone}`;
+      const appVerifier = setupRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      window.confirmationResult = confirmationResult;
+      setOtpSent(true);
+      toast({ title: "Success", description: "OTP sent to your phone!" });
+    } catch (error: any) {
+      console.error("Error sending OTP:", error);
+      toast({ title: "OTP Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -48,10 +76,13 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-        // Mock user creation for the purpose of getting a UID
-        const mockUserId = `mock_${phone}_${new Date().getTime()}`;
+        if (!window.confirmationResult) {
+            throw new Error("OTP not sent yet or session expired.");
+        }
+        const userCredential = await window.confirmationResult.confirm(otp);
+        const user = userCredential.user;
 
-        const userDocRef = doc(db, "users", mockUserId);
+        const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
@@ -90,6 +121,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
+       <div id="recaptcha-container"></div>
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>

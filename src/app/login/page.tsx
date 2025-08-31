@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -14,6 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+
+// Add a global declaration for the confirmationResult
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -23,18 +33,37 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const setupRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
+      });
+    }
+    return window.recaptchaVerifier;
+  };
+  
   const handleSendOtp = async () => {
     if (!phone) {
         toast({ title: "Error", description: "Please enter a phone number.", variant: "destructive" });
         return;
     }
     setLoading(true);
-    // Mock OTP sending
-    setTimeout(() => {
-      setOtpSent(true);
-      toast({ title: "Success", description: "OTP sent to your phone! (Test Mode)" });
-      setLoading(false);
-    }, 1000);
+    try {
+        const phoneNumber = `+91${phone}`;
+        const appVerifier = setupRecaptcha();
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+        window.confirmationResult = confirmationResult;
+        setOtpSent(true);
+        toast({ title: "Success", description: "OTP sent to your phone!" });
+      } catch (error: any) {
+        console.error("Error sending OTP:", error);
+        toast({ title: "OTP Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
   };
 
   const handleVerifyOtp = async () => {
@@ -43,17 +72,26 @@ export default function LoginPage() {
         return;
     }
     setLoading(true);
-    // Mock OTP verification
-     setTimeout(() => {
-        toast({ title: "Success", description: "Logged in successfully!" });
-        router.push("/");
+    try {
+        if (window.confirmationResult) {
+          await window.confirmationResult.confirm(otp);
+          toast({ title: "Success", description: "Logged in successfully!" });
+          router.push("/");
+        } else {
+            throw new Error("OTP not sent yet or session expired.");
+        }
+      } catch (error: any) {
+        console.error("Error verifying OTP:", error);
+        toast({ title: "Verification Error", description: error.message || "Invalid OTP. Please try again.", variant: "destructive" });
+      } finally {
         setLoading(false);
-    }, 1000);
+      }
   };
 
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
+      <div id="recaptcha-container"></div>
       <Card className="w-full max-w-sm mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
