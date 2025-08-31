@@ -1,3 +1,6 @@
+
+'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,9 +15,23 @@ import { ArrowRight } from "lucide-react";
 import { tournaments, MOCK_BANNERS } from "@/lib/mock-data";
 import TournamentCard from "@/components/TournamentCard";
 import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function Home() {
   const upcomingTournaments = tournaments.slice(0, 4);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   return (
     <div className="flex flex-col gap-12 md:gap-16 lg:gap-20 pb-12 md:pb-16 lg:pb-20">
@@ -40,9 +57,11 @@ export default function Home() {
             <Button asChild size="lg" className="font-semibold">
               <Link href="/tournaments">Browse Tournaments</Link>
             </Button>
-            <Button asChild size="lg" variant="secondary" className="font-semibold">
-              <Link href="/register">Join Now</Link>
-            </Button>
+            {!loading && !user && (
+              <Button asChild size="lg" variant="secondary" className="font-semibold">
+                <Link href="/register">Join Now</Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>

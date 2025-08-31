@@ -27,7 +27,6 @@ type WalletData = {
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/tournaments", label: "Tournaments" },
-  { href: "/admin", label: "Admin" },
 ];
 
 export function Header() {
@@ -65,6 +64,8 @@ export function Header() {
   const currentWallet = wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = currentWallet.deposit + currentWallet.winning + currentWallet.bonus;
 
+  const isAdminPage = pathname === '/admin';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-4">
@@ -88,13 +89,26 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+           {user && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "transition-colors hover:text-foreground/80",
+                  pathname === "/admin"
+                    ? "text-foreground"
+                    : "text-foreground/60"
+                )}
+              >
+                Admin
+              </Link>
+           )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end">
           <div className="hidden md:flex items-center space-x-2">
             {loading ? null : user ? (
               <>
-                {wallet !== null && (
+                {wallet !== null && !isAdminPage && (
                   <Button variant="outline" size="sm" asChild>
                      <Link href="/wallet">
                       <Wallet className="mr-2 h-4 w-4 text-primary" />
@@ -102,6 +116,12 @@ export function Header() {
                     </Link>
                   </Button>
                 )}
+                <Button variant="ghost" size="sm" asChild>
+                    <Link href="/profile">
+                        <User className="mr-2 h-4 w-4" />
+                        My Profile
+                    </Link>
+                </Button>
               </>
             ) : (
               <>
@@ -146,6 +166,9 @@ export function Header() {
                       {link.label}
                     </Link>
                   ))}
+                  {user && (
+                    <Link href="/admin" className="text-lg font-medium">Admin</Link>
+                  )}
                   <div className="border-t pt-4 flex flex-col space-y-3">
                     {loading ? null : user ? (
                        <div className="space-y-2">
@@ -157,6 +180,12 @@ export function Header() {
                               </Link>
                           </Button>
                         )}
+                        <Button variant="ghost" asChild className="w-full justify-start">
+                             <Link href="/profile">
+                                <User className="mr-2 h-4 w-4" />
+                                My Profile
+                            </Link>
+                        </Button>
                       </div>
                     ) : (
                       <>
