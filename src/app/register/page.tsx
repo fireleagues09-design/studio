@@ -102,10 +102,10 @@ export default function RegisterPage() {
         
         toast({
           title: "Success",
-          description: "Account created successfully! Please login.",
+          description: "Account created successfully!",
         });
 
-        router.push("/login");
+        router.push("/");
 
       } catch (error: any) {
         console.error("Error creating account:", error);
