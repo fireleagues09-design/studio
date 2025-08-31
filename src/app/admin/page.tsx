@@ -31,6 +31,7 @@ function CreateTournamentDialog() {
     const [prize, setPrize] = useState('');
     const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
+    const [teamType, setTeamType] = useState('Squad');
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     
     const [loading, setLoading] = useState(false);
@@ -66,6 +67,7 @@ function CreateTournamentDialog() {
                 prize,
                 slots: Number(slots),
                 category,
+                teamType,
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
@@ -78,7 +80,7 @@ function CreateTournamentDialog() {
                 description: `Tournament "${name}" has been created.`
             });
             // Reset form
-            setName(''); setDate(''); setTime(''); setEntryFee(''); setPrize(''); setSlots(''); setCategory('Clash Squad 4v4'); setBannerFile(null);
+            setName(''); setDate(''); setTime(''); setEntryFee(''); setPrize(''); setSlots(''); setCategory('Clash Squad 4v4'); setTeamType('Squad'); setBannerFile(null);
             setOpen(false);
         } catch (error) {
             console.error("Error creating tournament:", error);
@@ -149,6 +151,19 @@ function CreateTournamentDialog() {
                                 </SelectContent>
                             </Select>
                         </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="create-teamType">Team Type</Label>
+                        <Select value={teamType} onValueChange={setTeamType}>
+                            <SelectTrigger id="create-teamType">
+                                <SelectValue placeholder="Select team type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Solo">Solo</SelectItem>
+                                <SelectItem value="Duo">Duo</SelectItem>
+                                <SelectItem value="Squad">Squad</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="create-banner">Tournament Banner</Label>
@@ -361,13 +376,11 @@ export default function AdminPage() {
         const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
             const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentType));
             setTournaments(tournamentsData);
-        }, (error) => console.error("Error fetching tournaments:", error));
-
-        Promise.all([
-            new Promise(res => onSnapshot(usersQuery, res)),
-            new Promise(res => onSnapshot(transactionsQuery, res)),
-            new Promise(res => onSnapshot(tournamentsQuery, res)),
-        ]).finally(() => setDataLoading(false));
+            setDataLoading(false);
+        }, (error) => {
+            console.error("Error fetching tournaments:", error)
+            setDataLoading(false);
+        });
 
 
         return () => {

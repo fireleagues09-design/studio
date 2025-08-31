@@ -21,6 +21,7 @@ import {
   Trophy,
   Users,
   ShieldCheck,
+  User as UserIcon,
 } from "lucide-react";
 import {
   Table,
@@ -89,10 +90,10 @@ export default function TournamentPage({ params }: TournamentPageProps) {
   const {
     name,
     category,
+    teamType,
     image,
     dataAiHint,
     prize,
-    entryFee,
     slots,
     slotsFilled,
     date,
@@ -119,7 +120,10 @@ export default function TournamentPage({ params }: TournamentPageProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-0 left-0 p-6">
-                <Badge className="mb-2">{category}</Badge>
+                <div className="flex gap-2 mb-2">
+                    <Badge>{category}</Badge>
+                    <Badge variant="outline">{teamType}</Badge>
+                </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white">
                   {name}
                 </h1>
@@ -192,10 +196,10 @@ export default function TournamentPage({ params }: TournamentPageProps) {
                 <span className="text-muted-foreground">Total Prize:</span>
                 <strong className="ml-auto text-lg">₹{prize}</strong>
               </div>
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-primary" />
-                <span className="text-muted-foreground">Entry Fee:</span>
-                <strong className="ml-auto text-lg">{entryFee}</strong>
+               <div className="flex items-center gap-3">
+                <UserIcon className="h-5 w-5 text-primary" />
+                <span className="text-muted-foreground">Team Type:</span>
+                <strong className="ml-auto">{teamType}</strong>
               </div>
               <div className="flex items-center gap-3">
                 {category === "Clash Squad 4v4" ? <Swords className="h-5 w-5 text-primary" /> : <Map className="h-5 w-5 text-primary" />}
@@ -234,5 +238,3 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
-
-    

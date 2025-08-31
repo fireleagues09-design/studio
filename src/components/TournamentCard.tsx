@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -22,8 +23,8 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     id,
     name,
     category,
+    teamType,
     prize,
-    entryFee,
     slots,
     slotsFilled,
     image,
@@ -59,19 +60,22 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
         </Badge>
       </CardHeader>
       <CardContent className="flex-grow p-4">
-        <Badge variant="secondary" className="mb-2">
-          {categoryIcon}
-          <span className="ml-2">{category}</span>
-        </Badge>
+        <div className="flex items-center gap-2 mb-2">
+            <Badge variant="secondary" className="mr-auto">
+              {categoryIcon}
+              <span className="ml-2">{category}</span>
+            </Badge>
+             <Badge variant="outline">
+              <Users className="h-4 w-4" />
+              <span className="ml-2">{teamType}</span>
+            </Badge>
+        </div>
+
         <CardTitle className="text-xl h-14 line-clamp-2">{name}</CardTitle>
         <div className="mt-4 space-y-3 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Trophy className="h-4 w-4 text-primary" />
             <span>Prize Pool: <strong>₹{prize}</strong></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            <span>Entry Fee: <strong>{entryFee}</strong></span>
           </div>
         </div>
       </CardContent>

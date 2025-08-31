@@ -1,7 +1,9 @@
+
 export type Tournament = {
   id: string;
   name: string;
   category: 'Classic Full Map' | 'Clash Squad 4v4';
+  teamType: 'Solo' | 'Duo' | 'Squad';
   prize: string;
   entryFee: string;
   slots: number;
@@ -40,6 +42,7 @@ export const tournaments: Tournament[] = [
     id: "t1",
     name: "Grandmaster League S1",
     category: "Classic Full Map",
+    teamType: "Squad",
     prize: "50,000",
     entryFee: "500",
     slots: 100,
@@ -59,6 +62,7 @@ export const tournaments: Tournament[] = [
     id: "t2",
     name: "Clash Squad Kings",
     category: "Clash Squad 4v4",
+    teamType: "Squad",
     prize: "10,000",
     entryFee: "100",
     slots: 48,
@@ -78,6 +82,7 @@ export const tournaments: Tournament[] = [
     id: "t3",
     name: "Rookie Rumble",
     category: "Classic Full Map",
+    teamType: "Solo",
     prize: "5,000",
     entryFee: "FREE",
     slots: 100,
@@ -97,6 +102,7 @@ export const tournaments: Tournament[] = [
     id: "t4",
     name: "4v4 Fury",
     category: "Clash Squad 4v4",
+    teamType: "Squad",
     prize: "20,000",
     entryFee: "250",
     slots: 64,
@@ -116,6 +122,7 @@ export const tournaments: Tournament[] = [
     id: "t5",
     name: "Solo Survival Challenge",
     category: "Classic Full Map",
+    teamType: "Solo",
     prize: "15,000",
     entryFee: "150",
     slots: 100,
@@ -136,6 +143,7 @@ export const tournaments: Tournament[] = [
     id: "t6",
     name: "Squad Goals Weekly",
     category: "Clash Squad 4v4",
+    teamType: "Squad",
     prize: "8,000",
     entryFee: "80",
     slots: 32,
