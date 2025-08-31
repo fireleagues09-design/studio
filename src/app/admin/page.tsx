@@ -101,7 +101,7 @@ function CreateTournamentDialog() {
                 date,
                 time,
                 entryFee,
-                prize: prize,
+                prize,
                 slots: Number(slots),
                 category,
                 teamType,
