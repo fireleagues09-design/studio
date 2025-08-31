@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -28,21 +28,53 @@ function CreateTournamentDialog() {
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
     const [entryFee, setEntryFee] = useState('');
-    const [prize, setPrize] = useState('');
     const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
     const [bannerFile, setBannerFile] = useState<File | null>(null);
+    const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
+    const [prizePerKill, setPrizePerKill] = useState('');
     
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+
+    const handlePrizeChange = (index: number, field: 'place' | 'prize', value: string) => {
+        const newDistribution = [...prizeDistribution];
+        newDistribution[index][field] = value;
+        setPrizeDistribution(newDistribution);
+    };
+
+    const addPrizeRow = () => {
+        setPrizeDistribution([...prizeDistribution, { place: '', prize: '' }]);
+    };
+
+    const removePrizeRow = (index: number) => {
+        const newDistribution = prizeDistribution.filter((_, i) => i !== index);
+        setPrizeDistribution(newDistribution);
+    };
+
+    const totalPrizePool = prizeDistribution.reduce((sum, item) => sum + (Number(item.prize) || 0), 0);
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setBannerFile(e.target.files[0]);
         }
     };
+
+    const resetForm = () => {
+        setName('');
+        setDate('');
+        setTime('');
+        setEntryFee('');
+        setSlots('');
+        setCategory('Clash Squad 4v4');
+        setTeamType('Squad');
+        setBannerFile(null);
+        setPrizeDistribution([{ place: '1st', prize: '' }]);
+        setPrizePerKill('');
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -59,12 +91,17 @@ function CreateTournamentDialog() {
                 dataAiHint = 'custom tournament banner';
             }
 
+            const finalPrizeDistribution = prizeDistribution.filter(p => p.place && p.prize);
+            if (prizePerKill) {
+                finalPrizeDistribution.push({ place: 'Per Kill', prize: prizePerKill });
+            }
+
             await addDoc(collection(db, 'tournaments'), {
                 name,
                 date,
                 time,
                 entryFee,
-                prize,
+                prize: totalPrizePool.toString(),
                 slots: Number(slots),
                 category,
                 teamType,
@@ -72,15 +109,14 @@ function CreateTournamentDialog() {
                 slotsFilled: 0,
                 dataAiHint,
                 rules: ["Default rule 1", "Default rule 2"],
-                prizeDistribution: [{ place: "1st", prize: prize }],
+                prizeDistribution: finalPrizeDistribution,
                 createdAt: serverTimestamp()
             });
             toast({
                 title: 'Success',
                 description: `Tournament "${name}" has been created.`
             });
-            // Reset form
-            setName(''); setDate(''); setTime(''); setEntryFee(''); setPrize(''); setSlots(''); setCategory('Clash Squad 4v4'); setTeamType('Squad'); setBannerFile(null);
+            resetForm();
             setOpen(false);
         } catch (error) {
             console.error("Error creating tournament:", error);
@@ -102,14 +138,14 @@ function CreateTournamentDialog() {
                     Create Tournament
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Create New Tournament</DialogTitle>
                     <DialogDescription>
                         Fill in the details for the new tournament.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
                      <div className="grid gap-2">
                         <Label htmlFor="create-name">Tournament Name</Label>
                         <Input id="create-name" value={name} onChange={e => setName(e.target.value)} required />
@@ -124,21 +160,46 @@ function CreateTournamentDialog() {
                             <Input id="create-time" type="time" value={time} onChange={e => setTime(e.target.value)} required/>
                         </div>
                     </div>
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="create-entryFee">Entry Fee</Label>
-                            <Input id="create-entryFee" value={entryFee} onChange={e => setEntryFee(e.target.value)} required/>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="create-prize">Prize Pool (INR)</Label>
-                            <Input id="create-prize" value={prize} onChange={e => setPrize(e.target.value)} required/>
+                    
+                    <div className="space-y-2">
+                        <Label>Prize Distribution</Label>
+                        <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                            {prizeDistribution.map((dist, index) => (
+                                <div key={index} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-center">
+                                    <Input placeholder="Place (e.g., 1st)" value={dist.place} onChange={e => handlePrizeChange(index, 'place', e.target.value)} />
+                                    <Input type="number" placeholder="Prize (INR)" value={dist.prize} onChange={e => handlePrizeChange(index, 'prize', e.target.value)} />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removePrizeRow(index)} disabled={prizeDistribution.length === 1}>
+                                        <MinusCircleIcon className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                             <Button type="button" variant="outline" size="sm" onClick={addPrizeRow}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Rank
+                            </Button>
+                            <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="prize-per-kill">Prize Per Kill (INR)</Label>
+                                    <Input id="prize-per-kill" type="number" value={prizePerKill} onChange={e => setPrizePerKill(e.target.value)} placeholder="e.g. 50" />
+                                </div>
+                                <div className="grid gap-2">
+                                     <Label>Total Prize Pool</Label>
+                                     <p className="h-10 flex items-center px-3 rounded-md border border-input bg-background/50 font-bold text-primary">₹{totalPrizePool.toLocaleString()}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="create-entryFee">Entry Fee (INR)</Label>
+                            <Input id="create-entryFee" value={entryFee} onChange={e => setEntryFee(e.target.value)} required/>
+                        </div>
                         <div className="grid gap-2">
                             <Label htmlFor="create-slots">Total Slots</Label>
                             <Input id="create-slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} required/>
                         </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="create-category">Category</Label>
                             <Select value={category} onValueChange={setCategory}>
@@ -151,26 +212,26 @@ function CreateTournamentDialog() {
                                 </SelectContent>
                             </Select>
                         </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="create-teamType">Team Type</Label>
-                        <Select value={teamType} onValueChange={setTeamType}>
-                            <SelectTrigger id="create-teamType">
-                                <SelectValue placeholder="Select team type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Solo">Solo</SelectItem>
-                                <SelectItem value="Duo">Duo</SelectItem>
-                                <SelectItem value="Squad">Squad</SelectItem>
-                            </SelectContent>
-                        </Select>
+                         <div className="grid gap-2">
+                            <Label htmlFor="create-teamType">Team Type</Label>
+                            <Select value={teamType} onValueChange={setTeamType}>
+                                <SelectTrigger id="create-teamType">
+                                    <SelectValue placeholder="Select team type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Solo">Solo</SelectItem>
+                                    <SelectItem value="Duo">Duo</SelectItem>
+                                    <SelectItem value="Squad">Squad</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="create-banner">Tournament Banner</Label>
                         <Input id="create-banner" type="file" onChange={handleFileChange} accept="image/*" />
                         <p className="text-xs text-muted-foreground">Optional. If not provided, a default image will be used.</p>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
