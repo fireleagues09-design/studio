@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, User, UserPlus, Wallet } from "lucide-react";
+import { Flame, LogIn, Menu, User, UserPlus, Wallet, Shield } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -24,6 +24,11 @@ type WalletData = {
     bonus: number;
 }
 
+type UserProfile = {
+    wallet: WalletData;
+    isAdmin?: boolean;
+}
+
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/tournaments", label: "Tournaments" },
@@ -31,40 +36,36 @@ const navLinks = [
 
 export function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [wallet, setWallet] = useState<WalletData | null>(null);
-
+  
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
-
+      
       if (currentUser) {
         const userDocRef = doc(db, "users", currentUser.uid);
         const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
-            setWallet(doc.data().wallet as WalletData);
+            setProfile(doc.data() as UserProfile);
           } else {
-            console.log("No such user document!");
+            setProfile(null);
           }
+          setLoading(false);
         });
-        // Return the unsubscribe function for the snapshot listener
         return () => unsubscribeSnapshot();
       } else {
-        setWallet(null);
+        setProfile(null);
+        setLoading(false);
       }
     });
 
-    // Return the unsubscribe function for the auth state listener
     return () => unsubscribeAuth();
   }, []);
   
-  const currentWallet = wallet || { deposit: 0, winning: 0, bonus: 0 };
-  const totalBalance = currentWallet.deposit + currentWallet.winning + currentWallet.bonus;
-
-  const isAdminPage = pathname === '/admin';
+  const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
+  const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -95,14 +96,20 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-2">
             {loading ? null : user ? (
               <>
-                {wallet !== null && !isAdminPage && (
-                  <Button variant="outline" size="sm" asChild>
-                     <Link href="/wallet">
-                      <Wallet className="mr-2 h-4 w-4 text-primary" />
-                      ₹{totalBalance.toFixed(2)}
-                    </Link>
-                  </Button>
+                {profile?.isAdmin && (
+                   <Button variant="ghost" size="sm" asChild>
+                     <Link href="/admin">
+                       <Shield className="mr-2 h-4 w-4" />
+                       Admin Panel
+                     </Link>
+                   </Button>
                 )}
+                <Button variant="outline" size="sm" asChild>
+                    <Link href="/wallet">
+                    <Wallet className="mr-2 h-4 w-4 text-primary" />
+                    ₹{totalBalance.toFixed(2)}
+                    </Link>
+                </Button>
                 <Button variant="ghost" size="sm" asChild>
                     <Link href="/profile">
                         <User className="mr-2 h-4 w-4" />
@@ -156,14 +163,20 @@ export function Header() {
                   <div className="border-t pt-4 flex flex-col space-y-3">
                     {loading ? null : user ? (
                        <div className="space-y-2">
-                        {wallet !== null && (
-                          <Button variant="outline" asChild className="w-full justify-start">
+                         {profile?.isAdmin && (
+                            <Button variant="ghost" asChild className="w-full justify-start">
+                              <Link href="/admin">
+                                <Shield className="mr-2 h-4 w-4" />
+                                Admin Panel
+                              </Link>
+                            </Button>
+                         )}
+                         <Button variant="outline" asChild className="w-full justify-start">
                               <Link href="/wallet">
                                 <Wallet className="mr-2 h-4 w-4 text-primary" />
                                 ₹{totalBalance.toFixed(2)}
                               </Link>
                           </Button>
-                        )}
                         <Button variant="ghost" asChild className="w-full justify-start">
                              <Link href="/profile">
                                 <User className="mr-2 h-4 w-4" />
