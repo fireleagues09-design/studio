@@ -63,7 +63,13 @@ export default function RegisterPage() {
       toast({ title: "Success", description: "OTP sent to your phone!" });
     } catch (error: any) {
       console.error("Error sending OTP:", error);
-      toast({ title: "OTP Error", description: error.message || "Failed to send OTP. Please try again.", variant: "destructive" });
+      let description = "Failed to send OTP. Please try again.";
+      if (error.code === 'auth/too-many-requests') {
+        description = "You have requested too many OTPs. Please try again later.";
+      } else if (error.message) {
+        description = error.message;
+      }
+      toast({ title: "OTP Error", description, variant: "destructive" });
     } finally {
       setLoading(false);
     }
