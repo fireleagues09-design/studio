@@ -135,17 +135,9 @@ export default function ProfilePage() {
                         <Label>Phone Number</Label>
                         <p className="text-muted-foreground">{profile.phone}</p>
                     </div>
-                     <div className="space-y-2">
-                        <Label>Email</Label>
-                        <p className="text-muted-foreground">{profile.email}</p>
-                    </div>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center bg-secondary/50 p-6 rounded-b-lg">
+                <CardFooter className="flex justify-end items-center bg-secondary/50 p-6 rounded-b-lg">
                     <Button variant="ghost" onClick={handleLogout}>Logout</Button>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <KeySquare className="h-4 w-4"/>
-                        <span>User ID: {user?.uid.slice(0, 12)}...</span>
-                    </div>
                 </CardFooter>
             </Card>
         </div>
