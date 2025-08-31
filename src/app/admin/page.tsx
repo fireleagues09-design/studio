@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -29,16 +30,33 @@ function CreateTournamentDialog() {
     const [prize, setPrize] = useState('');
     const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
-    const [image, setImage] = useState('https://picsum.photos/600/400');
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
     
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setBannerFile(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+
+        let imageUrl = 'https://picsum.photos/600/400';
+        let dataAiHint = 'gaming abstract';
+
         try {
+            if (bannerFile) {
+                const storageRef = ref(storage, `tournament-banners/${Date.now()}_${bannerFile.name}`);
+                const snapshot = await uploadBytes(storageRef, bannerFile);
+                imageUrl = await getDownloadURL(snapshot.ref);
+                dataAiHint = 'custom tournament banner';
+            }
+
             await addDoc(collection(db, 'tournaments'), {
                 name,
                 date,
@@ -47,9 +65,9 @@ function CreateTournamentDialog() {
                 prize,
                 slots: Number(slots),
                 category,
-                image,
+                image: imageUrl,
                 slotsFilled: 0,
-                dataAiHint: "gaming abstract",
+                dataAiHint,
                 rules: ["Default rule 1", "Default rule 2"],
                 prizeDistribution: [{ place: "1st", prize: prize }],
                 createdAt: serverTimestamp()
@@ -59,7 +77,7 @@ function CreateTournamentDialog() {
                 description: `Tournament "${name}" has been created.`
             });
             // Reset form
-            setName(''); setDate(''); setTime(''); setEntryFee(''); setPrize(''); setSlots(''); setCategory('Clash Squad 4v4');
+            setName(''); setDate(''); setTime(''); setEntryFee(''); setPrize(''); setSlots(''); setCategory('Clash Squad 4v4'); setBannerFile(null);
             setOpen(false);
         } catch (error) {
             console.error("Error creating tournament:", error);
@@ -116,6 +134,11 @@ function CreateTournamentDialog() {
                      <div className="grid gap-2">
                         <Label htmlFor="create-slots">Total Slots</Label>
                         <Input id="create-slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} required/>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="create-banner">Tournament Banner</Label>
+                        <Input id="create-banner" type="file" onChange={handleFileChange} accept="image/*" />
+                        <p className="text-xs text-muted-foreground">Optional. If not provided, a default image will be used.</p>
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
@@ -276,10 +299,11 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [users, setUsers] = useState<UserProfile[]>([]);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<any[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dataLoading, setDataLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
@@ -296,43 +320,39 @@ export default function AdminPage() {
             } else {
                 router.push('/login');
             }
+            setLoading(false);
         });
         return () => unsubscribeAuth();
     }, [router]);
 
     useEffect(() => {
-        if (!isAdmin) {
-            if (!auth.currentUser) {
-                setLoading(false);
-            }
-            return;
-        }
+        if (!isAdmin) return;
+
+        setDataLoading(true);
 
         const usersQuery = query(collection(db, "users"), orderBy("registeredOn", "desc"));
         const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
             setUsers(usersData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching users:", error);
-            setLoading(false);
-        });
+        }, (error) => console.error("Error fetching users:", error));
 
         const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
         const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-            const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
             setTransactions(transactionsData);
-        }, (error) => {
-            console.error("Error fetching transactions:", error);
-        });
+        }, (error) => console.error("Error fetching transactions:", error));
         
-        const tournamentsQuery = query(collection(db, "tournaments"), orderBy("date", "desc"));
+        const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
         const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
             const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentType));
             setTournaments(tournamentsData);
-        }, (error) => {
-            console.error("Error fetching tournaments:", error);
-        });
+        }, (error) => console.error("Error fetching tournaments:", error));
+
+        Promise.all([
+            new Promise(res => onSnapshot(usersQuery, res)),
+            new Promise(res => onSnapshot(transactionsQuery, res)),
+            new Promise(res => onSnapshot(tournamentsQuery, res)),
+        ]).finally(() => setDataLoading(false));
 
 
         return () => {
@@ -355,59 +375,67 @@ export default function AdminPage() {
     if (loading) {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
-                <Skeleton className="h-10 w-64" />
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Skeleton className="h-28" />
-                    <Skeleton className="h-28" />
-                    <Skeleton className="h-28" />
-                    <Skeleton className="h-28" />
+                <div className="flex items-center justify-center h-64">
+                    <p>Loading Admin Panel...</p>
                 </div>
-                <Skeleton className="h-96" />
-                <Skeleton className="h-96" />
             </div>
         )
     }
 
     if (!isAdmin) {
-        return null;
+         return (
+            <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
+                <div className="flex items-center justify-center h-64">
+                    <p>Redirecting...</p>
+                </div>
+            </div>
+        )
     }
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
             <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
             
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{totalUsers}</div>
-                        <p className="text-xs text-muted-foreground">All registered users</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{totalDeposits.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">Completed deposits</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{pendingDeposits}</div>
-                        <p className="text-xs text-muted-foreground">Pending deposit requests</p>
-                    </CardContent>
-                </Card>
-            </section>
+            {dataLoading ? (
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <Skeleton className="h-28" />
+                    <Skeleton className="h-28" />
+                    <Skeleton className="h-28" />
+                </div>
+            ) : (
+                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{totalUsers}</div>
+                            <p className="text-xs text-muted-foreground">All registered users</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">₹{totalDeposits.toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground">Completed deposits</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{pendingDeposits}</div>
+                            <p className="text-xs text-muted-foreground">Pending deposit requests</p>
+                        </CardContent>
+                    </Card>
+                </section>
+            )}
             
             <section>
                 <Card>
@@ -419,35 +447,43 @@ export default function AdminPage() {
                         <CreateTournamentDialog />
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-md">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Slots</TableHead>
-                                        <TableHead>Entry Fee</TableHead>
-                                        <TableHead className="text-right">Prize</TableHead>
-                                        <TableHead className="text-center">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {tournaments.map(tournament => (
-                                        <TableRow key={tournament.id}>
-                                            <TableCell className="font-medium">{tournament.name}</TableCell>
-                                            <TableCell>{tournament.date} @ {tournament.time}</TableCell>
-                                            <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
-                                            <TableCell>{tournament.entryFee}</TableCell>
-                                            <TableCell className="text-right">₹{tournament.prize}</TableCell>
-                                            <TableCell className="text-center flex items-center justify-center gap-1">
-                                                <EditTournamentDialog tournament={tournament} />
-                                                <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
-                                            </TableCell>
+                        {dataLoading ? (
+                             <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : (
+                            <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Slots</TableHead>
+                                            <TableHead>Entry Fee</TableHead>
+                                            <TableHead className="text-right">Prize</TableHead>
+                                            <TableHead className="text-center">Actions</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {tournaments.map(tournament => (
+                                            <TableRow key={tournament.id}>
+                                                <TableCell className="font-medium">{tournament.name}</TableCell>
+                                                <TableCell>{tournament.date} @ {tournament.time}</TableCell>
+                                                <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
+                                                <TableCell>₹{tournament.entryFee}</TableCell>
+                                                <TableCell className="text-right">₹{tournament.prize}</TableCell>
+                                                <TableCell className="text-center flex items-center justify-center gap-1">
+                                                    <EditTournamentDialog tournament={tournament} />
+                                                    <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </section>
@@ -459,30 +495,38 @@ export default function AdminPage() {
                         <CardDescription>The last 10 users who registered.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-md">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>In-Game Name</TableHead>
-                                        <TableHead>Phone</TableHead>
-                                        <TableHead>Registered</TableHead>
-                                        <TableHead className="text-right">Admin</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {users.slice(0, 10).map(user => (
-                                        <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.inGameName}</TableCell>
-                                            <TableCell>{user.phone}</TableCell>
-                                            <TableCell>{formatDate(user.registeredOn)}</TableCell>
-                                            <TableCell className="text-right">
-                                                {user.isAdmin && <Badge>Admin</Badge>}
-                                            </TableCell>
+                         {dataLoading ? (
+                             <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : (
+                            <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>In-Game Name</TableHead>
+                                            <TableHead>Phone</TableHead>
+                                            <TableHead>Registered</TableHead>
+                                            <TableHead className="text-right">Admin</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {users.slice(0, 10).map(user => (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="font-medium">{user.inGameName}</TableCell>
+                                                <TableCell>{user.phone}</TableCell>
+                                                <TableCell>{formatDate(user.registeredOn)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {user.isAdmin && <Badge>Admin</Badge>}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </section>
