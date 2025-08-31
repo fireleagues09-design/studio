@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from "@/hooks/use-toast";
+import Link from 'next/link';
 
 
 type UserProfile = {
@@ -167,9 +168,11 @@ export default function ProfilePage() {
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <p className="text-4xl font-bold text-primary">₹{profile.walletBalance.toFixed(2)}</p>
                                 <div className="flex gap-2">
-                                    <Button>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add Funds
+                                    <Button asChild>
+                                        <Link href="/profile/deposit">
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Add Funds
+                                        </Link>
                                     </Button>
                                      <Button variant="outline">
                                         <MinusCircle className="mr-2 h-4 w-4" />
