@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Phone, Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { User as UserIcon, Phone, Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from "@/hooks/use-toast";
+
 
 type UserProfile = {
     inGameName: string;
@@ -35,8 +37,11 @@ const mockTransactions = [
 export default function ProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [inGameName, setInGameName] = useState('');
     const [loading, setLoading] = useState(true);
+    const [updating, setUpdating] = useState(false);
     const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -45,7 +50,9 @@ export default function ProfilePage() {
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    setProfile(userDoc.data() as UserProfile);
+                    const profileData = userDoc.data() as UserProfile
+                    setProfile(profileData);
+                    setInGameName(profileData.inGameName);
                 } else {
                     console.error("User profile not found in Firestore.");
                 }
@@ -57,6 +64,32 @@ export default function ProfilePage() {
 
         return () => unsubscribe();
     }, [router]);
+
+    const handleUpdateName = async () => {
+        if (!user || !inGameName.trim()) {
+            toast({ title: "Error", description: "In-game name cannot be empty.", variant: "destructive" });
+            return;
+        }
+        if (inGameName === profile?.inGameName) {
+            toast({ title: "Info", description: "No changes to save." });
+            return;
+        }
+
+        setUpdating(true);
+        try {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, {
+                inGameName: inGameName
+            });
+            setProfile(prevProfile => prevProfile ? { ...prevProfile, inGameName } : null);
+            toast({ title: "Success", description: "In-game name updated successfully!" });
+        } catch (error) {
+            console.error("Error updating name:", error);
+            toast({ title: "Error", description: "Failed to update name. Please try again.", variant: "destructive" });
+        } finally {
+            setUpdating(false);
+        }
+    };
     
     if (loading) {
         return (
@@ -114,9 +147,15 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid md:grid-cols-2 gap-6">
-                             <div className="grid gap-2">
+                            <div className="grid gap-2">
                                 <Label htmlFor="in-game-name" className="flex items-center gap-2 text-muted-foreground"><UserIcon className="h-4 w-4" /> In-Game Name</Label>
-                                <Input id="in-game-name" value={profile.inGameName} readOnly />
+                                <div className="flex items-center gap-2">
+                                    <Input id="in-game-name" value={inGameName} onChange={(e) => setInGameName(e.target.value)} />
+                                    <Button onClick={handleUpdateName} disabled={updating || inGameName === profile.inGameName}>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {updating ? 'Saving...' : 'Save'}
+                                    </Button>
+                                </div>
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="phone" className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" /> Phone Number</Label>
