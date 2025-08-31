@@ -65,7 +65,8 @@ export function Header() {
     router.push('/');
   };
   
-  const totalBalance = wallet ? wallet.deposit + wallet.winning + wallet.bonus : 0;
+  const currentWallet = wallet || { deposit: 0, winning: 0, bonus: 0 };
+  const totalBalance = currentWallet.deposit + currentWallet.winning + currentWallet.bonus;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

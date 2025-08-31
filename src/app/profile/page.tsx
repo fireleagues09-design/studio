@@ -22,7 +22,7 @@ import Link from 'next/link';
 type UserProfile = {
     inGameName: string;
     phone: string;
-    wallet: {
+    wallet?: {
         deposit: number;
         winning: number;
         bonus: number;
@@ -96,7 +96,8 @@ export default function ProfilePage() {
         }
     };
     
-    const totalBalance = profile?.wallet ? profile.wallet.deposit + profile.wallet.winning + profile.wallet.bonus : 0;
+    const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
+    const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
     if (loading) {
         return (
@@ -193,21 +194,21 @@ export default function ProfilePage() {
                                     <PiggyBank className="h-6 w-6 text-primary/80"/>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Deposit</p>
-                                        <p className="font-semibold">₹{profile.wallet.deposit.toFixed(2)}</p>
+                                        <p className="font-semibold">₹{wallet.deposit.toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-md">
                                     <CircleDollarSign className="h-6 w-6 text-primary/80"/>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Winnings</p>
-                                        <p className="font-semibold">₹{profile.wallet.winning.toFixed(2)}</p>
+                                        <p className="font-semibold">₹{wallet.winning.toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-md">
                                     <Gift className="h-6 w-6 text-primary/80"/>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Bonus</p>
-                                        <p className="font-semibold">₹{profile.wallet.bonus.toFixed(2)}</p>
+                                        <p className="font-semibold">₹{wallet.bonus.toFixed(2)}</p>
                                     </div>
                                 </div>
                             </div>
