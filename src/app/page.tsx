@@ -12,20 +12,28 @@ import {
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { MOCK_BANNERS } from "@/lib/mock-data";
 import TournamentCard from "@/components/TournamentCard";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
 
+type Banner = {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  dataAiHint: string;
+};
 
 export default function Home() {
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
+  const [loadingBanners, setLoadingBanners] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
@@ -45,10 +53,20 @@ export default function Home() {
         setLoadingTournaments(false);
     });
 
+    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
+    const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
+        const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+        setBanners(bannersData);
+        setLoadingBanners(false);
+    }, (error) => {
+        console.error("Error fetching banners:", error);
+        setLoadingBanners(false);
+    });
 
     return () => {
         unsubscribeAuth();
         unsubscribeTournaments();
+        unsubscribeBanners();
     };
   }, []);
 
@@ -82,37 +100,41 @@ export default function Home() {
       </section>
 
       <div className="container mx-auto px-4">
-        <Carousel
-          opts={{
-            align: "start",
-            loop: true,
-          }}
-          className="w-full"
-        >
-          <CarouselContent>
-            {MOCK_BANNERS.map((banner, index) => (
-              <CarouselItem key={index}>
-                <Card className="overflow-hidden">
-                  <div className="relative aspect-video md:aspect-[2.4/1]">
-                    <Image
-                      src={banner.image}
-                      alt={banner.title}
-                      data-ai-hint={banner.dataAiHint}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 flex flex-col justify-end p-6 md:p-8">
-                      <h2 className="text-2xl md:text-4xl font-bold text-white">{banner.title}</h2>
-                      <p className="text-md md:text-lg text-neutral-200 mt-2">{banner.description}</p>
+        {loadingBanners ? (
+            <Skeleton className="w-full aspect-video md:aspect-[2.4/1]" />
+        ) : (
+            <Carousel
+            opts={{
+                align: "start",
+                loop: true,
+            }}
+            className="w-full"
+            >
+            <CarouselContent>
+                {banners.map((banner, index) => (
+                <CarouselItem key={index}>
+                    <Card className="overflow-hidden">
+                    <div className="relative aspect-video md:aspect-[2.4/1]">
+                        <Image
+                        src={banner.image}
+                        alt={banner.title}
+                        data-ai-hint={banner.dataAiHint}
+                        fill
+                        className="object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/50 flex flex-col justify-end p-6 md:p-8">
+                        <h2 className="text-2xl md:text-4xl font-bold text-white">{banner.title}</h2>
+                        <p className="text-md md:text-lg text-neutral-200 mt-2">{banner.description}</p>
+                        </div>
                     </div>
-                  </div>
-                </Card>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="hidden sm:flex" />
-          <CarouselNext className="hidden sm:flex" />
-        </Carousel>
+                    </Card>
+                </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className="hidden sm:flex" />
+            <CarouselNext className="hidden sm:flex" />
+            </Carousel>
+        )}
       </div>
       
       <main className="container mx-auto px-4 flex flex-col gap-12 md:gap-16">
@@ -152,5 +174,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

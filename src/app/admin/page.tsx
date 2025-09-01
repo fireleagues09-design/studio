@@ -2,14 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -21,7 +21,18 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Image from 'next/image';
+import { Textarea } from '@/components/ui/textarea';
 
+
+type Banner = {
+    id: string;
+    title: string;
+    description: string;
+    image: string;
+    dataAiHint: string;
+    createdAt: any;
+};
 
 function CreateTournamentDialog() {
     const [name, setName] = useState('');
@@ -404,6 +415,172 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
     );
 }
 
+function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBanners: React.Dispatch<React.SetStateAction<Banner[]>> }) {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [newBanner, setNewBanner] = useState<{ title: string; description: string; file: File | null }>({ title: '', description: '', file: null });
+    const { toast } = useToast();
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setNewBanner(prev => ({ ...prev, file: e.target.files![0] }));
+        }
+    };
+    
+    const handleUpdateBanner = async (bannerId: string, field: 'title' | 'description', value: string) => {
+        const bannerDocRef = doc(db, 'banners', bannerId);
+        await updateDoc(bannerDocRef, { [field]: value });
+        setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, [field]: value } : b));
+    };
+    
+    const handleImageChange = async (bannerId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setLoading(true);
+            try {
+                const storageRef = ref(storage, `banners/${bannerId}`);
+                await uploadBytes(storageRef, file);
+                const imageUrl = await getDownloadURL(storageRef);
+                
+                const bannerDocRef = doc(db, 'banners', bannerId);
+                await updateDoc(bannerDocRef, { image: imageUrl });
+                
+                setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, image: imageUrl } : b));
+                toast({ title: "Success", description: "Banner image updated." });
+            } catch (error) {
+                console.error("Error updating banner image: ", error);
+                toast({ title: "Error", description: "Failed to update image.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleAddBanner = async () => {
+        if (!newBanner.file || !newBanner.title || !newBanner.description) {
+            toast({ title: "Error", description: "Please fill all fields and select an image.", variant: "destructive" });
+            return;
+        }
+        setLoading(true);
+        try {
+            const bannerId = doc(collection(db, 'banners')).id;
+            const storageRef = ref(storage, `banners/${bannerId}`);
+            await uploadBytes(storageRef, newBanner.file);
+            const imageUrl = await getDownloadURL(storageRef);
+
+            const bannerDocRef = doc(db, 'banners', bannerId);
+            await setDoc(bannerDocRef, {
+                title: newBanner.title,
+                description: newBanner.description,
+                image: imageUrl,
+                dataAiHint: "custom banner",
+                createdAt: serverTimestamp()
+            });
+
+            toast({ title: "Success", description: "New banner added." });
+            setNewBanner({ title: '', description: '', file: null });
+
+        } catch (error) {
+            console.error("Error adding banner: ", error);
+            toast({ title: "Error", description: "Failed to add new banner.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteBanner = async (banner: Banner) => {
+        try {
+            // Delete Firestore document
+            await deleteDoc(doc(db, 'banners', banner.id));
+
+            // Delete image from Storage
+            const imageRef = ref(storage, banner.image);
+            await deleteObject(imageRef);
+
+            setBanners(prev => prev.filter(b => b.id !== banner.id));
+            toast({ title: "Success", description: "Banner deleted." });
+        } catch (error) {
+            console.error("Error deleting banner: ", error);
+            toast({ title: "Error", description: "Failed to delete banner.", variant: "destructive" });
+        }
+    };
+
+
+    return (
+         <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                 <Button variant="outline">
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Manage Banners
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Homepage Banner Management</DialogTitle>
+                    <DialogDescription>Add, edit, or remove carousel banners.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+                    {banners.map((banner) => (
+                        <Card key={banner.id}>
+                            <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-start">
+                                <div className="relative w-full md:w-48 h-28 flex-shrink-0 rounded-md overflow-hidden">
+                                     <Image src={banner.image} alt={banner.title} fill className="object-cover" />
+                                     <Label htmlFor={`image-upload-${banner.id}`} className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 hover:opacity-100 cursor-pointer transition-opacity">
+                                         <Pencil className="h-6 w-6"/>
+                                     </Label>
+                                     <Input id={`image-upload-${banner.id}`} type="file" className="hidden" accept="image/*" onChange={(e) => handleImageChange(banner.id, e)}/>
+                                </div>
+                                <div className="flex-grow space-y-2">
+                                     <Input
+                                        defaultValue={banner.title}
+                                        onBlur={(e) => handleUpdateBanner(banner.id, 'title', e.target.value)}
+                                        className="text-lg font-semibold"
+                                     />
+                                     <Textarea
+                                        defaultValue={banner.description}
+                                        onBlur={(e) => handleUpdateBanner(banner.id, 'description', e.target.value)}
+                                        rows={2}
+                                     />
+                                </div>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive flex-shrink-0"><Trash className="h-4 w-4"/></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Banner?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently remove the "{banner.title}" banner.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteBanner(banner)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </CardContent>
+                        </Card>
+                    ))}
+                     <div className="p-4 border-2 border-dashed rounded-lg">
+                        <h3 className="text-lg font-medium mb-2">Add New Banner</h3>
+                        <div className="space-y-4">
+                             <Input placeholder="Banner Title" value={newBanner.title} onChange={(e) => setNewBanner(prev => ({ ...prev, title: e.target.value }))} />
+                             <Textarea placeholder="Banner Description" value={newBanner.description} onChange={(e) => setNewBanner(prev => ({ ...prev, description: e.target.value }))} />
+                             <Input type="file" accept="image/*" onChange={handleFileChange} />
+                             <Button onClick={handleAddBanner} disabled={loading}>
+                                {loading ? "Adding..." : "Add Banner"}
+                             </Button>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -411,6 +588,7 @@ export default function AdminPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
+    const [banners, setBanners] = useState<Banner[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const router = useRouter();
@@ -461,11 +639,18 @@ export default function AdminPage() {
             setDataLoading(false);
         });
 
+        const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
+        const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
+            const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+            setBanners(bannersData);
+        }, (error) => console.error("Error fetching banners:", error));
+
 
         return () => {
             unsubscribeUsers();
             unsubscribeTransactions();
             unsubscribeTournaments();
+            unsubscribeBanners();
         };
     }, [isAdmin]);
     
@@ -544,6 +729,18 @@ export default function AdminPage() {
                 </section>
             )}
             
+            <section>
+                 <Card>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <CardTitle>Homepage Banners</CardTitle>
+                            <CardDescription>Manage the images in the homepage carousel.</CardDescription>
+                        </div>
+                        <BannerManagerDialog banners={banners} setBanners={setBanners} />
+                    </CardHeader>
+                </Card>
+            </section>
+
             <section>
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -648,9 +845,3 @@ export default function AdminPage() {
 
         </div>
     );
-
-    
-
-    
-
-    
