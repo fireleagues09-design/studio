@@ -1,13 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
+import { db, auth, storage } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -34,7 +40,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { deleteSlider, uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
@@ -105,50 +110,43 @@ export default function SliderAdmin() {
     setUploading(true);
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        try {
-            const idToken = await user.getIdToken(true);
-            const result = await uploadSlider(base64data, file.type, idToken);
+        // Step 1: Verify the user is an admin before proceeding
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
 
-            if (result.success) {
-                toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-                setFile(null);
-                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-                if (fileInput) fileInput.value = '';
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (err: any) {
-            console.error('Upload process failed:', err);
-            toast({ 
-                title: 'Upload Failed', 
-                description: err.message || 'An unknown error occurred.', 
-                variant: 'destructive' 
-            });
-        } finally {
-            setUploading(false);
+        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
+            throw new Error("Permission denied: You are not an administrator.");
         }
-      };
-      reader.onerror = (error) => {
-        console.error("File reading failed:", error);
+
+        // Step 2: Upload file to Storage
+        const storagePath = `sliders/${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, file);
+
+        // Step 3: Get download URL
+        const downloadURL = await getDownloadURL(storageRef);
+
+        // Step 4: Save to Firestore
+        await addDoc(collection(db, 'sliders'), {
+            url: downloadURL,
+            storagePath: storagePath,
+            createdAt: serverTimestamp(),
+        });
+        
+        toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+        setFile(null);
+        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+
+    } catch (err: any) {
+        console.error('Upload process failed:', err);
         toast({ 
-            title: 'Error', 
-            description: "Could not read the selected file. Please try again.", 
+            title: 'Upload Failed', 
+            description: err.message || 'An unknown error occurred.', 
             variant: 'destructive' 
         });
+    } finally {
         setUploading(false);
-      };
-    } catch (err: any) {
-      console.error("Error setting up file reader:", err);
-      toast({ 
-          title: 'Error', 
-          description: "An unexpected error occurred. Please refresh and try again.", 
-          variant: 'destructive' 
-      });
-      setUploading(false);
     }
   };
 
@@ -158,13 +156,20 @@ export default function SliderAdmin() {
         return;
     }
     try {
-        const idToken = await user.getIdToken(true);
-        const result = await deleteSlider(slider.id, slider.storagePath, idToken);
-        if (result.success) {
-            toast({ title: 'Success', description: 'Slider deleted successfully.' });
-        } else {
-            throw new Error(result.message);
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
+            throw new Error("Permission denied: You are not an administrator.");
         }
+        // Delete from Storage
+        const storageRef = ref(storage, slider.storagePath);
+        await deleteObject(storageRef);
+        // Delete from Firestore
+        await deleteDoc(doc(db, 'sliders', slider.id));
+        
+        toast({ title: 'Success', description: 'Slider deleted successfully.' });
+
     } catch (error: any) {
         console.error('Error deleting slider:', error);
         toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
