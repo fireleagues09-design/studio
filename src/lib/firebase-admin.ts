@@ -1,18 +1,21 @@
 
 import admin from 'firebase-admin';
+import { config } from 'dotenv';
+
+// Load environment variables from .env file
+config();
 
 // This is a more robust way to initialize the Firebase Admin SDK.
 // It ensures that we don't try to re-initialize the app if it's already been done.
 if (!admin.apps.length) {
   try {
-    // When running in App Hosting, the GOOGLE_CLOUD_PROJECT and GOOGLE_STORAGE_BUCKET
-    // environment variables are automatically populated.
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT;
-    const storageBucket = `${projectId}.appspot.com`;
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID;
 
     if (!projectId) {
-      throw new Error('GOOGLE_CLOUD_PROJECT environment variable not set.');
+      throw new Error('GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID environment variable not set.');
     }
+
+    const storageBucket = `${projectId}.appspot.com`;
 
     admin.initializeApp({
       // The service account credentials should be automatically available
@@ -25,9 +28,11 @@ if (!admin.apps.length) {
     console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
     console.error('Firebase Admin SDK initialization error:', error.message);
+    // You might want to handle this more gracefully, but for now, we'll log it.
   }
 }
 
+// These will now be safely initialized.
 export const auth = admin.auth();
 export const db = admin.firestore();
 export const storage = admin.storage();
