@@ -46,13 +46,14 @@ export function FloatingHomeButton() {
 
   const handleDragStart = (clientX: number, clientY: number) => {
     if (buttonRef.current) {
+        setIsDragging(true);
         const rect = buttonRef.current.getBoundingClientRect();
         setOffset({ x: clientX - rect.left, y: clientY - rect.top });
-        setIsDragging(true);
     }
   };
 
   const handleMouseDown = (e: MouseEvent) => {
+    e.preventDefault();
     handleDragStart(e.clientX, e.clientY);
   };
   
@@ -109,7 +110,7 @@ export function FloatingHomeButton() {
       document.removeEventListener('touchend', handleDragEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, offset]);
+  }, [isDragging]);
 
 
   if (!isVisible || !isMounted) {
