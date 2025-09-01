@@ -15,7 +15,6 @@ export function FloatingHomeButton() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,7 +86,7 @@ export function FloatingHomeButton() {
   };
 
   const handleDragEnd = () => {
-    setTimeout(() => setIsDragging(false), 0);
+    setIsDragging(false);
   };
 
   useEffect(() => {
