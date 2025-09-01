@@ -104,44 +104,56 @@ export default function SliderAdmin() {
       toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive' });
       return;
     }
-
+    
     setUploading(true);
     setUploadProgress(0);
 
     try {
-        const storagePath = `sliders/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+          throw new Error('Permission denied. User is not an admin.');
+      }
 
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                throw error; // Rethrow to be caught by the outer catch block
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                await addDoc(collection(db, 'sliders'), {
-                    url: downloadURL,
-                    storagePath: storagePath,
-                    createdAt: serverTimestamp(),
-                });
-                toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-                setFile(null);
-                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-                if (fileInput) fileInput.value = '';
-            }
-        );
+      const storagePath = `sliders/${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error("Upload failed:", error);
+          throw error;
+        },
+        async () => {
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, 'sliders'), {
+                url: downloadURL,
+                storagePath: storagePath,
+                createdAt: serverTimestamp(),
+            });
+            toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+            setFile(null);
+            const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+          } catch(error) {
+             console.error("Error saving slider data:", error);
+             toast({ title: 'Database Error', description: 'Image uploaded but failed to save to database.', variant: 'destructive' });
+          } finally {
+            setUploading(false);
+          }
+        }
+      );
     } catch (err: any) {
         console.error('Upload process failed:', err);
         toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive' });
-    } finally {
-      setUploading(false);
+        setUploading(false);
     }
   };
+
 
   async function handleDelete(slider: Slider) {
       try {
@@ -257,3 +269,5 @@ export default function SliderAdmin() {
     </Card>
   );
 }
+
+    
