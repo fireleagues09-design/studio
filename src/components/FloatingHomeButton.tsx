@@ -15,6 +15,7 @@ export function FloatingHomeButton() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -44,46 +45,31 @@ export function FloatingHomeButton() {
     }
   }, [pathname]);
 
-  const handleMouseDown = (e: MouseEvent) => {
+  const handleDragStart = (clientX: number, clientY: number) => {
     if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      setIsDragging(true);
-    }
-  };
-  
-  const handleTouchStart = (e: TouchEvent) => {
-    if (buttonRef.current) {
-        const touch = e.touches[0];
         const rect = buttonRef.current.getBoundingClientRect();
-        setOffset({ x: touch.clientX - rect.left, y: touch.clientY - rect.top });
+        setOffset({ x: clientX - rect.left, y: clientY - rect.top });
         setIsDragging(true);
     }
   };
 
-  const handleMouseMove = (e: globalThis.MouseEvent) => {
-    if (isDragging && buttonRef.current) {
-      const buttonWidth = buttonRef.current.offsetWidth;
-      const buttonHeight = buttonRef.current.offsetHeight;
-      let newX = e.clientX - offset.x;
-      let newY = e.clientY - offset.y;
-      
-      // Boundary checks
-      newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
-      newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
-
-      setPosition({ x: newX, y: newY });
-    }
+  const handleMouseDown = (e: MouseEvent) => {
+    handleDragStart(e.clientX, e.clientY);
+  };
+  
+  const handleTouchStart = (e: TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragStart(touch.clientX, touch.clientY);
   };
 
-  const handleTouchMove = (e: globalThis.TouchEvent) => {
+  const handleDragMove = (clientX: number, clientY: number) => {
     if (isDragging && buttonRef.current) {
-        const touch = e.touches[0];
         const buttonWidth = buttonRef.current.offsetWidth;
         const buttonHeight = buttonRef.current.offsetHeight;
-        let newX = touch.clientX - offset.x;
-        let newY = touch.clientY - offset.y;
+        let newX = clientX - offset.x;
+        let newY = clientY - offset.y;
         
+        // Boundary checks
         newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
         newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
 
@@ -91,32 +77,37 @@ export function FloatingHomeButton() {
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handleMouseMove = (e: globalThis.MouseEvent) => {
+    handleDragMove(e.clientX, e.clientY);
   };
-  
-  const handleTouchEnd = () => {
-    setIsDragging(false);
+
+  const handleTouchMove = (e: globalThis.TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragMove(touch.clientX, touch.clientY);
+  };
+
+  const handleDragEnd = () => {
+    setTimeout(() => setIsDragging(false), 0);
   };
 
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseup', handleDragEnd);
       document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleTouchEnd);
+      document.addEventListener('touchend', handleDragEnd);
     } else {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', handleDragEnd);
       document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchend', handleDragEnd);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', handleDragEnd);
       document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchend', handleDragEnd);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging, offset]);
@@ -140,7 +131,7 @@ export function FloatingHomeButton() {
       onTouchStart={handleTouchStart}
     >
       <Link href="/" className="w-full h-full flex items-center justify-center" draggable="false" onClick={(e) => isDragging && e.preventDefault()}>
-        <Home className="h-5 w-5 text-[hsl(var(--primary-foreground))]" />
+        <Home className="h-5 w-5 text-white" />
       </Link>
     </div>
   );
