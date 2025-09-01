@@ -3,7 +3,6 @@
 
 import { auth, db, storage } from '@/lib/firebase-admin';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 
 type ActionResponse = {
     success: boolean;
@@ -11,12 +10,9 @@ type ActionResponse = {
 };
 
 // This function securely uploads a slider image using the Firebase Admin SDK.
-export async function uploadSlider(base64Data: string, fileName: string, fileType: string): Promise<ActionResponse> {
+export async function uploadSlider(token: string, base64Data: string, fileName: string, fileType: string): Promise<ActionResponse> {
     try {
-        // 1. Verify user is an admin
-        const cookieStore = cookies();
-        const token = cookieStore.get('firebaseIdToken')?.value;
-
+        // 1. Verify user is an admin using the passed token
         if (!token) {
             throw new Error('User not authenticated.');
         }
@@ -68,12 +64,9 @@ export async function uploadSlider(base64Data: string, fileName: string, fileTyp
 
 
 // This function securely deletes a slider image and its Firestore document.
-export async function deleteSlider(docId: string, storagePath: string): Promise<ActionResponse> {
+export async function deleteSlider(token: string, docId: string, storagePath: string): Promise<ActionResponse> {
      try {
         // 1. Verify user is an admin
-        const cookieStore = cookies();
-        const token = cookieStore.get('firebaseIdToken')?.value;
-
         if (!token) {
             throw new Error('User not authenticated.');
         }
@@ -100,3 +93,4 @@ export async function deleteSlider(docId: string, storagePath: string): Promise<
         return { success: false, message: `Deletion failed: ${error.message}` };
     }
 }
+
