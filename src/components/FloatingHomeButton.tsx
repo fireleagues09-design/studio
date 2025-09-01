@@ -23,8 +23,9 @@ export function FloatingHomeButton() {
     setIsMounted(true);
     // Set initial position after component mounts to safely access `window`
     if (buttonRef.current) {
-        const initialX = window.innerWidth - 80;
-        const initialY = window.innerHeight - 80;
+        // Position it at the bottom-right corner
+        const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20; // 20px margin from right
+        const initialY = window.innerHeight - buttonRef.current.offsetHeight - 20; // 20px margin from bottom
         positionRef.current = { x: initialX, y: initialY };
         buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
     }
@@ -36,8 +37,9 @@ export function FloatingHomeButton() {
     const handleResize = () => {
         if (!buttonRef.current) return;
         const { offsetWidth, offsetHeight } = buttonRef.current;
-        const newX = Math.min(positionRef.current.x, window.innerWidth - offsetWidth - 16);
-        const newY = Math.min(positionRef.current.y, window.innerHeight - offsetHeight - 16);
+        // Keep it within bounds on resize
+        const newX = Math.max(16, Math.min(positionRef.current.x, window.innerWidth - offsetWidth - 16));
+        const newY = Math.max(16, Math.min(positionRef.current.y, window.innerHeight - offsetHeight - 16));
         positionRef.current = { x: newX, y: newY };
         buttonRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
     };
@@ -53,8 +55,6 @@ export function FloatingHomeButton() {
     buttonRef.current.classList.add('grabbing');
     
     const rect = buttonRef.current.getBoundingClientRect();
-    // We calculate the offset from the top-left of the button element,
-    // not from the overall viewport position.
     offsetRef.current = {
       x: clientX - rect.left,
       y: clientY - rect.top,
@@ -69,7 +69,6 @@ export function FloatingHomeButton() {
   const handleDragMove = (clientX: number, clientY: number) => {
     if (!isDraggingRef.current || !buttonRef.current) return;
     
-    // Only set hasMoved to true if it moves more than a small threshold
     if (!hasMovedRef.current) {
         const dx = clientX - (positionRef.current.x + offsetRef.current.x);
         const dy = clientY - (positionRef.current.y + offsetRef.current.y);
@@ -108,7 +107,7 @@ export function FloatingHomeButton() {
 
   const handleMouseDown = (e: ReactMouseEvent) => handleDragStart(e.clientX, e.clientY);
   const handleTouchStart = (e: ReactTouchEvent) => {
-    e.preventDefault(); // Prevents scrolling on touch devices
+    e.preventDefault(); 
     handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
   };
   const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
