@@ -4,16 +4,12 @@
 import { Buffer } from 'node:buffer';
 import { auth, db, storage } from '@/lib/firebase-admin';
 
-async function verifyAdmin(idToken: string): Promise<boolean> {
+async function verifyToken(idToken: string): Promise<boolean> {
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
-    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-    if (userDoc.exists && userDoc.data()?.isAdmin) {
-      return true;
-    }
-    return false;
+    await auth.verifyIdToken(idToken);
+    return true;
   } catch (error) {
-    console.error('Error verifying admin token:', error);
+    console.error('Error verifying token:', error);
     return false;
   }
 }
@@ -23,9 +19,9 @@ export async function uploadSlider(
   fileData: { base64: string; type: string; name: string }
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-      return { success: false, message: 'Permission denied. User is not an admin.' };
+    const isAuthenticated = await verifyToken(idToken);
+    if (!isAuthenticated) {
+      return { success: false, message: 'Authentication failed.' };
     }
 
     const base64Data = fileData.base64.split(',')[1];
