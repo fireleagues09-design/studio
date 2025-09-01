@@ -21,26 +21,27 @@ export function FloatingHomeButton() {
   
   useEffect(() => {
     setIsMounted(true);
-    
-    if (buttonRef.current) {
-        const setInitialPosition = () => {
-            if (buttonRef.current) {
-                const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20;
-                const initialY = window.innerHeight - buttonRef.current.offsetHeight - 20;
-                positionRef.current = { x: initialX, y: initialY };
-                buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
-            }
-        };
-        setInitialPosition();
-    }
+    // The rest of the logic is now in the second useEffect
   }, []);
 
   useEffect(() => {
+    // Only run this effect on the client after the component is mounted
+    if (!isMounted) return;
+
+    // Set initial position once mounted
+    if (buttonRef.current) {
+        const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20;
+        const initialY = window.innerHeight - buttonRef.current.offsetHeight - 20;
+        positionRef.current = { x: initialX, y: initialY };
+        buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
+    }
+    
     setIsVisible(pathname !== '/');
 
     const handleResize = () => {
         if (!buttonRef.current) return;
         const { offsetWidth, offsetHeight } = buttonRef.current;
+        // Adjust position on resize to stay within bounds
         const newX = Math.max(16, Math.min(positionRef.current.x, window.innerWidth - offsetWidth - 16));
         const newY = Math.max(16, Math.min(positionRef.current.y, window.innerHeight - offsetHeight - 16));
         positionRef.current = { x: newX, y: newY };
@@ -49,7 +50,8 @@ export function FloatingHomeButton() {
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [pathname]);
+
+  }, [pathname, isMounted]);
 
   const handleDragStart = (clientX: number, clientY: number) => {
     if (!buttonRef.current) return;
@@ -75,7 +77,7 @@ export function FloatingHomeButton() {
     if (!hasMovedRef.current) {
         const dx = clientX - (positionRef.current.x + offsetRef.current.x);
         const dy = clientY - (positionRef.current.y + offsetRef.current.y);
-        if (Math.sqrt(dx*dx + dy*dy) > 5) {
+        if (Math.sqrt(dx*dx + dy*dy) > 5) { // Threshold to detect a drag vs a click
             hasMovedRef.current = true;
         }
     }
@@ -85,6 +87,7 @@ export function FloatingHomeButton() {
     let newX = clientX - offsetRef.current.x;
     let newY = clientY - offsetRef.current.y;
     
+    // Boundary checks
     newX = Math.max(16, Math.min(newX, window.innerWidth - offsetWidth - 16));
     newY = Math.max(16, Math.min(newY, window.innerHeight - offsetHeight - 16));
 
@@ -109,12 +112,12 @@ export function FloatingHomeButton() {
 
   const handleMouseDown = (e: ReactMouseEvent) => handleDragStart(e.clientX, e.clientY);
   const handleTouchStart = (e: ReactTouchEvent) => {
-    e.preventDefault(); 
+    e.preventDefault(); // Prevents scrolling on touch devices while dragging
     handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
   };
   const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
   const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
+      e.preventDefault(); // Prevents scrolling on touch devices while dragging
       handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
   };
   const handleMouseUp = () => handleDragEnd();
