@@ -42,10 +42,9 @@ function Logo() {
             strokeLinejoin="round"
             className="h-8 w-8 text-primary"
         >
-            <path d="M15.5 2.8a2 2 0 0 0-2.8 0L8.7 6.8a2 2 0 0 0 0 2.8l4 4a2 2 0 0 0 2.8 0l4-4a2 2 0 0 0 0-2.8z"></path>
-            <path d="M2.8 15.5a2 2 0 0 0 0 2.8l4 4a2 2 0 0 0 2.8 0l4-4a2 2 0 0 0 0-2.8z"></path>
-            <path d="m13.4 7.6 5.1 5.1"></path>
-            <path d="m7.6 13.4 5.1 5.1"></path>
+            <path d="M14.5 4.5c-2-2-5-2-7 0s-2 5 0 7c2 2 5 2 7 0s2-5 0-7z" />
+            <path d="M12 17a7 7 0 0 0 5-12.5" />
+            <path d="M12 17a4 4 0 0 0 4-8" />
         </svg>
     )
 }
@@ -93,7 +92,7 @@ export function Header() {
         <div className="flex-1 md:flex-none">
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <Logo />
-              <span className="font-bold text-lg">FireLeagues</span>
+              <span className="font-bold text-lg hidden sm:inline-block">FireLeagues</span>
             </Link>
         </div>
 
