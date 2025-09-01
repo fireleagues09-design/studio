@@ -3,33 +3,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    // Helper function to check for admin status
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Users can only read/update their own data. Anyone can create a user doc (for registration).
+    match /users/{userId} {
+      allow read;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if false; // Generally, users shouldn't delete their own accounts directly
+    }
+
+    // Anyone can read tournaments. Only admins can write.
+    match /tournaments/{tournamentId} {
+      allow read;
+      allow write: if isAdmin();
     }
     
-    // Sliders: Public can read, only admin can write.
-    match /sliders/{sliderId} {
-        allow read: if true;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Users: Public can read basic info, but users can only write to their own doc.
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth.uid == userId;
-    }
-
-    // Tournaments: Public can read, only admins can modify.
-    match /tournaments/{tournamentId} {
-      allow read: if true;
-      allow create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Transactions: Users can only read/create their own. Admins can manage all.
+    // Users can only read their own transactions. Admins can write.
     match /transactions/{transactionId} {
-      allow read, create: if request.auth.uid == request.resource.data.userId;
-      allow update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+       allow read: if request.auth.uid == resource.data.userId;
+       allow write: if isAdmin();
+    }
+    
+    // Anyone can read sliders. Only admins can write.
+    match /sliders/{sliderId} {
+      allow read;
+      allow write: if isAdmin();
     }
   }
 }

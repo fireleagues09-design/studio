@@ -5,13 +5,26 @@ import { auth as adminAuth, db, storage } from '@/lib/firebase-admin';
 async function verifyAdmin(idToken: string): Promise<boolean> {
     try {
         const decodedToken = await adminAuth.verifyIdToken(idToken);
-        const user = await adminAuth.getUser(decodedToken.uid);
-        return user.customClaims?.isAdmin === true;
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        
+        if (!userDoc.exists) {
+            console.error(`Admin verification failed: User document not found for UID ${decodedToken.uid}`);
+            return false;
+        }
+
+        const userData = userDoc.data();
+        if (userData?.isAdmin !== true) {
+            console.error(`Admin verification failed: User ${decodedToken.uid} is not an admin. isAdmin field is: ${userData?.isAdmin}`);
+            return false;
+        }
+        
+        return true;
     } catch (error) {
         console.error('Error verifying admin token:', error);
         return false;
     }
 }
+
 
 export async function uploadSlider(base64Data: string, contentType: string, idToken: string) {
     const isAdmin = await verifyAdmin(idToken);
