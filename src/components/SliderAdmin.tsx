@@ -7,10 +7,7 @@ import {
   onSnapshot,
   query,
   orderBy,
-  deleteDoc,
-  doc,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -52,11 +49,12 @@ export default function SliderAdmin() {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -134,11 +132,20 @@ export default function SliderAdmin() {
             setUploading(false);
         }
       };
+      reader.onerror = (error) => {
+        console.error("File reading failed:", error);
+        toast({ 
+            title: 'Error', 
+            description: "Could not read the selected file. Please try again.", 
+            variant: 'destructive' 
+        });
+        setUploading(false);
+      };
     } catch (err: any) {
-      console.error("File reading failed:", err);
+      console.error("Error setting up file reader:", err);
       toast({ 
           title: 'Error', 
-          description: "Could not read the selected file. Please try again.", 
+          description: "An unexpected error occurred. Please refresh and try again.", 
           variant: 'destructive' 
       });
       setUploading(false);
@@ -147,7 +154,7 @@ export default function SliderAdmin() {
 
   const handleDelete = async (slider: Slider) => {
     if (!user) {
-        toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+        toast({ title: 'Error', description: 'You must be logged in to delete sliders.', variant: 'destructive' });
         return;
     }
     try {
@@ -180,14 +187,14 @@ export default function SliderAdmin() {
             accept="image/png, image/jpeg, image/gif, image/webp"
             onChange={handleFileChange}
             className="w-full sm:w-auto flex-grow"
-            disabled={uploading}
+            disabled={uploading || authLoading}
           />
           <Button
             onClick={handleUpload}
-            disabled={uploading || !file}
+            disabled={uploading || !file || authLoading}
             className="w-full sm:w-auto"
           >
-            {uploading ? (
+            {authLoading ? 'Authenticating...' : uploading ? (
               'Uploading...'
             ) : (
               <>
@@ -228,7 +235,7 @@ export default function SliderAdmin() {
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
+                        <Button variant="destructive" size="icon" disabled={authLoading}>
                           <Trash2 className="h-5 w-5" />
                         </Button>
                       </AlertDialogTrigger>
