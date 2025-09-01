@@ -56,14 +56,18 @@ export function HomeSlider() {
 
   // Do not render the carousel if there are no sliders to display
   if (sliders.length === 0) {
-    return null;
+    return (
+        <div className="w-full aspect-[12/5] flex items-center justify-center bg-muted rounded-xl">
+            <p className="text-muted-foreground">No slides available. Upload one in the admin panel.</p>
+        </div>
+    );
   }
 
   return (
     <Carousel
       className="w-full"
       plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
-      opts={{ loop: true }}
+      opts={{ loop: sliders.length > 1 }}
     >
       <CarouselContent>
         {sliders.map((slider, index) => (
