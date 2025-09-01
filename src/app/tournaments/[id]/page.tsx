@@ -44,70 +44,70 @@ type TournamentPageProps = {
   };
 };
 
-export default function TournamentPage({ params }: TournamentPageProps) {
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [loading, setLoading] = useState(true);
+type TournamentDetailViewProps = {
+    tournamentId: string;
+}
 
-  useEffect(() => {
-    const tournamentDocRef = doc(db, 'tournaments', params.id);
-    const unsubscribe = onSnapshot(tournamentDocRef, (doc) => {
-        if (doc.exists()) {
-            setTournament({ id: doc.id, ...doc.data() } as Tournament);
-        } else {
-            console.error("Tournament not found!");
-            setTournament(null);
-        }
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching tournament:", error);
-        setLoading(false);
-    });
+function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
+    const [tournament, setTournament] = useState<Tournament | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    return () => unsubscribe();
-  }, [params.id]);
+    useEffect(() => {
+        const tournamentDocRef = doc(db, 'tournaments', tournamentId);
+        const unsubscribe = onSnapshot(tournamentDocRef, (doc) => {
+            if (doc.exists()) {
+                setTournament({ id: doc.id, ...doc.data() } as Tournament);
+            } else {
+                console.error("Tournament not found!");
+                setTournament(null);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching tournament:", error);
+            setLoading(false);
+        });
 
+        return () => unsubscribe();
+    }, [tournamentId]);
 
-  if (loading) {
+    if (loading) {
       return (
-        <div className="container mx-auto px-4 py-8 md:py-12">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <Skeleton className="h-96 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                </div>
-                <div className="lg:col-span-1">
-                    <Skeleton className="h-[500px] w-full" />
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+                <Skeleton className="h-96 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
+            <div className="lg:col-span-1">
+                <Skeleton className="h-[500px] w-full" />
             </div>
         </div>
       )
-  }
+    }
 
-  if (!tournament) {
-    notFound();
-  }
+    if (!tournament) {
+        notFound();
+    }
+    
+    const {
+        name,
+        category,
+        teamType,
+        image,
+        dataAiHint,
+        prize,
+        slots,
+        slotsFilled,
+        date,
+        time,
+        rules,
+        prizeDistribution,
+    } = tournament;
 
-  const {
-    name,
-    category,
-    teamType,
-    image,
-    dataAiHint,
-    prize,
-    slots,
-    slotsFilled,
-    date,
-    time,
-    rules,
-    prizeDistribution,
-  } = tournament;
+    const progress = (slotsFilled / slots) * 100;
+    const isFilled = slotsFilled >= slots;
 
-  const progress = (slotsFilled / slots) * 100;
-  const isFilled = slotsFilled >= slots;
-
-  return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Card className="overflow-hidden">
             <div className="relative h-64 md:h-96 w-full">
@@ -235,6 +235,13 @@ export default function TournamentPage({ params }: TournamentPageProps) {
           </Card>
         </div>
       </div>
+    );
+}
+
+export default function TournamentPage({ params }: TournamentPageProps) {
+  return (
+    <div className="container mx-auto px-4 py-8 md:py-12">
+      <TournamentDetailView key={params.id} tournamentId={params.id} />
     </div>
   );
 }
