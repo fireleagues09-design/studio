@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -414,6 +414,119 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
     );
 }
 
+function ManageSlidersDialog() {
+    const [banners, setBanners] = useState<Banner[]>([]);
+    const [loadingBanners, setLoadingBanners] = useState(true);
+    const [uploading, setUploading] = useState<string | null>(null);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const bannersQuery = query(collection(db, 'banners'), orderBy('createdAt', 'asc'));
+        const unsubscribe = onSnapshot(bannersQuery, (snapshot) => {
+            const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
+            setBanners(bannersData);
+            setLoadingBanners(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, bannerId: string) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(bannerId);
+
+        try {
+            // Create a storage reference
+            const storageRef = ref(storage, `banners/${bannerId}-${Date.now()}`);
+
+            // Upload the file
+            const snapshot = await uploadBytes(storageRef, file);
+
+            // Get the download URL
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            // Update the banner document in Firestore
+            const bannerDocRef = doc(db, 'banners', bannerId);
+            await updateDoc(bannerDocRef, {
+                image: downloadURL,
+            });
+
+            toast({
+                title: 'Success!',
+                description: 'Slider image has been updated.',
+            });
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            toast({
+                title: 'Upload Failed',
+                description: 'There was an error updating the slider image. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setUploading(null);
+        }
+    };
+
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button>
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    Manage Sliders
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Manage Homepage Sliders</DialogTitle>
+                    <DialogDescription>
+                        Update the images for the homepage slider carousel.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                    {loadingBanners ? (
+                         <div className="space-y-4">
+                            <Skeleton className="h-24 w-full" />
+                            <Skeleton className="h-24 w-full" />
+                            <Skeleton className="h-24 w-full" />
+                        </div>
+                    ) : (
+                        banners.map((banner, index) => (
+                            <div key={banner.id} className="flex items-center gap-4">
+                                <Image 
+                                    src={banner.image}
+                                    alt={`Slider ${index + 1}`}
+                                    width={120}
+                                    height={60}
+                                    className="rounded-md object-cover aspect-video"
+                                />
+                                <div className="flex-1">
+                                    <p className="font-semibold">Slider {index + 1}</p>
+                                </div>
+                                <Button asChild variant="outline" size="sm" disabled={uploading === banner.id}>
+                                    <Label htmlFor={`slider-upload-${banner.id}`}>
+                                        {uploading === banner.id ? 'Uploading...' : 'Change'}
+                                        <Input 
+                                            id={`slider-upload-${banner.id}`}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleFileChange(e, banner.id)}
+                                            disabled={uploading === banner.id}
+                                        />
+                                    </Label>
+                                </Button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -551,6 +664,18 @@ export default function AdminPage() {
                     </Card>
                 </section>
             )}
+
+             <section>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Site Management</CardTitle>
+                        <CardDescription>Manage sitewide content like homepage sliders.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ManageSlidersDialog />
+                    </CardContent>
+                </Card>
+            </section>
 
             <section>
                 <Card>
