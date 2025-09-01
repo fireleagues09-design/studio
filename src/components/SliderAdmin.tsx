@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -21,18 +21,21 @@ export default function SliderAdmin() {
         toast({ title: "No File Selected", description: "Please select a file to upload.", variant: "destructive"});
         return;
     }
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Upload to storage
+      // Create a unique path for each slider image
       const storageRef = ref(storage, `sliders/${Date.now()}-${file.name}`);
+      
+      // Upload to storage
       await uploadBytes(storageRef, file);
+      
+      // Get URL
       const url = await getDownloadURL(storageRef);
 
       // Save to Firestore
       await addDoc(collection(db, "sliders"), {
         url,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
 
       setFile(null);
@@ -43,7 +46,7 @@ export default function SliderAdmin() {
       toast({ title: "Success", description: "Slider image uploaded successfully!" });
     } catch (err) {
       console.error("Upload failed:", err);
-      toast({ title: "Upload Failed", description: "Please check the console for details.", variant: "destructive"});
+      toast({ title: "Upload Failed", description: "Could not upload image. Check permissions or console for details.", variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export default function SliderAdmin() {
             />
             <Button
                 onClick={handleUpload}
-                disabled={loading}
+                disabled={loading || !file}
                 className="w-full sm:w-auto"
             >
                 {loading ? "Uploading..." : <><UploadCloud className="mr-2 h-4 w-4"/> Upload Slider</>}
@@ -74,3 +77,5 @@ export default function SliderAdmin() {
     </Card>
   );
 }
+
+    
