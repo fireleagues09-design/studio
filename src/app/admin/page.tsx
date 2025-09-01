@@ -507,7 +507,7 @@ function ManageSlidersDialog() {
                                 </div>
                                 <Button asChild variant="outline" size="sm" disabled={uploading === banner.id}>
                                     <Label htmlFor={`slider-upload-${banner.id}`}>
-                                        {uploading === banner.id ? 'Uploading...' : 'Change'}
+                                        {uploading === banner.id ? 'Uploading...' : 'Upload'}
                                         <Input 
                                             id={`slider-upload-${banner.id}`}
                                             type="file"
@@ -781,6 +781,8 @@ export default function AdminPage() {
         </div>
     );
 }
+    
+
     
 
     
