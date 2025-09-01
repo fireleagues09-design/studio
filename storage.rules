@@ -1,16 +1,16 @@
 rules_version = '2';
 
-// WARNING: These rules are insecure and are for debugging purposes only.
-// They allow public read and write access to your storage bucket.
-// You should secure your rules before deploying to production.
 service firebase.storage {
   match /b/{bucket}/o {
-    // This rule allows any user to read and write to the sliders directory.
-    match /sliders/{allPaths=**} {
-      allow read, write: if true;
-    }
     
-    // Fallback rule: Deny all other paths
+    // Allow public read access to slider images
+    match /sliders/{allPaths=**} {
+      allow read;
+      // Allow write (upload, update, delete) only for authenticated admins
+      allow write: if request.auth != null && get(/databases/{database}/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Default deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;
     }
