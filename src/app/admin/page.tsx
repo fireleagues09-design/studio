@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, limit, getDocs, addDoc } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -425,7 +425,8 @@ function UploadSliderButton() {
         setUploading(true);
 
         try {
-            const bannersQuery = query(collection(db, 'banners'), orderBy('createdAt', 'asc'), limit(1));
+            // Check for the first existing banner to replace.
+            const bannersQuery = query(collection(db, 'banners'), orderBy('createdAt', 'asc'));
             const snapshot = await getDocs(bannersQuery);
             const bannerDoc = snapshot.docs[0];
 
@@ -433,30 +434,41 @@ function UploadSliderButton() {
             let oldImageUrl: string | undefined;
 
             if (bannerDoc) {
+                // If a banner exists, get its ID and old image URL to replace it.
                 bannerId = bannerDoc.id;
                 oldImageUrl = bannerDoc.data().image;
             } else {
+                // If no banners exist, create a new document.
                 const newBannerDocRef = doc(collection(db, 'banners'));
                 bannerId = newBannerDocRef.id;
             }
-
+            
+            // Define the storage path using the determined banner ID.
             const storageRef = ref(storage, `banners/${bannerId}`);
+
+            // Upload the new file.
             await uploadBytes(storageRef, file);
+            
+            // Get the download URL for the newly uploaded file.
             const downloadURL = await getDownloadURL(storageRef);
 
+            // Prepare the data to be saved in Firestore.
             const docData = {
                 image: downloadURL,
                 dataAiHint: 'slider image',
                 createdAt: serverTimestamp(),
             };
-
+            
+            // Save the new data to Firestore, either creating or merging with the existing doc.
             await setDoc(doc(db, 'banners', bannerId), docData, { merge: true });
 
+            // If there was an old image, delete it from storage after the new one is confirmed.
             if (oldImageUrl && oldImageUrl.includes('firebasestorage') && oldImageUrl !== downloadURL) {
                 try {
                     const oldImageRef = ref(storage, oldImageUrl);
                     await deleteObject(oldImageRef);
                 } catch (deleteError: any) {
+                     // Log a warning if the old image can't be deleted, but don't block success.
                     if (deleteError.code !== 'storage/object-not-found') {
                         console.warn("Could not delete old banner image:", deleteError);
                     }
@@ -477,6 +489,7 @@ function UploadSliderButton() {
             });
         } finally {
             setUploading(false);
+            // Reset the file input to allow uploading the same file again if needed.
             if (e.target) {
                 e.target.value = '';
             }
