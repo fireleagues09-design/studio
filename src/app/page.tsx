@@ -20,11 +20,10 @@ import { auth, db } from "@/lib/firebase";
 import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type Banner = {
   id: string;
-  title: string;
-  description: string;
   image: string;
   dataAiHint: string;
 };
@@ -117,15 +116,11 @@ export default function Home() {
                     <div className="relative aspect-video md:aspect-[2.4/1]">
                         <Image
                         src={banner.image}
-                        alt={banner.title}
+                        alt={`Promotional banner ${index + 1}`}
                         data-ai-hint={banner.dataAiHint}
                         fill
                         className="object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/50 flex flex-col justify-end p-6 md:p-8">
-                        <h2 className="text-2xl md:text-4xl font-bold text-white">{banner.title}</h2>
-                        <p className="text-md md:text-lg text-neutral-200 mt-2">{banner.description}</p>
-                        </div>
                     </div>
                     </Card>
                 </CarouselItem>
@@ -174,3 +169,4 @@ export default function Home() {
     </div>
   );
 }
+    

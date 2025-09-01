@@ -27,8 +27,6 @@ import { Textarea } from '@/components/ui/textarea';
 
 type Banner = {
     id: string;
-    title: string;
-    description: string;
     image: string;
     dataAiHint: string;
     createdAt: any;
@@ -418,27 +416,24 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
 function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBanners: React.Dispatch<React.SetStateAction<Banner[]>> }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [newBanner, setNewBanner] = useState<{ title: string; description: string; file: File | null }>({ title: '', description: '', file: null });
     const { toast } = useToast();
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setNewBanner(prev => ({ ...prev, file: e.target.files![0] }));
-        }
-    };
-    
-    const handleUpdateBanner = async (bannerId: string, field: 'title' | 'description', value: string) => {
-        const bannerDocRef = doc(db, 'banners', bannerId);
-        await updateDoc(bannerDocRef, { [field]: value });
-        setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, [field]: value } : b));
-    };
     
     const handleImageChange = async (bannerId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setLoading(true);
             try {
-                const storageRef = ref(storage, `banners/${bannerId}`);
+                // Find the original banner to get the old image URL for deletion
+                const originalBanner = banners.find(b => b.id === bannerId);
+                if (originalBanner) {
+                    const oldImageRef = ref(storage, originalBanner.image);
+                    await deleteObject(oldImageRef).catch(error => {
+                        // It's okay if the old image doesn't exist, just log it.
+                        console.warn("Could not delete old image, it might not exist: ", error);
+                    });
+                }
+
+                const storageRef = ref(storage, `banners/${bannerId}_${Date.now()}`);
                 await uploadBytes(storageRef, file);
                 const imageUrl = await getDownloadURL(storageRef);
                 
@@ -456,56 +451,6 @@ function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBa
         }
     };
 
-    const handleAddBanner = async () => {
-        if (!newBanner.file || !newBanner.title || !newBanner.description) {
-            toast({ title: "Error", description: "Please fill all fields and select an image.", variant: "destructive" });
-            return;
-        }
-        setLoading(true);
-        try {
-            const bannerId = doc(collection(db, 'banners')).id;
-            const storageRef = ref(storage, `banners/${bannerId}`);
-            await uploadBytes(storageRef, newBanner.file);
-            const imageUrl = await getDownloadURL(storageRef);
-
-            const bannerDocRef = doc(db, 'banners', bannerId);
-            await setDoc(bannerDocRef, {
-                title: newBanner.title,
-                description: newBanner.description,
-                image: imageUrl,
-                dataAiHint: "custom banner",
-                createdAt: serverTimestamp()
-            });
-
-            toast({ title: "Success", description: "New banner added." });
-            setNewBanner({ title: '', description: '', file: null });
-
-        } catch (error) {
-            console.error("Error adding banner: ", error);
-            toast({ title: "Error", description: "Failed to add new banner.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDeleteBanner = async (banner: Banner) => {
-        try {
-            // Delete Firestore document
-            await deleteDoc(doc(db, 'banners', banner.id));
-
-            // Delete image from Storage
-            const imageRef = ref(storage, banner.image);
-            await deleteObject(imageRef);
-
-            setBanners(prev => prev.filter(b => b.id !== banner.id));
-            toast({ title: "Success", description: "Banner deleted." });
-        } catch (error) {
-            console.error("Error deleting banner: ", error);
-            toast({ title: "Error", description: "Failed to delete banner.", variant: "destructive" });
-        }
-    };
-
-
     return (
          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -514,63 +459,27 @@ function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBa
                     Manage Banners
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Homepage Banner Management</DialogTitle>
-                    <DialogDescription>Add, edit, or remove carousel banners.</DialogDescription>
+                    <DialogDescription>Change the images in the homepage carousel.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
-                    {banners.map((banner) => (
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+                    {banners.map((banner, index) => (
                         <Card key={banner.id}>
-                            <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-start">
+                            <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                               <div className="font-medium text-lg">Slot {index + 1}</div>
                                 <div className="relative w-full md:w-48 h-28 flex-shrink-0 rounded-md overflow-hidden">
-                                     <Image src={banner.image} alt={banner.title} fill className="object-cover" />
-                                     <Label htmlFor={`image-upload-${banner.id}`} className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 hover:opacity-100 cursor-pointer transition-opacity">
-                                         <Pencil className="h-6 w-6"/>
+                                     <Image src={banner.image} alt={`Banner ${index + 1}`} fill className="object-cover" />
+                                </div>
+                                <div className="flex-grow">
+                                     <Label htmlFor={`image-upload-${banner.id}`} className={cn("w-full", loading && "opacity-50")}>
+                                         <Input id={`image-upload-${banner.id}`} type="file" className="w-full" accept="image/*" onChange={(e) => handleImageChange(banner.id, e)} disabled={loading}/>
                                      </Label>
-                                     <Input id={`image-upload-${banner.id}`} type="file" className="hidden" accept="image/*" onChange={(e) => handleImageChange(banner.id, e)}/>
                                 </div>
-                                <div className="flex-grow space-y-2">
-                                     <Input
-                                        defaultValue={banner.title}
-                                        onBlur={(e) => handleUpdateBanner(banner.id, 'title', e.target.value)}
-                                        className="text-lg font-semibold"
-                                     />
-                                     <Textarea
-                                        defaultValue={banner.description}
-                                        onBlur={(e) => handleUpdateBanner(banner.id, 'description', e.target.value)}
-                                        rows={2}
-                                     />
-                                </div>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive flex-shrink-0"><Trash className="h-4 w-4"/></Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Banner?</AlertDialogTitle>
-                                            <AlertDialogDescription>This will permanently remove the "{banner.title}" banner.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteBanner(banner)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
                             </CardContent>
                         </Card>
                     ))}
-                     <div className="p-4 border-2 border-dashed rounded-lg">
-                        <h3 className="text-lg font-medium mb-2">Add New Banner</h3>
-                        <div className="space-y-4">
-                             <Input placeholder="Banner Title" value={newBanner.title} onChange={(e) => setNewBanner(prev => ({ ...prev, title: e.target.value }))} />
-                             <Textarea placeholder="Banner Description" value={newBanner.description} onChange={(e) => setNewBanner(prev => ({ ...prev, description: e.target.value }))} />
-                             <Input type="file" accept="image/*" onChange={handleFileChange} />
-                             <Button onClick={handleAddBanner} disabled={loading}>
-                                {loading ? "Adding..." : "Add Banner"}
-                             </Button>
-                        </div>
-                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
@@ -845,3 +754,5 @@ export default function AdminPage() {
 
         </div>
     );
+}
+    
