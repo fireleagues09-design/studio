@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase"; // adjust import to your firebase config
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import Image from "next/image";
 import { Skeleton } from "./ui/skeleton";
@@ -25,6 +25,9 @@ export default function SliderGallery() {
         url: doc.data().url,
       }));
       setSliders(sliderData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching sliders: ", error);
       setLoading(false);
     });
     return () => unsub();
@@ -73,5 +76,3 @@ export default function SliderGallery() {
     </div>
   );
 }
-
-    
