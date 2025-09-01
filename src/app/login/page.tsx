@@ -66,6 +66,8 @@ export default function LoginPage() {
         let description = "Failed to send OTP. Please try again.";
         if (error.code === 'auth/too-many-requests') {
           description = "You have requested too many OTPs. Please try again later.";
+        } else if (error.message && error.message.includes('reCAPTCHA client element has been removed')) {
+          description = "OTP Error Please Refresh The Page";
         } else if (error.message) {
           description = error.message;
         }
