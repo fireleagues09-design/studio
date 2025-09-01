@@ -1,119 +1,110 @@
 
 'use client';
 
-import { useState, useEffect, useRef, MouseEvent, TouchEvent } from 'react';
+import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function FloatingHomeButton() {
   const pathname = usePathname();
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const router = useRouter();
+  
   const buttonRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const positionRef = useRef({ x: 0, y: 0 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+
 
   useEffect(() => {
     setIsMounted(true);
-    // Set initial position to bottom-right only after component has mounted on the client
-    setPosition({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
+    if (buttonRef.current) {
+        const initialX = window.innerWidth - 80;
+        const initialY = window.innerHeight - 80;
+        positionRef.current = { x: initialX, y: initialY };
+        buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
+    }
   }, []);
 
   useEffect(() => {
-    // Only show the button if not on the homepage
     setIsVisible(pathname !== '/');
 
     const handleResize = () => {
         if (!buttonRef.current) return;
-        const buttonWidth = buttonRef.current.offsetWidth;
-        const buttonHeight = buttonRef.current.offsetHeight;
-        // Adjust position on resize to keep it within bounds
-        setPosition(prev => ({
-            x: Math.min(prev.x, window.innerWidth - buttonWidth),
-            y: Math.min(prev.y, window.innerHeight - buttonHeight)
-        }));
+        const { offsetWidth, offsetHeight } = buttonRef.current;
+        const newX = Math.min(positionRef.current.x, window.innerWidth - offsetWidth - 16);
+        const newY = Math.min(positionRef.current.y, window.innerHeight - offsetHeight - 16);
+        positionRef.current = { x: newX, y: newY };
+        buttonRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
     };
-
+    
     window.addEventListener('resize', handleResize);
-
-    return () => {
-        window.removeEventListener('resize', handleResize);
-    }
+    return () => window.removeEventListener('resize', handleResize);
   }, [pathname]);
 
-  const handleDragStart = (clientX: number, clientY: number) => {
-    if (buttonRef.current) {
-        setIsDragging(true);
-        const rect = buttonRef.current.getBoundingClientRect();
-        setOffset({ x: clientX - rect.left, y: clientY - rect.top });
-    }
-  };
 
-  const handleMouseDown = (e: MouseEvent) => {
-    e.preventDefault();
-    handleDragStart(e.clientX, e.clientY);
+  const handleDragStart = (clientX: number, clientY: number) => {
+    if (!buttonRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    setIsInteracting(true);
+    
+    const rect = buttonRef.current.getBoundingClientRect();
+    offsetRef.current = {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchUp);
   };
   
-  const handleTouchStart = (e: TouchEvent) => {
-    const touch = e.touches[0];
-    handleDragStart(touch.clientX, touch.clientY);
-  };
-
   const handleDragMove = (clientX: number, clientY: number) => {
-    if (isDragging && buttonRef.current) {
-        const buttonWidth = buttonRef.current.offsetWidth;
-        const buttonHeight = buttonRef.current.offsetHeight;
-        let newX = clientX - offset.x;
-        let newY = clientY - offset.y;
-        
-        // Boundary checks
-        newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
-        newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
+    if (!isDraggingRef.current || !buttonRef.current) return;
+    hasMovedRef.current = true;
 
-        setPosition({ x: newX, y: newY });
-    }
-  };
+    const { offsetWidth, offsetHeight } = buttonRef.current;
+    
+    let newX = clientX - offsetRef.current.x;
+    let newY = clientY - offsetRef.current.y;
+    
+    // Boundary checks (with a 16px margin)
+    newX = Math.max(16, Math.min(newX, window.innerWidth - offsetWidth - 16));
+    newY = Math.max(16, Math.min(newY, window.innerHeight - offsetHeight - 16));
 
-  const handleMouseMove = (e: globalThis.MouseEvent) => {
-    handleDragMove(e.clientX, e.clientY);
-  };
-
-  const handleTouchMove = (e: globalThis.TouchEvent) => {
-    const touch = e.touches[0];
-    handleDragMove(touch.clientX, touch.clientY);
+    positionRef.current = { x: newX, y: newY };
+    buttonRef.current.style.transform = `translate(${newX}px, ${newY}px)`;
   };
 
   const handleDragEnd = () => {
-    setIsDragging(false);
+    if (!hasMovedRef.current) {
+        router.push('/');
+    }
+    isDraggingRef.current = false;
+    setIsInteracting(false);
+    
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchUp);
   };
 
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleDragEnd);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleDragEnd);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleDragEnd);
-    }
+  const handleMouseDown = (e: ReactMouseEvent) => handleDragStart(e.clientX, e.clientY);
+  const handleTouchStart = (e: ReactTouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+  const handleTouchMove = (e: TouchEvent) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  const handleMouseUp = () => handleDragEnd();
+  const handleTouchUp = () => handleDragEnd();
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleDragEnd);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging]);
-
-
-  if (!isVisible || !isMounted) {
+  if (!isMounted) {
     return null;
   }
 
@@ -121,18 +112,18 @@ export function FloatingHomeButton() {
     <div
       ref={buttonRef}
       className={cn(
-        'fixed z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
+        'fixed top-0 left-0 z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
         'hover:shadow-primary/40 hover:shadow-[0_0_15px_5px_hsl(var(--primary))]',
-        isDragging && 'cursor-grabbing scale-105 shadow-primary/40 shadow-[0_0_15px_5px_hsl(var(--primary))]',
+        isInteracting && 'cursor-grabbing scale-105 shadow-primary/40 shadow-[0_0_15px_5px_hsl(var(--primary))]',
         isVisible ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
       )}
-      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+      style={{ touchAction: 'none' }} // Prevent scrolling on mobile while dragging
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      <Link href="/" className="w-full h-full flex items-center justify-center" draggable="false" onClick={(e) => isDragging && e.preventDefault()}>
+      <div className="w-full h-full flex items-center justify-center">
         <Home className="h-5 w-5 text-white" />
-      </Link>
+      </div>
     </div>
   );
 }
