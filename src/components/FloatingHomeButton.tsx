@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 export function FloatingHomeButton() {
   const pathname = usePathname();
-  const [position, setPosition] = useState({ x: 20, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -18,8 +18,8 @@ export function FloatingHomeButton() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Set initial position only after component has mounted on the client
-    setPosition({ x: 20, y: window.innerHeight - 80 });
+    // Set initial position to bottom-right only after component has mounted on the client
+    setPosition({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
   }, []);
 
   useEffect(() => {
@@ -92,11 +92,11 @@ export function FloatingHomeButton() {
   };
 
   const handleMouseUp = () => {
-    setTimeout(() => setIsDragging(false), 50);
+    setIsDragging(false);
   };
   
   const handleTouchEnd = () => {
-    setTimeout(() => setIsDragging(false), 50);
+    setIsDragging(false);
   };
 
   useEffect(() => {
