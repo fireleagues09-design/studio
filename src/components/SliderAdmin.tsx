@@ -109,37 +109,54 @@ export default function SliderAdmin() {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = async () => {
-            const base64 = reader.result as string;
-            const fileData = {
-                base64,
-                type: file.type,
-                name: file.name
-            };
+            try {
+              const base64 = reader.result as string;
+              const fileData = {
+                  base64,
+                  type: file.type,
+                  name: file.name
+              };
 
-            const result = await uploadSlider(idToken, fileData);
+              const result = await uploadSlider(idToken, fileData);
 
-            if (result.success) {
-                toast({ title: 'Success', description: result.message });
-                setFile(null); // Clear the file input
-                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-                if (fileInput) fileInput.value = '';
-            } else {
-                throw new Error(result.message);
+              if (result.success) {
+                  toast({ title: 'Success', description: result.message });
+                  setFile(null); // Clear the file input
+                  const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+                  if (fileInput) fileInput.value = '';
+              } else {
+                  throw new Error(result.message);
+              }
+            } catch (err: any) {
+                console.error('Upload process failed:', err);
+                toast({ 
+                    title: 'Upload Failed', 
+                    description: err.message || 'An unknown error occurred.', 
+                    variant: 'destructive' 
+                });
+            } finally {
+                setUploading(false);
             }
         };
 
         reader.onerror = (error) => {
-            throw new Error("Failed to read file.");
+            console.error('File Reader Error:', error);
+            toast({ 
+                title: 'File Read Error', 
+                description: 'Failed to read the selected file.',
+                variant: 'destructive' 
+            });
+            setUploading(false);
         };
 
     } catch (err: any) {
-        console.error('Upload process failed:', err);
+        // This outer catch handles errors from getIdToken()
+        console.error('Authentication error:', err);
         toast({ 
-            title: 'Upload Failed', 
-            description: err.message || 'An unknown error occurred.', 
+            title: 'Authentication Failed', 
+            description: err.message || 'Could not verify user.', 
             variant: 'destructive' 
         });
-    } finally {
         setUploading(false);
     }
   };
