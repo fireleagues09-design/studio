@@ -39,7 +39,6 @@ import {
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { revalidatePath } from 'next/cache';
 
 type Slider = {
   id: string;
