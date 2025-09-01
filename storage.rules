@@ -1,14 +1,17 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Only admins can upload files to the 'sliders' path.
-    // The rule checks the 'isAdmin' flag on the user's Firestore document.
+    // Files can be read by anyone.
+    match /{allPaths=**} {
+      allow read;
+    }
+
+    // Only authenticated admins can upload to the 'sliders' folder.
+    // The rule checks the 'isAdmin' flag on the user's document in Firestore.
     match /sliders/{allPaths=**} {
-      allow read: if true; // Allow public reads for slider images
       allow write: if request.auth != null && 
-                    get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-      allow delete: if request.auth != null &&
-                     get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }
