@@ -109,13 +109,6 @@ export default function SliderAdmin() {
     setUploadProgress(0);
 
     try {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
-             throw new Error('Permission denied. User is not an admin.');
-        }
-
         const storagePath = `sliders/${Date.now()}-${file.name}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
@@ -140,15 +133,14 @@ export default function SliderAdmin() {
                 setFile(null);
                 const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
                 if (fileInput) fileInput.value = '';
-                setUploading(false);
             }
         );
     } catch (err: any) {
         console.error('Upload process failed:', err);
         toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive' });
-        setUploading(false); // Ensure uploading is reset on error
+    } finally {
+      setUploading(false);
     }
-    // Note: 'finally' block is not used here because the final state update is in the uploadTask's completion callback.
   };
 
   async function handleDelete(slider: Slider) {
