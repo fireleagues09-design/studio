@@ -1,0 +1,12 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Default deny all access.
+    // All uploads should be handled by the server-side admin action.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
