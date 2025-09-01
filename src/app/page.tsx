@@ -51,6 +51,20 @@ export default function Home() {
         <HomeSlider isAuthenticated={!!user} />
       </section>
 
+      {!loadingAuth && !user && (
+        <section className="container mx-auto px-4 md:hidden">
+            <div className="grid grid-cols-2 gap-4">
+                <Button variant="ghost" asChild>
+                    <Link href="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                    <Link href="/register">Register</Link>
+                </Button>
+            </div>
+        </section>
+      )}
+
+
       <main className="container mx-auto px-4 flex flex-col gap-8">
         
         <section>
