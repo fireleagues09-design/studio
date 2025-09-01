@@ -48,7 +48,7 @@ export default function Home() {
     <div className="flex flex-col gap-8 pb-12">
       
       <section className="container mx-auto px-4">
-        <HomeSlider />
+        <HomeSlider isAuthenticated={!!user} />
       </section>
 
       <main className="container mx-auto px-4 flex flex-col gap-8">

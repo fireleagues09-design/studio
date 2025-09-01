@@ -20,37 +20,31 @@ type Slider = {
   url: string;
 };
 
-const MOCK_SLIDERS: Slider[] = [
-    { id: '1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBermuda_App_Splash.webp?alt=media&token=0bdaa681-9730-4c12-be7c-053d235e9c09' },
-    { id: '2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2Fdownload.jpg?alt=media&token=30f25368-ec19-4671-9e2d-5cb147b6d5bc' }
-]
+type HomeSliderProps = {
+    isAuthenticated: boolean;
+};
+
+const AUTHENTICATED_SLIDERS: Slider[] = [
+    { id: 'auth1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBermuda_App_Splash.webp?alt=media&token=0bdaa681-9730-4c12-be7c-053d235e9c09' },
+    { id: 'auth2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2Fdownload.jpg?alt=media&token=30f25368-ec19-4671-9e2d-5cb147b6d5bc' }
+];
+
+const GUEST_SLIDERS: Slider[] = [
+    { id: 'guest1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FRegister_Now_Banner.png?alt=media&token=e9c8f85f-8f11-4e7a-9b48-1123a1a5b8e9' },
+    { id: 'guest2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FWelcome_Bonus_Banner.png?alt=media&token=48c3b9b4-b49c-4e89-8d76-5a417539c3a3' }
+];
 
 
-export function HomeSlider() {
-  const [sliders, setSliders] = useState<Slider[]>(MOCK_SLIDERS);
-  const [loading, setLoading] = useState(false);
+export function HomeSlider({ isAuthenticated }: HomeSliderProps) {
+  const [sliders, setSliders] = useState<Slider[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // The Firestore fetching logic is kept in case you want to revert to dynamic sliders later.
-  // useEffect(() => {
-  //   const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
-  //   const unsubscribe = onSnapshot(q, (snapshot) => {
-  //     const sliderData = snapshot.docs.map(doc => ({
-  //       id: doc.id,
-  //       ...doc.data()
-  //     })) as Slider[];
-      
-  //     // If firestore is empty, use mock data. Otherwise, use firestore data.
-  //     setSliders(sliderData.length > 0 ? sliderData : MOCK_SLIDERS);
-  //     setLoading(false);
-  //   }, (error) => {
-  //     console.error("Error fetching sliders: ", error);
-  //     // Fallback to mock data on error
-  //     setSliders(MOCK_SLIDERS);
-  //     setLoading(false);
-  //   });
-
-  //   return () => unsubscribe();
-  // }, []);
+  useEffect(() => {
+    setLoading(true);
+    // Use different sliders based on authentication status
+    setSliders(isAuthenticated ? AUTHENTICATED_SLIDERS : GUEST_SLIDERS);
+    setLoading(false);
+  }, [isAuthenticated]);
 
 
   if (loading) {
@@ -58,7 +52,6 @@ export function HomeSlider() {
   }
 
   if (!sliders || sliders.length === 0) {
-    // This part should ideally not be reached now with the hardcoded fallback
     return (
         <div className="aspect-[16/7] w-full relative bg-secondary rounded-lg flex items-center justify-center">
             <p className="text-muted-foreground">No promotional images available.</p>
