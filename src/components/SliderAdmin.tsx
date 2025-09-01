@@ -55,13 +55,27 @@ export default function SliderAdmin() {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists() && userDoc.data().isAdmin === true) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
     });
     return () => unsubscribe();
   }, []);
+
 
   useEffect(() => {
     const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
@@ -107,24 +121,16 @@ export default function SliderAdmin() {
       return;
     }
 
-    if (!user) {
-      toast({ title: 'Not authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
+    if (!user || !isAdmin) {
+      toast({ title: 'Permission Denied', description: 'You are not authorized to upload sliders.', variant: 'destructive' });
       return;
     }
     
     setUploading(true);
+    const storagePath = `sliders/${Date.now()}-${file.name}`;
+    const storageRef = ref(storage, storagePath);
 
     try {
-      // Check if user is an admin from the client-side before attempting upload
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (!userDoc.exists() || !userDoc.data().isAdmin) {
-          throw new Error('Permission denied. User is not an admin.');
-      }
-
-      const storagePath = `sliders/${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, storagePath);
-      
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
@@ -153,11 +159,12 @@ export default function SliderAdmin() {
 
 
   async function handleDelete(slider: Slider) {
+    if (!user || !isAdmin) {
+      toast({ title: 'Permission Denied', description: 'You are not authorized to delete sliders.', variant: 'destructive' });
+      return;
+    }
       try {
-        // First delete the Firestore document
         await deleteDoc(doc(db, 'sliders', slider.id));
-        
-        // Then delete the file from Storage
         const storageRef = ref(storage, slider.storagePath);
         await deleteObject(storageRef);
 
@@ -184,11 +191,11 @@ export default function SliderAdmin() {
             accept="image/png, image/jpeg, image/gif, image/webp"
             onChange={handleFileChange}
             className="w-full sm:w-auto flex-grow"
-            disabled={uploading}
+            disabled={uploading || !isAdmin}
           />
           <Button
             onClick={handleUpload}
-            disabled={uploading || !file}
+            disabled={uploading || !file || !isAdmin}
             className="w-full sm:w-auto"
           >
             {uploading ? (
@@ -233,7 +240,7 @@ export default function SliderAdmin() {
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon">
+                        <Button variant="destructive" size="icon" disabled={!isAdmin}>
                           <Trash2 className="h-5 w-5" />
                         </Button>
                       </AlertDialogTrigger>
