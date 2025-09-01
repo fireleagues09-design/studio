@@ -20,13 +20,6 @@ type Slider = {
   url: string;
 };
 
-// Default sliders to show if the database is empty or on error
-const DEFAULT_SLIDERS: Slider[] = [
-  { id: 'default-1', url: 'https://picsum.photos/1200/500?random=1' },
-  { id: 'default-2', url: 'https://picsum.photos/1200/500?random=2' },
-  { id: 'default-3', url: 'https://picsum.photos/1200/500?random=3' },
-];
-
 export function HomeSlider() {
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,20 +29,16 @@ export function HomeSlider() {
     const unsubscribe = onSnapshot(
       q,
       snapshot => {
-        if (snapshot.empty) {
-          setSliders(DEFAULT_SLIDERS);
-        } else {
-          const sliderData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            url: doc.data().url,
-          }));
-          setSliders(sliderData);
-        }
+        const sliderData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          url: doc.data().url,
+        }));
+        setSliders(sliderData);
         setLoading(false);
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        setSliders(DEFAULT_SLIDERS); // Fallback to default on error
+        setSliders([]); // Fallback to empty on error
         setLoading(false);
       }
     );
@@ -63,6 +52,11 @@ export function HomeSlider() {
         <Skeleton className="aspect-[12/5] w-full rounded-xl" />
       </div>
     );
+  }
+
+  // Do not render the carousel if there are no sliders to display
+  if (sliders.length === 0) {
+    return null;
   }
 
   return (
