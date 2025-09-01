@@ -2,13 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
+import { db, auth, storage } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
+  addDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -33,7 +39,8 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { uploadSlider, deleteSlider } from '@/app/admin/actions';
+import { Progress } from './ui/progress';
+
 
 type Slider = {
   id: string;
@@ -41,19 +48,12 @@ type Slider = {
   storagePath: string;
 };
 
-// Helper to convert file to base64
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-});
-
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        toast({ title: 'Error', description: 'Could not fetch sliders. Check permissions.', variant: 'destructive'});
+        toast({ title: 'Error', description: 'Could not fetch sliders.', variant: 'destructive'});
         setLoading(false);
       }
     );
@@ -91,62 +91,76 @@ export default function SliderAdmin() {
         }
         setFile(selectedFile);
     }
-};
+  };
 
   const handleUpload = async () => {
     if (!file) {
-      toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
+      toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive' });
       return;
     }
 
     const currentUser = auth.currentUser;
     if (!currentUser) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive'});
-        return;
+      toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive' });
+      return;
     }
-    
+
     setUploading(true);
-    const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+    setUploadProgress(0);
 
     try {
-        const token = await currentUser.getIdToken();
-        const base64Data = await toBase64(file);
-        const result = await uploadSlider(token, base64Data, file.type, file.name);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
 
-       if (result.success) {
-            toast({ title: 'Success', description: "Slider uploaded successfully!" });
-            setFile(null);
-            if (fileInput) fileInput.value = '';
-        } else {
-            throw new Error(result.message);
+        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+             throw new Error('Permission denied. User is not an admin.');
         }
-     } catch (err: any) {
-       console.error('Upload process failed:', err);
-       toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
-     } finally {
-       setUploading(false);
-     }
+
+        const storagePath = `sliders/${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+            },
+            (error) => {
+                console.error("Upload failed:", error);
+                throw error; // Rethrow to be caught by the outer catch block
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                await addDoc(collection(db, 'sliders'), {
+                    url: downloadURL,
+                    storagePath: storagePath,
+                    createdAt: serverTimestamp(),
+                });
+                toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+                setFile(null);
+                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+                if (fileInput) fileInput.value = '';
+                setUploading(false);
+            }
+        );
+    } catch (err: any) {
+        console.error('Upload process failed:', err);
+        toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive' });
+        setUploading(false); // Ensure uploading is reset on error
+    }
+    // Note: 'finally' block is not used here because the final state update is in the uploadTask's completion callback.
   };
 
   async function handleDelete(slider: Slider) {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in to delete.', variant: 'destructive'});
-        return;
-    }
-
-    try {
-        const token = await currentUser.getIdToken();
-        const result = await deleteSlider(token, slider.id, slider.storagePath);
-        if (result.success) {
-            toast({ title: 'Success', description: 'Slider image deleted.'});
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (error: any) {
-       console.error('Error deleting slider:', error);
-       toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive'});
-    }
+      try {
+        await deleteDoc(doc(db, 'sliders', slider.id));
+        const storageRef = ref(storage, slider.storagePath);
+        await deleteObject(storageRef);
+        toast({ title: 'Success', description: 'Slider image deleted.' });
+      } catch (error: any) {
+        console.error('Error deleting slider:', error);
+        toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
+      }
   }
 
   return (
@@ -154,7 +168,7 @@ export default function SliderAdmin() {
       <CardHeader>
         <CardTitle>Manage Sliders</CardTitle>
         <CardDescription>
-          Upload new images for the homepage slider gallery.
+          Upload new images for the homepage slider gallery. Recommended size: 1200x500px.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -181,6 +195,14 @@ export default function SliderAdmin() {
             )}
           </Button>
         </div>
+        
+        {uploading && (
+            <div className="space-y-2">
+                <Progress value={uploadProgress} />
+                <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
+            </div>
+        )}
+
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">
