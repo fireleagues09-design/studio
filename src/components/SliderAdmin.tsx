@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -9,11 +9,8 @@ import {
   orderBy,
   deleteDoc,
   doc,
-  getDoc,
-  addDoc,
-  serverTimestamp,
 } from 'firebase/firestore';
-import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -40,6 +37,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { deleteSlider, uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
@@ -59,17 +57,6 @@ export default function SliderAdmin() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists() && userDoc.data().isAdmin === true) {
-          setIsAdmin(true);
-        } else {
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -113,73 +100,69 @@ export default function SliderAdmin() {
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive' });
+    if (!file || !user) {
+      toast({ title: 'Error', description: 'No file selected or you are not logged in.', variant: 'destructive' });
       return;
     }
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive' });
-      return;
-    }
-
     setUploading(true);
+
     try {
-      // 1. Verify user is an admin from Firestore
-      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-      if (!userDoc.exists() || userDoc.data().isAdmin !== true) {
-        throw new Error("Permission denied: not an admin.");
-      }
-      
-      // 2. Upload to Firebase Storage
-      const storagePath = `sliders/${Date.now()}-${file.name}`;
-      const fileRef = ref(storage, storagePath);
-      await uploadBytes(fileRef, file);
-      
-      // 3. Get public URL
-      const url = await getDownloadURL(fileRef);
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        try {
+            const idToken = await user.getIdToken(true);
+            const result = await uploadSlider(base64data, file.type, idToken);
 
-      // 4. Save metadata to Firestore
-      await addDoc(collection(db, 'sliders'), {
-        url: url,
-        storagePath: storagePath,
-        createdAt: serverTimestamp(),
-      });
-
-      toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-      setFile(null);
-      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-
+            if (result.success) {
+                toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+                setFile(null);
+                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+                if (fileInput) fileInput.value = '';
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err: any) {
+            console.error('Upload process failed:', err);
+            toast({ 
+                title: 'Upload Failed', 
+                description: err.message || 'An unknown error occurred.', 
+                variant: 'destructive' 
+            });
+        } finally {
+            setUploading(false);
+        }
+      };
     } catch (err: any) {
-      console.error("Upload process failed:", err);
+      console.error("File reading failed:", err);
       toast({ 
-          title: 'Upload Failed', 
-          description: err.message || 'An unknown error occurred.', 
+          title: 'Error', 
+          description: "Could not read the selected file. Please try again.", 
           variant: 'destructive' 
       });
-    } finally {
       setUploading(false);
     }
   };
 
-
-  async function handleDelete(slider: Slider) {
-    if (!user || !isAdmin) {
-      toast({ title: 'Permission Denied', description: 'You are not authorized to delete sliders.', variant: 'destructive' });
-      return;
+  const handleDelete = async (slider: Slider) => {
+    if (!user) {
+        toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+        return;
     }
-      try {
-        await deleteDoc(doc(db, 'sliders', slider.id));
-        const storageRef = ref(storage, slider.storagePath);
-        await deleteObject(storageRef);
-
-        toast({ title: 'Success', description: 'Slider deleted successfully.' });
-      } catch (error: any) {
+    try {
+        const idToken = await user.getIdToken(true);
+        const result = await deleteSlider(slider.id, slider.storagePath, idToken);
+        if (result.success) {
+            toast({ title: 'Success', description: 'Slider deleted successfully.' });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
         console.error('Error deleting slider:', error);
         toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
-      }
-  }
+    }
+  };
 
   return (
     <Card>
@@ -197,11 +180,11 @@ export default function SliderAdmin() {
             accept="image/png, image/jpeg, image/gif, image/webp"
             onChange={handleFileChange}
             className="w-full sm:w-auto flex-grow"
-            disabled={uploading || !isAdmin}
+            disabled={uploading}
           />
           <Button
             onClick={handleUpload}
-            disabled={uploading || !file || !isAdmin}
+            disabled={uploading || !file}
             className="w-full sm:w-auto"
           >
             {uploading ? (
@@ -220,7 +203,6 @@ export default function SliderAdmin() {
                 <p className="text-sm text-muted-foreground text-center">Uploading and processing...</p>
             </div>
         )}
-
 
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">
@@ -246,7 +228,7 @@ export default function SliderAdmin() {
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={!isAdmin}>
+                        <Button variant="destructive" size="icon">
                           <Trash2 className="h-5 w-5" />
                         </Button>
                       </AlertDialogTrigger>

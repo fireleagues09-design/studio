@@ -1,0 +1,65 @@
+'use server';
+
+import { auth as adminAuth, db, storage } from '@/lib/firebase-admin';
+
+async function verifyAdmin(idToken: string): Promise<boolean> {
+    try {
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        const user = await adminAuth.getUser(decodedToken.uid);
+        return user.customClaims?.isAdmin === true;
+    } catch (error) {
+        console.error('Error verifying admin token:', error);
+        return false;
+    }
+}
+
+export async function uploadSlider(base64Data: string, contentType: string, idToken: string) {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: 'Permission denied. User is not an admin.' };
+    }
+    
+    try {
+        const fileBuffer = Buffer.from(base64Data.split(',')[1], 'base64');
+        const fileName = `sliders/${Date.now()}`;
+        const file = storage.bucket().file(fileName);
+        
+        await file.save(fileBuffer, {
+            metadata: { contentType: contentType },
+            public: true,
+        });
+
+        const publicUrl = file.publicUrl();
+
+        await db.collection('sliders').add({
+            url: publicUrl,
+            storagePath: fileName,
+            createdAt: new Date(),
+        });
+        
+        return { success: true, url: publicUrl };
+    } catch (error: any) {
+        console.error("Upload failed:", error);
+        return { success: false, message: `Upload failed: ${error.message}` };
+    }
+}
+
+export async function deleteSlider(sliderId: string, storagePath: string, idToken: string) {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: 'Permission denied. User is not an admin.' };
+    }
+
+    try {
+        // Delete from Firestore
+        await db.collection('sliders').doc(sliderId).delete();
+        
+        // Delete from Storage
+        await storage.bucket().file(storagePath).delete();
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Deletion failed:", error);
+        return { success: false, message: `Deletion failed: ${error.message}` };
+    }
+}
