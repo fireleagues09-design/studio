@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -112,7 +112,11 @@ function CreateTournamentDialog() {
                 finalPrizeDistribution.push({ place: 'Per Kill', prize: prizePerKill });
             }
 
-            await addDoc(collection(db, 'tournaments'), {
+            const tournamentId = Math.random().toString(36).substring(2, 10);
+            const tournamentDocRef = doc(db, 'tournaments', tournamentId);
+
+            await setDoc(tournamentDocRef, {
+                id: tournamentId,
                 name,
                 date,
                 time,
@@ -691,3 +695,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
