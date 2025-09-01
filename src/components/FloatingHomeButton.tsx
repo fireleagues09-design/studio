@@ -71,7 +71,11 @@ export function FloatingHomeButton() {
     
     // Only set hasMoved to true if it moves more than a small threshold
     if (!hasMovedRef.current) {
-        hasMovedRef.current = true;
+        const dx = clientX - (positionRef.current.x + offsetRef.current.x);
+        const dy = clientY - (positionRef.current.y + offsetRef.current.y);
+        if (Math.sqrt(dx*dx + dy*dy) > 5) {
+            hasMovedRef.current = true;
+        }
     }
 
     const { offsetWidth, offsetHeight } = buttonRef.current;
