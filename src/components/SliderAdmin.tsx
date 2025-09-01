@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, storage as clientStorage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -10,11 +10,7 @@ import {
   orderBy,
   deleteDoc,
   doc,
-  addDoc,
-  serverTimestamp,
-  getDoc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -39,7 +35,8 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
+import { uploadSlider, deleteSlider } from '@/app/admin/actions';
+
 
 type Slider = {
   id: string;
@@ -75,74 +72,71 @@ export default function SliderAdmin() {
     return () => unsub();
   }, [toast]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+        // Limit file size to 5MB
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            toast({
+                title: 'File too large',
+                description: 'Please select a file smaller than 5MB.',
+                variant: 'destructive',
+            });
+            e.target.value = ''; // Reset file input
+            return;
+        }
+        setFile(selectedFile);
+    }
+};
+
   const handleUpload = async () => {
-    const user = auth.currentUser;
     if (!file) {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
-    }
-     if (!user) {
-        toast({ title: 'Not Authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
-        return;
     }
     
     setUploading(true);
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
-       // 1. Check if user is an admin
-       const userDocRef = doc(db, 'users', user.uid);
-       const userDoc = await getDoc(userDocRef);
-       if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
-           throw new Error('Permission Denied. You do not have permission to upload sliders.');
-       }
-       
-       const storagePath = `sliders/${Date.now()}-${file.name}`;
-       const storageRef = ref(clientStorage, storagePath);
- 
-       // 2. Upload file to Firebase Storage
-       await uploadBytes(storageRef, file);
- 
-       // 3. Get the public URL
-       const publicUrl = await getDownloadURL(storageRef);
- 
-       // 4. Save metadata to Firestore
-       await addDoc(collection(db, 'sliders'), {
-           url: publicUrl,
-           storagePath: storagePath,
-           createdAt: serverTimestamp(),
-       });
- 
-       toast({ title: 'Success', description: "Slider uploaded successfully!" });
-       setFile(null);
-       if (fileInput) fileInput.value = '';
- 
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64String = reader.result as string;
+            const result = await uploadSlider(base64String, file.name, file.type);
+
+            if (result.success) {
+                toast({ title: 'Success', description: "Slider uploaded successfully!" });
+                setFile(null);
+                if (fileInput) fileInput.value = '';
+            } else {
+                throw new Error(result.message);
+            }
+        };
+
+        reader.onerror = () => {
+            throw new Error('Failed to read file.');
+        };
+     
      } catch (err: any) {
        console.error('Upload process failed:', err);
        toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
      } finally {
-       // This guarantees the loading state is turned off.
        setUploading(false);
      }
   };
 
   async function handleDelete(slider: Slider) {
     try {
-      // Delete Firestore document first
-      await deleteDoc(doc(db, 'sliders', slider.id));
-      
-      // Then delete file from Storage
-      const imageRef = ref(clientStorage, slider.storagePath);
-      await deleteObject(imageRef);
-
-      toast({ title: 'Success', description: 'Slider image deleted.'});
+        const result = await deleteSlider(slider.id, slider.storagePath);
+        if (result.success) {
+            toast({ title: 'Success', description: 'Slider image deleted.'});
+        } else {
+            throw new Error(result.message);
+        }
     } catch (error: any) {
        console.error('Error deleting slider:', error);
-       let errorMessage = 'Failed to delete slider. Check console for details.';
-       if (error.code === 'storage/unauthorized' || error.code === 'permission-denied') {
-          errorMessage = 'Permission denied. Please check your Firebase rules.';
-       }
-       toast({ title: 'Error', description: errorMessage, variant: 'destructive'});
+       toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive'});
     }
   }
 
@@ -159,8 +153,8 @@ export default function SliderAdmin() {
           <Input
             id="slider-file-input"
             type="file"
-            accept="image/*"
-            onChange={e => setFile(e.target.files?.[0] || null)}
+            accept="image/png, image/jpeg, image/gif, image/webp"
+            onChange={handleFileChange}
             className="w-full sm:w-auto flex-grow"
             disabled={uploading}
           />

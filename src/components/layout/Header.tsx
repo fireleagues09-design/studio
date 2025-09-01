@@ -14,9 +14,10 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser, getIdToken } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import Cookies from 'js-cookie';
 
 type WalletData = {
     deposit: number;
@@ -46,6 +47,9 @@ export function Header() {
       setUser(currentUser);
       
       if (currentUser) {
+        const token = await getIdToken(currentUser);
+        Cookies.set('firebaseIdToken', token, { secure: true, httpOnly: false, sameSite: 'strict' });
+
         const userDocRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(userDocRef);
         if (docSnap.exists()) {
@@ -54,6 +58,7 @@ export function Header() {
             setProfile(null);
         }
       } else {
+        Cookies.remove('firebaseIdToken');
         setProfile(null);
       }
       setLoading(false);
