@@ -35,6 +35,7 @@ function CreateTournamentDialog() {
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
     const [prizePerKill, setPrizePerKill] = useState('');
+    const [rules, setRules] = useState<string[]>(Array(10).fill('•'));
     
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -54,7 +55,21 @@ function CreateTournamentDialog() {
         const newDistribution = prizeDistribution.filter((_, i) => i !== index);
         setPrizeDistribution(newDistribution);
     };
+    
+    const handleRuleChange = (index: number, value: string) => {
+        const newRules = [...rules];
+        newRules[index] = value;
+        setRules(newRules);
+    };
 
+    const addRuleRow = () => {
+        setRules([...rules, '']);
+    };
+
+    const removeRuleRow = (index: number) => {
+        const newRules = rules.filter((_, i) => i !== index);
+        setRules(newRules);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -74,6 +89,7 @@ function CreateTournamentDialog() {
         setBannerFile(null);
         setPrizeDistribution([{ place: '1st', prize: '' }]);
         setPrizePerKill('');
+        setRules(Array(10).fill('•'));
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -108,7 +124,7 @@ function CreateTournamentDialog() {
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
-                rules: ["Default rule 1", "Default rule 2"],
+                rules: rules.filter(r => r.trim() !== ''),
                 prizeDistribution: finalPrizeDistribution,
                 createdAt: serverTimestamp()
             });
@@ -225,6 +241,24 @@ function CreateTournamentDialog() {
                             </Select>
                         </div>
                     </div>
+
+                    <div className="space-y-2">
+                        <Label>Tournament Rules</Label>
+                        <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                            {rules.map((rule, index) => (
+                                <div key={index} className="grid grid-cols-[1fr,auto] gap-2 items-center">
+                                    <Input value={rule} onChange={e => handleRuleChange(index, e.target.value)} placeholder={`Rule ${index + 1}`} />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRuleRow(index)}>
+                                        <MinusCircleIcon className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={addRuleRow}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
+                            </Button>
+                        </div>
+                    </div>
+
                     <div className="grid gap-2">
                         <Label htmlFor="create-banner">Tournament Banner</Label>
                         <Input id="create-banner" type="file" onChange={handleFileChange} accept="image/*" />
@@ -251,9 +285,25 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [entryFee, setEntryFee] = useState(tournament.entryFee);
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
+    const [rules, setRules] = useState(tournament.rules || []);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+    
+    const handleRuleChange = (index: number, value: string) => {
+        const newRules = [...rules];
+        newRules[index] = value;
+        setRules(newRules);
+    };
+
+    const addRuleRow = () => {
+        setRules([...rules, '']);
+    };
+
+    const removeRuleRow = (index: number) => {
+        const newRules = rules.filter((_, i) => i !== index);
+        setRules(newRules);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -266,7 +316,8 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 time,
                 entryFee,
                 prize,
-                slots: Number(slots)
+                slots: Number(slots),
+                rules: rules.filter(r => r.trim() !== '')
             });
             toast({
                 title: 'Success',
@@ -292,14 +343,14 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                     <Pencil className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Edit Tournament</DialogTitle>
                     <DialogDescription>
                         Make changes to "{tournament.name}".
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
                      <div className="grid gap-2">
                         <Label htmlFor="name">Tournament Name</Label>
                         <Input id="name" value={name} onChange={e => setName(e.target.value)} />
@@ -328,7 +379,25 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                         <Label htmlFor="slots">Total Slots</Label>
                         <Input id="slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} />
                     </div>
-                    <DialogFooter>
+
+                    <div className="space-y-2">
+                        <Label>Tournament Rules</Label>
+                        <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                            {rules.map((rule, index) => (
+                                <div key={index} className="grid grid-cols-[1fr,auto] gap-2 items-center">
+                                    <Input value={rule} onChange={e => handleRuleChange(index, e.target.value)} placeholder={`Rule ${index + 1}`} />
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRuleRow(index)}>
+                                        <MinusCircleIcon className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={addRuleRow}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
+                            </Button>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
