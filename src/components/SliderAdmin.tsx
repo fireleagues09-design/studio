@@ -55,11 +55,23 @@ export default function SliderAdmin() {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists() && userDoc.data().isAdmin === true) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
       setAuthLoading(false);
     });
     return () => unsubscribe();
@@ -104,46 +116,50 @@ export default function SliderAdmin() {
   };
 
   const handleUpload = async () => {
-    if (!file || !user) {
-      toast({ title: 'Error', description: 'No file selected or you are not logged in.', variant: 'destructive' });
+    if (!file) {
+      toast({ title: 'Error', description: 'No file selected.', variant: 'destructive' });
+      return;
+    }
+    if (!isAdmin) {
+      toast({ title: 'Permission Denied', description: 'You are not an administrator.', variant: 'destructive' });
       return;
     }
 
     setUploading(true);
-
+    
     try {
-        // Step 1: Verify user is admin on the client side before any upload attempt
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
-            throw new Error("Permission denied: User is not an admin.");
-        }
+      const storagePath = `sliders/${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      
+      // Step 1: Upload to Firebase Storage
+      await uploadBytes(storageRef, file);
 
-        // Step 2: Upload to Firebase Storage
-        const storagePath = `sliders/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, file);
+      // Step 2: Get download URL
+      const url = await getDownloadURL(storageRef);
+      
+      // Step 3: Save to Firestore
+      await addDoc(collection(db, 'sliders'), {
+          url: url,
+          storagePath: storagePath,
+          createdAt: serverTimestamp(),
+      });
 
-        // Step 3: Get download URL
-        const url = await getDownloadURL(storageRef);
-        
-        // Step 4: Save to Firestore
-        await addDoc(collection(db, 'sliders'), {
-            url: url,
-            storagePath: storagePath,
-            createdAt: serverTimestamp(),
-        });
-
-        toast({ title: 'Success', description: "Slider uploaded successfully!" });
-        setFile(null);
-        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
+      toast({ title: 'Success', description: "Slider uploaded successfully!" });
+      setFile(null);
+      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
 
     } catch (err: any) {
         console.error('Upload process failed:', err);
+        let errorMessage = 'An unknown error occurred.';
+        if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
+            errorMessage = 'Permission denied. Please check storage rules.';
+        } else if (err.message) {
+            errorMessage = err.message;
+        }
         toast({ 
             title: 'Upload Failed', 
-            description: err.message || 'An unknown error occurred.', 
+            description: errorMessage, 
             variant: 'destructive' 
         });
     } finally {
@@ -152,8 +168,8 @@ export default function SliderAdmin() {
   };
 
   const handleDelete = async (slider: Slider) => {
-    if (!user) {
-        toast({ title: 'Error', description: 'You must be logged in to delete sliders.', variant: 'destructive' });
+    if (!isAdmin) {
+        toast({ title: 'Permission Denied', description: 'You are not an administrator.', variant: 'destructive' });
         return;
     }
     try {
@@ -166,6 +182,8 @@ export default function SliderAdmin() {
         toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
     }
   };
+
+  const canUpload = !authLoading && isAdmin;
 
   return (
     <Card>
@@ -183,14 +201,14 @@ export default function SliderAdmin() {
             accept="image/png, image/jpeg, image/gif, image/webp"
             onChange={handleFileChange}
             className="w-full sm:w-auto flex-grow"
-            disabled={uploading || authLoading}
+            disabled={uploading || !canUpload}
           />
           <Button
             onClick={handleUpload}
-            disabled={uploading || !file || authLoading}
+            disabled={uploading || !file || !canUpload}
             className="w-full sm:w-auto"
           >
-            {authLoading ? 'Authenticating...' : uploading ? (
+            {authLoading ? 'Verifying...' : uploading ? (
               'Uploading...'
             ) : (
               <>
@@ -199,6 +217,9 @@ export default function SliderAdmin() {
             )}
           </Button>
         </div>
+        {!authLoading && !isAdmin && (
+            <p className="text-sm text-destructive text-center">You do not have permission to manage sliders.</p>
+        )}
         
         {uploading && (
              <div className="space-y-2">
@@ -231,7 +252,7 @@ export default function SliderAdmin() {
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={authLoading}>
+                        <Button variant="destructive" size="icon" disabled={!canUpload}>
                           <Trash2 className="h-5 w-5" />
                         </Button>
                       </AlertDialogTrigger>
