@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadCloud, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { Skeleton } from "./ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+
 
 type Slider = {
   id: string;
@@ -73,9 +75,6 @@ export default function SliderAdmin() {
   }
 
   async function handleDelete(slider: Slider) {
-     if (!confirm("Are you sure you want to delete this slider image?")) {
-      return;
-    }
     try {
       // Delete from Storage
       const imageRef = ref(storage, slider.url);
@@ -87,7 +86,7 @@ export default function SliderAdmin() {
       toast({ title: "Success", description: "Slider image deleted." });
     } catch (error) {
       console.error("Error deleting slider:", error);
-      toast({ title: "Error", description: "Failed to delete slider. It might have been already deleted.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete slider. Check permissions or console for details.", variant: "destructive" });
     }
   }
 
@@ -136,9 +135,27 @@ export default function SliderAdmin() {
                                     className="aspect-video w-full rounded-lg object-cover"
                                 />
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(slider)}>
-                                        <Trash2 className="h-5 w-5" />
-                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="icon">
+                                                <Trash2 className="h-5 w-5" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the slider image.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(slider)} className="bg-destructive hover:bg-destructive/90">
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
                             </div>
                         ))}

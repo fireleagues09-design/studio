@@ -1,11 +1,13 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read for slider images
+    // Allow public read access for all files in the 'sliders' directory
     match /sliders/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow read: if true;
+      allow write: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }
