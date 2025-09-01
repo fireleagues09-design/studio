@@ -29,7 +29,7 @@ function CreateTournamentDialog() {
     const [time, setTime] = useState('');
     const [entryFee, setEntryFee] = useState('');
     const [prize, setPrize] = useState('');
-    const [slots, setSlots]_useState('');
+    const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
     const [status, setStatus] = useState<TournamentType['status']>('Upcoming');
@@ -668,5 +668,7 @@ export default function AdminPage() {
 
         </div>
     );
+
+    
 
     
