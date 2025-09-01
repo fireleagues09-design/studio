@@ -13,7 +13,7 @@ import {
   deleteDoc,
   doc,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -38,11 +38,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './ui/alert-dialog';
-import { getSignedUploadUrl } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
   url: string;
+  storagePath: string;
 };
 
 export default function SliderAdmin() {
@@ -68,7 +68,7 @@ export default function SliderAdmin() {
         console.error('Error fetching sliders: ', error);
         toast({
           title: 'Error',
-          description: 'Could not fetch sliders. Check permissions.',
+          description: 'Could not fetch sliders. Check Firestore permissions.',
           variant: 'destructive',
         });
         setLoading(false);
@@ -88,40 +88,25 @@ export default function SliderAdmin() {
     }
 
     setUploading(true);
+    const storagePath = `sliders/${Date.now()}-${file.name}`;
+    const storageRef = ref(storage, storagePath);
+
     try {
-      // 1. Get signed URL from server action
-      const { success, uploadUrl, publicUrl, error } = await getSignedUploadUrl(
-        file.name,
-        file.type
-      );
-
-      if (!success || !uploadUrl || !publicUrl) {
-        throw new Error(error || 'Failed to get upload URL.');
-      }
-
-      // 2. Upload file to Firebase Storage using the signed URL
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('File upload failed.');
-      }
+      // 1. Upload file to Firebase Storage
+      await uploadBytes(storageRef, file);
       
-      // 3. Save public URL to Firestore
+      // 2. Get download URL
+      const url = await getDownloadURL(storageRef);
+
+      // 3. Save URL and path to Firestore
       await addDoc(collection(db, 'sliders'), {
-        url: publicUrl,
+        url: url,
+        storagePath: storagePath, // Store path for deletion
         createdAt: serverTimestamp(),
       });
 
       setFile(null);
-      const fileInput = document.getElementById(
-        'slider-file-input'
-      ) as HTMLInputElement;
+      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
       toast({
@@ -133,7 +118,9 @@ export default function SliderAdmin() {
       toast({
         title: 'Upload Failed',
         description:
-          err.message || 'Could not upload image. Check permissions or console for details.',
+          err.code === 'storage/unauthorized' 
+            ? 'Permission denied. Check Firebase Storage rules.'
+            : 'Could not upload image. Check console for details.',
         variant: 'destructive',
       });
     } finally {
@@ -144,7 +131,7 @@ export default function SliderAdmin() {
   async function handleDelete(slider: Slider) {
     try {
       // Delete from Storage
-      const imageRef = ref(storage, slider.url);
+      const imageRef = ref(storage, slider.storagePath);
       await deleteObject(imageRef);
 
       // Delete from Firestore
@@ -153,15 +140,14 @@ export default function SliderAdmin() {
       toast({ title: 'Success', description: 'Slider image deleted.' });
     } catch (error: any) {
        console.error('Error deleting slider:', error);
-       // Handle cases where the file might not exist in storage anymore
       if (error.code === 'storage/object-not-found') {
+          // If file doesn't exist in storage, just delete the Firestore doc
           await deleteDoc(doc(db, 'sliders', slider.id));
            toast({ title: 'Success', description: 'Slider record deleted (image was not found in storage).' });
       } else {
         toast({
-            title: 'Error',
-            description:
-            'Failed to delete slider. Check permissions or console for details.',
+            title: 'Error Deleting',
+            description: 'Failed to delete slider. Check permissions or console for details.',
             variant: 'destructive',
         });
       }
@@ -173,8 +159,7 @@ export default function SliderAdmin() {
       <CardHeader>
         <CardTitle>Manage Sliders</CardTitle>
         <CardDescription>
-          Upload new images for the homepage slider gallery. Click an image to
-          delete it.
+          Upload new images for the homepage slider gallery.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
