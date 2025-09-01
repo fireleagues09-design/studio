@@ -1,15 +1,9 @@
 
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow admin users to upload files to the 'sliders' directory.
-    // This rule checks the 'isAdmin' flag on the user's document in Firestore.
-    match /sliders/{fileName} {
-      allow write: if request.auth != null &&
-                      get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    match /sliders/{allPaths=**} {
+      allow write: if request.auth != null;
     }
   }
 }
-
-    

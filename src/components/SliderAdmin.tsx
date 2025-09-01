@@ -107,54 +107,45 @@ export default function SliderAdmin() {
     
     setUploading(true);
     setUploadProgress(0);
+    const toastId = 'upload-toast';
 
     try {
         const storagePath = `sliders/${Date.now()}-${file.name}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
+        // Attach listener for progress updates
         uploadTask.on('state_changed',
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 setUploadProgress(progress);
-                toast({
-                    title: 'Uploading...',
-                    description: `Upload is ${Math.round(progress)}% complete.`,
-                });
-            },
-            (error) => {
-                console.error("Upload failed:", error);
-                toast({
-                    title: 'Upload Failed',
-                    description: `Error: ${error.message}`,
-                    variant: 'destructive',
-                });
-                setUploading(false); // Ensure uploading state is reset on error
-            },
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    await addDoc(collection(db, 'sliders'), {
-                        url: downloadURL,
-                        storagePath: storagePath,
-                        createdAt: serverTimestamp(),
-                    });
-                    toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-                    setFile(null);
-                    const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-                    if (fileInput) fileInput.value = '';
-                } catch(error: any) {
-                    console.error("Error saving slider data:", error);
-                    toast({ title: 'Database Error', description: 'Image uploaded but failed to save to database. ' + error.message, variant: 'destructive' });
-                } finally {
-                    setUploading(false);
-                }
             }
         );
+
+        // Await completion of the upload
+        await uploadTask;
+
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        await addDoc(collection(db, 'sliders'), {
+            url: downloadURL,
+            storagePath: storagePath,
+            createdAt: serverTimestamp(),
+        });
+        toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+        
     } catch (err: any) {
         console.error('Upload process failed:', err);
-        toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive' });
+        toast({ 
+            title: 'Upload Failed', 
+            description: err.message || 'An unknown error occurred.', 
+            variant: 'destructive' 
+        });
+    } finally {
+        setFile(null);
+        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
         setUploading(false);
+        setUploadProgress(0);
     }
   };
 
@@ -273,3 +264,4 @@ export default function SliderAdmin() {
     </Card>
   );
 }
+
