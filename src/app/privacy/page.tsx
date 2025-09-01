@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PrivacyPage() {
@@ -25,20 +26,18 @@ export default function PrivacyPage() {
           </p>
 
           <h2>2. Use of Data</h2>
-          <p>
-            FireLeagues uses the collected data for various purposes:
-            <ul>
-              <li>To provide and maintain the Service</li>
-              <li>To notify you about changes to our Service</li>
-              <li>
-                To allow you to participate in interactive features of our
-                Service when you choose to do so
-              </li>
-              <li>To provide customer care and support</li>
-              <li>To monitor the usage of the Service</li>
-              <li>To detect, prevent and address technical issues</li>
-            </ul>
-          </p>
+          <p>FireLeagues uses the collected data for various purposes:</p>
+          <ul>
+            <li>To provide and maintain the Service</li>
+            <li>To notify you about changes to our Service</li>
+            <li>
+              To allow you to participate in interactive features of our
+              Service when you choose to do so
+            </li>
+            <li>To provide customer care and support</li>
+            <li>To monitor the usage of the Service</li>
+            <li>To detect, prevent and address technical issues</li>
+          </ul>
 
           <h2>3. Data Security</h2>
           <p>
