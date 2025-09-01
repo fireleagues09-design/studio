@@ -405,68 +405,6 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
     );
 }
 
-function UploadSliderButton() {
-    const [uploading, setUploading] = useState(false);
-    const { toast } = useToast();
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploading(true);
-
-        try {
-            const newBannerRef = doc(collection(db, 'banners'));
-            const bannerId = newBannerRef.id;
-            const storageRef = ref(storage, `banners/${bannerId}`);
-
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
-
-            await setDoc(newBannerRef, {
-                image: downloadURL,
-                dataAiHint: 'slider image',
-                createdAt: serverTimestamp(),
-            });
-
-            toast({
-                title: 'Success!',
-                description: 'New slider image has been uploaded.',
-            });
-
-        } catch (error: any) {
-            console.error("Error uploading image:", error);
-            toast({
-                title: 'Upload Failed',
-                description: error.message || 'There was an error uploading the slider image.',
-                variant: 'destructive',
-            });
-        } finally {
-            setUploading(false);
-            if (e.target) {
-                e.target.value = '';
-            }
-        }
-    };
-
-    return (
-        <Button asChild variant="outline" disabled={uploading}>
-            <Label htmlFor="slider-upload" className="cursor-pointer flex items-center gap-2">
-                <ImageIcon className="h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Upload New Slider'}
-                <Input
-                    id="slider-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    disabled={uploading}
-                />
-            </Label>
-        </Button>
-    );
-}
-
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -604,18 +542,6 @@ export default function AdminPage() {
                     </Card>
                 </section>
             )}
-
-             <section>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Site Management</CardTitle>
-                        <CardDescription>Manage sitewide content like homepage sliders.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <UploadSliderButton />
-                    </CardContent>
-                </Card>
-            </section>
 
             <section>
                 <Card>

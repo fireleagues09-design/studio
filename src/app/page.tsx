@@ -3,17 +3,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import TournamentCard from "@/components/TournamentCard";
-import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -21,17 +13,9 @@ import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestor
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
 
-type Banner = {
-  id: string;
-  image: string;
-  dataAiHint: string;
-};
-
 export default function Home() {
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
-  const [banners, setBanners] = useState<Banner[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
-  const [loadingBanners, setLoadingBanners] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
@@ -50,21 +34,10 @@ export default function Home() {
         console.error("Error fetching tournaments:", error);
         setLoadingTournaments(false);
     });
-
-    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
-    const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
-        const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
-        setBanners(bannersData);
-        setLoadingBanners(false);
-    }, (error) => {
-        console.error("Error fetching banners:", error);
-        setLoadingBanners(false);
-    });
-
+    
     return () => {
         unsubscribeAuth();
         unsubscribeTournaments();
-        unsubscribeBanners();
     };
   }, []);
 
@@ -97,42 +70,6 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="container mx-auto px-4">
-        {loadingBanners ? (
-            <Skeleton className="w-full aspect-video md:aspect-[2.4/1]" />
-        ) : (
-            banners.length > 0 && (
-                <Carousel
-                opts={{
-                    align: "start",
-                    loop: true,
-                }}
-                className="w-full"
-                >
-                <CarouselContent>
-                    {banners.map((banner, index) => (
-                    <CarouselItem key={banner.id}>
-                        <Card className="overflow-hidden">
-                        <div className="relative aspect-video md:aspect-[2.4/1]">
-                            <Image
-                            src={banner.image}
-                            alt={`Promotional banner ${index + 1}`}
-                            data-ai-hint={banner.dataAiHint}
-                            fill
-                            className="object-cover"
-                            />
-                        </div>
-                        </Card>
-                    </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious className="hidden sm:flex" />
-                <CarouselNext className="hidden sm:flex" />
-                </Carousel>
-            )
-        )}
-      </div>
-      
       <main className="container mx-auto px-4 flex flex-col gap-12 md:gap-16">
         <section>
           <div className="flex justify-between items-center mb-6">
