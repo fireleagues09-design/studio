@@ -1,45 +1,65 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, deleteDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Trash2 } from "lucide-react";
+import Image from "next/image";
+import { Skeleton } from "./ui/skeleton";
+
+type Slider = {
+  id: string;
+  url: string;
+};
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [sliders, setSliders] = useState<Slider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+
+   useEffect(() => {
+    const q = query(collection(db, "sliders"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const sliderData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Slider));
+      setSliders(sliderData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching sliders: ", error);
+      toast({ title: "Error", description: "Could not fetch sliders. Check permissions.", variant: "destructive"});
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [toast]);
+
 
   async function handleUpload() {
     if (!file) {
         toast({ title: "No File Selected", description: "Please select a file to upload.", variant: "destructive"});
         return;
     }
-    setLoading(true);
+    setUploading(true);
     try {
-      // Create a unique path for each slider image
       const storageRef = ref(storage, `sliders/${Date.now()}-${file.name}`);
-      
-      // Upload to storage
       await uploadBytes(storageRef, file);
-      
-      // Get URL
       const url = await getDownloadURL(storageRef);
 
-      // Save to Firestore
       await addDoc(collection(db, "sliders"), {
         url,
         createdAt: serverTimestamp(),
       });
 
       setFile(null);
-      // Clear the file input visually
       const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
@@ -48,7 +68,26 @@ export default function SliderAdmin() {
       console.error("Upload failed:", err);
       toast({ title: "Upload Failed", description: "Could not upload image. Check permissions or console for details.", variant: "destructive"});
     } finally {
-      setLoading(false);
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete(slider: Slider) {
+     if (!confirm("Are you sure you want to delete this slider image?")) {
+      return;
+    }
+    try {
+      // Delete from Storage
+      const imageRef = ref(storage, slider.url);
+      await deleteObject(imageRef);
+
+      // Delete from Firestore
+      await deleteDoc(doc(db, "sliders", slider.id));
+      
+      toast({ title: "Success", description: "Slider image deleted." });
+    } catch (error) {
+      console.error("Error deleting slider:", error);
+      toast({ title: "Error", description: "Failed to delete slider. It might have been already deleted.", variant: "destructive" });
     }
   }
 
@@ -56,23 +95,58 @@ export default function SliderAdmin() {
     <Card>
         <CardHeader>
             <CardTitle>Manage Sliders</CardTitle>
-            <CardDescription>Upload new images for the homepage slider gallery.</CardDescription>
+            <CardDescription>Upload new images for the homepage slider gallery. Click an image to delete it.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row items-center gap-4">
-            <Input
-                id="slider-file-input"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full sm:w-auto flex-grow"
-            />
-            <Button
-                onClick={handleUpload}
-                disabled={loading || !file}
-                className="w-full sm:w-auto"
-            >
-                {loading ? "Uploading..." : <><UploadCloud className="mr-2 h-4 w-4"/> Upload Slider</>}
-            </Button>
+        <CardContent className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Input
+                    id="slider-file-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="w-full sm:w-auto flex-grow"
+                    disabled={uploading}
+                />
+                <Button
+                    onClick={handleUpload}
+                    disabled={uploading || !file}
+                    className="w-full sm:w-auto"
+                >
+                    {uploading ? "Uploading..." : <><UploadCloud className="mr-2 h-4 w-4"/> Upload Slider</>}
+                </Button>
+            </div>
+            
+            <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">Current Sliders</h3>
+                {loading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                           <Skeleton key={i} className="aspect-video w-full rounded-lg" />
+                        ))}
+                    </div>
+                ) : sliders.length > 0 ? (
+                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {sliders.map((slider) => (
+                            <div key={slider.id} className="relative group">
+                                <Image
+                                    src={slider.url}
+                                    alt="Uploaded slider"
+                                    width={200}
+                                    height={120}
+                                    className="aspect-video w-full rounded-lg object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="destructive" size="icon" onClick={() => handleDelete(slider)}>
+                                        <Trash2 className="h-5 w-5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No sliders uploaded yet.</p>
+                )}
+            </div>
         </CardContent>
     </Card>
   );
