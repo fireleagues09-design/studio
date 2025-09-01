@@ -1,23 +1,20 @@
-rules_version = '2';
 
+rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Helper function to check admin status
-    function isAdmin() {
-      return exists(/databases/(default)/documents/users/$(request.auth.uid)) && 
-             get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Admins can read and write to the sliders directory
+    // Allow public read access to slider images
     match /sliders/{allPaths=**} {
-      allow read; // Sliders are public
-      allow write: if isAdmin();
+      allow read;
+      // Allow writes only for authenticated admins
+      allow write: if request.auth != null && 
+                      get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Default deny all other paths
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
+    // You can add other rules for other paths here
+    // For example, for user profile pictures:
+    // match /users/{userId}/{allPaths=**} {
+    //   allow read;
+    //   allow write: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }

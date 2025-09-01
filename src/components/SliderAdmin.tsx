@@ -12,6 +12,7 @@ import {
   doc,
   addDoc,
   serverTimestamp,
+  getDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
@@ -79,10 +80,19 @@ export default function SliderAdmin() {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
-    if (!auth.currentUser) {
+    const user = auth.currentUser;
+    if (!user) {
         toast({ title: 'Not Authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
         return;
     }
+     // Check if user is admin
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+        toast({ title: 'Permission Denied', description: 'You do not have permission to upload sliders.', variant: 'destructive' });
+        return;
+    }
+
 
     setUploading(true);
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
@@ -111,7 +121,7 @@ export default function SliderAdmin() {
     } catch (err: any) {
       console.error('Upload process failed:', err);
       let errorMessage = 'An unknown error occurred.';
-      if (err.code === 'storage/unauthorized') {
+      if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
           errorMessage = 'Permission denied. Please check your Firebase Storage rules.';
       } else if (err.message) {
           errorMessage = err.message;
@@ -135,7 +145,11 @@ export default function SliderAdmin() {
       toast({ title: 'Success', description: 'Slider image deleted.'});
     } catch (error: any) {
        console.error('Error deleting slider:', error);
-       toast({ title: 'Error', description: 'Failed to delete slider. Check console for details.', variant: 'destructive'});
+       let errorMessage = 'Failed to delete slider. Check console for details.';
+       if (error.code === 'storage/unauthorized' || error.code === 'permission-denied') {
+          errorMessage = 'Permission denied. Please check your Firebase rules.';
+       }
+       toast({ title: 'Error', description: errorMessage, variant: 'destructive'});
     }
   }
 
