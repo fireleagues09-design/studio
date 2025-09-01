@@ -108,7 +108,6 @@ export default function RegisterPage() {
             winning: 0,
             bonus: 0,
           },
-          isAdmin: false,
           registeredOn: serverTimestamp(),
         });
         
