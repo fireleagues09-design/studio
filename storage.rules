@@ -1,21 +1,20 @@
 
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    // Rules for all files
-    match /{allPaths=**} {
-      // By default, deny all reads and writes
-      allow read, write: if false;
-    }
-
-    // Rules for slider images
+    // Allow public read access to all slider images
     match /sliders/{allPaths=**} {
-      // Allow anyone to read slider images
-      allow read: if true;
-      // Allow only authenticated admins to upload/delete
+      allow read;
+      // Allow write access (uploads, deletes) only to authenticated admin users
       allow write: if request.auth != null && 
                     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Secure all other paths
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
