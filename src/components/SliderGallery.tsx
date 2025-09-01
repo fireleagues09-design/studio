@@ -13,6 +13,7 @@ type Slider = {
   url: string;
 };
 
+// Default sliders to show if the database is empty
 const DEFAULT_SLIDERS: Slider[] = [
     { id: 'default-1', url: 'https://picsum.photos/350/210?random=1' },
     { id: 'default-2', url: 'https://picsum.photos/350/210?random=2' },
@@ -24,11 +25,17 @@ export default function SliderGallery() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Query the 'sliders' collection, ordering by 'createdAt' in descending order
+    // to show the newest sliders first.
     const q = query(collection(db, "sliders"), orderBy("createdAt", "desc"));
+    
+    // onSnapshot listens for real-time updates.
     const unsub = onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
+          // If there are no sliders in the database, show the default ones.
           setSliders(DEFAULT_SLIDERS);
       } else {
+          // Map the documents to the Slider type
           const sliderData = snapshot.docs.map((doc) => ({
             id: doc.id,
             url: doc.data().url,
@@ -38,10 +45,12 @@ export default function SliderGallery() {
       setLoading(false);
     }, (error) => {
       console.error("Error fetching sliders: ", error);
-      // On error (e.g. permissions), show default sliders
+      // On error (e.g., permissions issues), show default sliders as a fallback.
       setSliders(DEFAULT_SLIDERS);
       setLoading(false);
     });
+
+    // Clean up the listener when the component unmounts.
     return () => unsub();
   }, []);
 
