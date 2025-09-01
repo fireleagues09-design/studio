@@ -10,8 +10,10 @@ import {
   orderBy,
   deleteDoc,
   doc,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -36,26 +38,14 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { uploadSlider } from '@/app/admin/actions';
+import { auth } from '@/lib/firebase';
+import { revalidatePath } from 'next/cache';
 
 type Slider = {
   id: string;
   url: string;
   storagePath: string;
 };
-
-// Helper to convert file to base64
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-        const result = reader.result as string;
-        // Remove the data URI prefix
-        resolve(result.split(',')[1]);
-    };
-    reader.onerror = error => reject(error);
-});
-
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
@@ -78,7 +68,7 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        toast({ title: 'Error', description: 'Could not fetch sliders.', variant: 'destructive'});
+        toast({ title: 'Error', description: 'Could not fetch sliders. Check permissions.', variant: 'destructive'});
         setLoading(false);
       }
     );
@@ -90,42 +80,59 @@ export default function SliderAdmin() {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
+    if (!auth.currentUser) {
+        toast({ title: 'Not Authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
+        return;
+    }
 
     setUploading(true);
-    try {
-      const fileBuffer = await toBase64(file);
+    const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
-      const result = await uploadSlider({
-        fileBuffer,
-        fileName: file.name,
-        fileType: file.type,
+    try {
+      const storagePath = `sliders/${Date.now()}-${file.name}`;
+      const storageRef = ref(clientStorage, storagePath);
+
+      // 1. Upload file to Firebase Storage
+      await uploadBytes(storageRef, file);
+
+      // 2. Get the public URL
+      const publicUrl = await getDownloadURL(storageRef);
+
+      // 3. Save metadata to Firestore
+      await addDoc(collection(db, 'sliders'), {
+          url: publicUrl,
+          storagePath: storagePath,
+          createdAt: serverTimestamp(),
       });
 
-      if (result.success) {
-        toast({ title: 'Success', description: result.message });
-        setFile(null);
-        // Reset file input
-        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
-      } else {
-        throw new Error(result.message);
-      }
+      toast({ title: 'Success', description: "Slider uploaded successfully!" });
+      setFile(null);
+      if (fileInput) fileInput.value = '';
+
     } catch (err: any) {
       console.error('Upload process failed:', err);
-      toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
+      let errorMessage = 'An unknown error occurred.';
+      if (err.code === 'storage/unauthorized') {
+          errorMessage = 'Permission denied. Please check your Firebase Storage rules.';
+      } else if (err.message) {
+          errorMessage = err.message;
+      }
+      toast({ title: 'Upload Failed', description: errorMessage, variant: 'destructive'});
     } finally {
+      // This guarantees the loading state is turned off.
       setUploading(false);
     }
   };
 
   async function handleDelete(slider: Slider) {
     try {
+      // Delete Firestore document first
       await deleteDoc(doc(db, 'sliders', slider.id));
-      if (slider.storagePath) {
-        // Use the client storage instance for deletion from the client
-        const imageRef = ref(clientStorage, slider.storagePath);
-        await deleteObject(imageRef);
-      }
+      
+      // Then delete file from Storage
+      const imageRef = ref(clientStorage, slider.storagePath);
+      await deleteObject(imageRef);
+
       toast({ title: 'Success', description: 'Slider image deleted.'});
     } catch (error: any) {
        console.error('Error deleting slider:', error);
