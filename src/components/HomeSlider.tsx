@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Autoplay from 'embla-carousel-autoplay';
 
@@ -17,15 +16,23 @@ type Slider = {
   url: string;
 };
 
-// We'll use the provided URL directly for now.
-const featuredSlider: Slider = {
-    id: 'featured-1',
-    url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBermuda_App_Splash.webp?alt=media&token=0bdaa681-9730-4c12-be7c-053d235e9c09'
-};
+const sliders: Slider[] = [
+    {
+        id: 'user-slide-1',
+        url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2Fdownload.jpg?alt=media&token=30f25368-ec19-4671-9e2d-5cb147b6d5bc'
+    },
+    {
+        id: 'user-slide-2',
+        url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2Fdownload.jpg?alt=media&token=30f25368-ec19-4671-9e2d-5cb147b6d5bc'
+    }
+];
 
 
 export function HomeSlider() {
-  const sliders = [featuredSlider];
+
+  if (!sliders || sliders.length === 0) {
+    return null;
+  }
 
   return (
     <Carousel
