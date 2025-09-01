@@ -20,7 +20,6 @@ import { auth, db } from "@/lib/firebase";
 import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from '@/lib/utils';
 
 type Banner = {
   id: string;
@@ -52,7 +51,7 @@ export default function Home() {
         setLoadingTournaments(false);
     });
 
-    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "asc"));
+    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
     const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
         const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
         setBanners(bannersData);
@@ -171,6 +170,4 @@ export default function Home() {
     </div>
   );
 }
-    
-
     
