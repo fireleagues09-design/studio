@@ -76,61 +76,54 @@ export default function SliderAdmin() {
   }, [toast]);
 
   const handleUpload = async () => {
+    const user = auth.currentUser;
     if (!file) {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
-    const user = auth.currentUser;
-    if (!user) {
+     if (!user) {
         toast({ title: 'Not Authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
         return;
     }
-     // Check if user is admin
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
-        toast({ title: 'Permission Denied', description: 'You do not have permission to upload sliders.', variant: 'destructive' });
-        return;
-    }
-
-
+    
     setUploading(true);
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
-      const storagePath = `sliders/${Date.now()}-${file.name}`;
-      const storageRef = ref(clientStorage, storagePath);
-
-      // 1. Upload file to Firebase Storage
-      await uploadBytes(storageRef, file);
-
-      // 2. Get the public URL
-      const publicUrl = await getDownloadURL(storageRef);
-
-      // 3. Save metadata to Firestore
-      await addDoc(collection(db, 'sliders'), {
-          url: publicUrl,
-          storagePath: storagePath,
-          createdAt: serverTimestamp(),
-      });
-
-      toast({ title: 'Success', description: "Slider uploaded successfully!" });
-      setFile(null);
-      if (fileInput) fileInput.value = '';
-
-    } catch (err: any) {
-      console.error('Upload process failed:', err);
-      let errorMessage = 'An unknown error occurred.';
-      if (err.code === 'storage/unauthorized' || err.code === 'permission-denied') {
-          errorMessage = 'Permission denied. Please check your Firebase Storage rules.';
-      } else if (err.message) {
-          errorMessage = err.message;
-      }
-      toast({ title: 'Upload Failed', description: errorMessage, variant: 'destructive'});
-    } finally {
-      // This guarantees the loading state is turned off.
-      setUploading(false);
-    }
+       // 1. Check if user is an admin
+       const userDocRef = doc(db, 'users', user.uid);
+       const userDoc = await getDoc(userDocRef);
+       if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+           throw new Error('Permission Denied. You do not have permission to upload sliders.');
+       }
+       
+       const storagePath = `sliders/${Date.now()}-${file.name}`;
+       const storageRef = ref(clientStorage, storagePath);
+ 
+       // 2. Upload file to Firebase Storage
+       await uploadBytes(storageRef, file);
+ 
+       // 3. Get the public URL
+       const publicUrl = await getDownloadURL(storageRef);
+ 
+       // 4. Save metadata to Firestore
+       await addDoc(collection(db, 'sliders'), {
+           url: publicUrl,
+           storagePath: storagePath,
+           createdAt: serverTimestamp(),
+       });
+ 
+       toast({ title: 'Success', description: "Slider uploaded successfully!" });
+       setFile(null);
+       if (fileInput) fileInput.value = '';
+ 
+     } catch (err: any) {
+       console.error('Upload process failed:', err);
+       toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
+     } finally {
+       // This guarantees the loading state is turned off.
+       setUploading(false);
+     }
   };
 
   async function handleDelete(slider: Slider) {
