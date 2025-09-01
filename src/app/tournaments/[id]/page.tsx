@@ -39,21 +39,16 @@ import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type TournamentPageProps = {
-  params: {
-    id: string;
-  };
+  params: { id: string };
 };
 
 type TournamentDetailViewProps = {
-    params: {
-        id: string;
-    }
+    tournamentId: string;
 }
 
-function TournamentDetailView({ params }: TournamentDetailViewProps) {
+function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
-    const tournamentId = params.id;
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -241,10 +236,11 @@ function TournamentDetailView({ params }: TournamentDetailViewProps) {
     );
 }
 
+
 export default function TournamentPage({ params }: TournamentPageProps) {
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <TournamentDetailView key={params.id} params={params} />
+      <TournamentDetailView key={params.id} tournamentId={params.id} />
     </div>
   );
 }
