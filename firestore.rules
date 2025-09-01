@@ -1,34 +1,44 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admins can do anything
-    match /{document=**} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    
+    // Helper function to check for admin privileges
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Sliders are public to read for everyone
-    match /sliders/{sliderId} {
+    // Users can be read by their own authenticated user or an admin.
+    // Users can create their own document on registration.
+    // Users can only update their own inGameName.
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId && request.resource.data.keys().hasOnly(['inGameName']);
+    }
+
+    // Tournaments can be read by anyone.
+    // Only admins can create, update, or delete tournaments.
+    match /tournaments/{tournamentId} {
       allow read: if true;
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow write: if isAdmin();
     }
     
-    // Tournaments are public to read
-    match /tournaments/{tournamentId} {
-        allow read: if true;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    // Sliders can be read by anyone.
+    // Only admins can create or delete sliders.
+    match /sliders/{sliderId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
-
-    // Allow users to read their own profile, but not write to it directly
-    match /users/{userId} {
-      allow read: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inGameName']);
-    }
-
-    // Transactions can only be read by the user they belong to.
-    // New transactions can be created by the user.
+    
+    // Transactions can be read by the associated user or an admin.
+    // Users can create their own transaction documents (for deposit requests).
     match /transactions/{transactionId} {
-       allow read: if resource.data.userId == request.auth.uid;
-       allow create: if request.resource.data.userId == request.auth.uid;
+        allow read: if request.auth.uid == resource.data.userId || isAdmin();
+        allow create: if request.auth.uid == request.resource.data.userId;
+        allow update, delete: if isAdmin();
     }
   }
 }
