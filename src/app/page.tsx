@@ -44,17 +44,17 @@ export default function Home() {
 
 
   return (
-    <div className="flex flex-col gap-12 md:gap-16 lg:gap-20 pb-12 md:pb-16 lg:pb-20">
+    <div className="flex flex-col gap-8 pb-12">
       
       <section className="container mx-auto px-4">
         <HomeSlider />
       </section>
 
-      <main className="container mx-auto px-4 flex flex-col gap-12 md:gap-16">
+      <main className="container mx-auto px-4 flex flex-col gap-8">
         
         <section>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold tracking-tight">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold tracking-tight">
               Upcoming Tournaments
             </h2>
             <Button variant="link" asChild>
@@ -64,18 +64,16 @@ export default function Home() {
             </Button>
           </div>
           {loadingTournaments ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-4">
-                        <Skeleton className="h-48 w-full" />
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-10 w-full" />
+                    <div key={i} className="space-y-2">
+                        <Skeleton className="aspect-square w-full rounded-lg" />
+                        <Skeleton className="h-5 w-3/4 rounded-md" />
                     </div>
                 ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {upcomingTournaments.map((tournament) => (
                 <TournamentCard key={tournament.id} tournament={tournament} />
                 ))}

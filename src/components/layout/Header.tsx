@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -68,12 +69,15 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-4">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
-          <Flame className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg">FireLeagues</span>
-        </Link>
+        <div className="flex-1 md:flex-none">
+            <Link href="/" className="mr-6 flex items-center space-x-2">
+              <Flame className="h-6 w-6 text-primary" />
+              <span className="font-bold text-lg hidden sm:inline-block">FireLeagues</span>
+            </Link>
+        </div>
 
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+
+        <nav className="hidden md:flex flex-1 justify-center items-center space-x-6 text-sm font-medium">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -90,7 +94,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex flex-1 items-center justify-end">
+        <div className="flex flex-1 justify-end">
           <div className="hidden md:flex items-center space-x-2">
             {loading ? null : user ? (
               <>
@@ -98,7 +102,7 @@ export function Header() {
                    <Button variant="ghost" size="sm" asChild>
                      <Link href="/admin">
                        <Shield className="mr-2 h-4 w-4" />
-                       Admin Panel
+                       Admin
                      </Link>
                    </Button>
                 )}
@@ -108,24 +112,21 @@ export function Header() {
                     ₹{totalBalance.toFixed(2)}
                     </Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="icon" asChild>
                     <Link href="/profile">
-                        <User className="mr-2 h-4 w-4" />
-                        My Profile
+                        <User className="h-5 w-5" />
                     </Link>
                 </Button>
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" size="sm" asChild>
                   <Link href="/login">
-                    <LogIn className="mr-2 h-4 w-4" />
                     Login
                   </Link>
                 </Button>
-                <Button asChild>
+                <Button asChild size="sm">
                   <Link href="/register">
-                    <UserPlus className="mr-2 h-4 w-4" />
                     Register
                   </Link>
                 </Button>
@@ -172,7 +173,7 @@ export function Header() {
                          <Button variant="outline" asChild className="w-full justify-start">
                               <Link href="/wallet">
                                 <Wallet className="mr-2 h-4 w-4 text-primary" />
-                                ₹{totalBalance.toFixed(2)}
+                                Wallet: ₹{totalBalance.toFixed(2)}
                               </Link>
                           </Button>
                         <Button variant="ghost" asChild className="w-full justify-start">
