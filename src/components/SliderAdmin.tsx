@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db, storage as clientStorage } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -10,10 +10,8 @@ import {
   orderBy,
   deleteDoc,
   doc,
-  addDoc,
-  serverTimestamp,
 } from 'firebase/firestore';
-import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -38,13 +36,26 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase';
+import { uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
   url: string;
   storagePath: string;
 };
+
+// Helper to convert file to base64
+const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data URI prefix
+        resolve(result.split(',')[1]);
+    };
+    reader.onerror = error => reject(error);
+});
+
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
@@ -79,38 +90,29 @@ export default function SliderAdmin() {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
-     if (!auth.currentUser) {
-      toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive'});
-      return;
-    }
 
     setUploading(true);
     try {
-      const storagePath = `sliders/${Date.now()}-${file.name}`;
-      const storageRef = ref(storage, storagePath);
+      const fileBuffer = await toBase64(file);
 
-      await uploadBytes(storageRef, file);
-      const publicUrl = await getDownloadURL(storageRef);
-
-      await addDoc(collection(db, 'sliders'), {
-        url: publicUrl,
-        storagePath: storagePath,
-        createdAt: serverTimestamp(),
+      const result = await uploadSlider({
+        fileBuffer,
+        fileName: file.name,
+        fileType: file.type,
       });
-      
-      toast({ title: 'Success', description: "Slider uploaded successfully!" });
-      setFile(null);
-      // Reset file input
-      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
 
-    } catch (error: any) {
-      console.error('Upload process failed:', error);
-       let errorMessage = 'Upload failed. Please check the console for more details.';
-       if (error.code === 'storage/unauthorized') {
-            errorMessage = "Permission denied. Make sure you are an admin and the storage rules are correct.";
-       }
-      toast({ title: 'Upload Failed', description: errorMessage, variant: 'destructive'});
+      if (result.success) {
+        toast({ title: 'Success', description: result.message });
+        setFile(null);
+        // Reset file input
+        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (err: any) {
+      console.error('Upload process failed:', err);
+      toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
     } finally {
       setUploading(false);
     }
@@ -120,7 +122,8 @@ export default function SliderAdmin() {
     try {
       await deleteDoc(doc(db, 'sliders', slider.id));
       if (slider.storagePath) {
-        const imageRef = ref(storage, slider.storagePath);
+        // Use the client storage instance for deletion from the client
+        const imageRef = ref(clientStorage, slider.storagePath);
         await deleteObject(imageRef);
       }
       toast({ title: 'Success', description: 'Slider image deleted.'});
