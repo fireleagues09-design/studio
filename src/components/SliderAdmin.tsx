@@ -106,7 +106,6 @@ export default function SliderAdmin() {
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
-        // First, verify the user is an admin
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
@@ -116,13 +115,9 @@ export default function SliderAdmin() {
         const storagePath = `sliders/${Date.now()}-${file.name}`;
         const storageRef = ref(storage, storagePath);
 
-        // Upload the file
         await uploadBytes(storageRef, file);
-
-        // Get the download URL
         const downloadURL = await getDownloadURL(storageRef);
 
-        // Save slider metadata to Firestore
         await addDoc(collection(db, 'sliders'), {
             url: downloadURL,
             storagePath: storagePath,
@@ -142,22 +137,18 @@ export default function SliderAdmin() {
   };
 
   async function handleDelete(slider: Slider) {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in to delete.', variant: 'destructive'});
-        return;
-    }
     try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+           throw new Error('You must be logged in to delete.');
+        }
         const userDocRef = doc(db, "users", currentUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
           throw new Error("Permission Denied. User is not an admin.");
         }
 
-        // Delete the Firestore document
         await deleteDoc(doc(db, 'sliders', slider.id));
-
-        // Delete the file from Firebase Storage
         const storageRef = ref(storage, slider.storagePath);
         await deleteObject(storageRef);
 

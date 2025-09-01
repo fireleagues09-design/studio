@@ -1,37 +1,33 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check for admin role
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Users can be read by anyone, but only created by the user themselves.
-    // Users can update their own inGameName.
-    match /users/{userId} {
+  
+    // Sliders can be read by anyone, but only created/deleted by admins
+    match /sliders/{sliderId} {
       allow read: if true;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inGameName']);
-    }
-
-    // Tournaments can be read by anyone, but only created/updated/deleted by an admin.
-    match /tournaments/{tournamentId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
     
-    // Sliders can be read by anyone, but only created/deleted by an admin.
-    match /sliders/{sliderId} {
-        allow read: if true;
-        allow write: if isAdmin();
+    // Tournaments can be read by anyone, but only created/updated/deleted by admins
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Users can create their own profile, can read their own profile,
+    // and can only update their own inGameName. Admins can read any profile.
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['inGameName']);
     }
 
-    // Transactions can only be read or created by the user they belong to.
-    // Admins can update transactions (e.g., to approve a deposit).
+    // Transactions: users can create their own, and can read their own. Admins can read all.
     match /transactions/{transactionId} {
-      allow read, create: if request.auth.uid == request.resource.data.userId;
-      allow update: if isAdmin();
+       allow read: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true);
+       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
   }
 }
