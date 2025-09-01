@@ -28,10 +28,13 @@ export function FloatingHomeButton() {
     setIsVisible(pathname !== '/');
 
     const handleResize = () => {
+        if (!buttonRef.current) return;
+        const buttonWidth = buttonRef.current.offsetWidth;
+        const buttonHeight = buttonRef.current.offsetHeight;
         // Adjust position on resize to keep it within bounds
         setPosition(prev => ({
-            x: Math.min(prev.x, window.innerWidth - 60),
-            y: Math.min(prev.y, window.innerHeight - 60)
+            x: Math.min(prev.x, window.innerWidth - buttonWidth),
+            y: Math.min(prev.y, window.innerHeight - buttonHeight)
         }));
     };
 
@@ -60,37 +63,41 @@ export function FloatingHomeButton() {
   };
 
   const handleMouseMove = (e: globalThis.MouseEvent) => {
-    if (isDragging) {
+    if (isDragging && buttonRef.current) {
+      const buttonWidth = buttonRef.current.offsetWidth;
+      const buttonHeight = buttonRef.current.offsetHeight;
       let newX = e.clientX - offset.x;
       let newY = e.clientY - offset.y;
       
       // Boundary checks
-      newX = Math.max(0, Math.min(newX, window.innerWidth - 56));
-      newY = Math.max(0, Math.min(newY, window.innerHeight - 56));
+      newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
+      newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
 
       setPosition({ x: newX, y: newY });
     }
   };
 
   const handleTouchMove = (e: globalThis.TouchEvent) => {
-    if (isDragging) {
+    if (isDragging && buttonRef.current) {
         const touch = e.touches[0];
+        const buttonWidth = buttonRef.current.offsetWidth;
+        const buttonHeight = buttonRef.current.offsetHeight;
         let newX = touch.clientX - offset.x;
         let newY = touch.clientY - offset.y;
         
-        newX = Math.max(0, Math.min(newX, window.innerWidth - 56));
-        newY = Math.max(0, Math.min(newY, window.innerHeight - 56));
+        newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
 
         setPosition({ x: newX, y: newY });
     }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    setTimeout(() => setIsDragging(false), 50);
   };
   
   const handleTouchEnd = () => {
-    setIsDragging(false);
+    setTimeout(() => setIsDragging(false), 50);
   };
 
   useEffect(() => {
@@ -112,6 +119,7 @@ export function FloatingHomeButton() {
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging, offset]);
 
 
@@ -123,16 +131,17 @@ export function FloatingHomeButton() {
     <div
       ref={buttonRef}
       className={cn(
-        'fixed z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center cursor-grab transition-opacity duration-300',
-        isDragging && 'cursor-grabbing scale-105 shadow-2xl',
-        isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        'fixed z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
+        'hover:shadow-primary/40 hover:shadow-[0_0_15px_5px_hsl(var(--primary))]',
+        isDragging && 'cursor-grabbing scale-105 shadow-primary/40 shadow-[0_0_15px_5px_hsl(var(--primary))]',
+        isVisible ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
       )}
       style={{ left: `${position.x}px`, top: `${position.y}px` }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
       <Link href="/" className="w-full h-full flex items-center justify-center" draggable="false" onClick={(e) => isDragging && e.preventDefault()}>
-        <Home className="h-6 w-6" />
+        <Home className="h-5 w-5" />
       </Link>
     </div>
   );
