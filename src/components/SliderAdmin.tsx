@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
+import { db, auth, storage } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
@@ -10,8 +10,11 @@ import {
   orderBy,
   deleteDoc,
   doc,
+  addDoc,
+  serverTimestamp,
+  getDoc,
 } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -37,7 +40,7 @@ import {
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
-import { uploadSlider } from '@/app/admin/actions';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 type Slider = {
   id: string;
@@ -51,6 +54,14 @@ export default function SliderAdmin() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, currentUser => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
@@ -66,7 +77,7 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        toast({ title: 'Error', description: 'Could not fetch sliders.', variant: 'destructive'});
+        toast({ title: 'Error', description: 'Could not fetch sliders. Check security rules.', variant: 'destructive'});
         setLoading(false);
       }
     );
@@ -96,84 +107,64 @@ export default function SliderAdmin() {
       return;
     }
 
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive' });
+    if (!user) {
+      toast({ title: 'Not authenticated', description: 'You must be logged in to upload.', variant: 'destructive' });
       return;
     }
     
     setUploading(true);
 
     try {
-        const idToken = await currentUser.getIdToken();
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = async () => {
-            try {
-              const base64 = reader.result as string;
-              const fileData = {
-                  base64,
-                  type: file.type,
-                  name: file.name
-              };
+      // Check if user is an admin from the client-side before attempting upload
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists() || !userDoc.data().isAdmin) {
+          throw new Error('Permission denied. User is not an admin.');
+      }
 
-              const result = await uploadSlider(idToken, fileData);
+      const storagePath = `sliders/${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
 
-              if (result.success) {
-                  toast({ title: 'Success', description: result.message });
-                  setFile(null); // Clear the file input
-                  const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-                  if (fileInput) fileInput.value = '';
-              } else {
-                  throw new Error(result.message);
-              }
-            } catch (err: any) {
-                console.error('Upload process failed:', err);
-                toast({ 
-                    title: 'Upload Failed', 
-                    description: err.message || 'An unknown error occurred.', 
-                    variant: 'destructive' 
-                });
-            } finally {
-                setUploading(false);
-            }
-        };
+      await addDoc(collection(db, 'sliders'), {
+        url: downloadURL,
+        storagePath: storagePath,
+        createdAt: serverTimestamp(),
+      });
 
-        reader.onerror = (error) => {
-            console.error('File Reader Error:', error);
-            toast({ 
-                title: 'File Read Error', 
-                description: 'Failed to read the selected file.',
-                variant: 'destructive' 
-            });
-            setUploading(false);
-        };
+      toast({ title: 'Success', description: "Slider uploaded successfully!" });
+      setFile(null);
+      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
 
     } catch (err: any) {
-        // This outer catch handles errors from getIdToken()
-        console.error('Authentication error:', err);
+        console.error('Upload process failed:', err);
         toast({ 
-            title: 'Authentication Failed', 
-            description: err.message || 'Could not verify user.', 
+            title: 'Upload Failed', 
+            description: err.message || 'An unknown error occurred. Check console and security rules.', 
             variant: 'destructive' 
         });
+    } finally {
         setUploading(false);
     }
   };
 
 
   async function handleDelete(slider: Slider) {
-      // NOTE: This client-side delete will fail if you don't have storage rules.
-      // A server action would be more robust for deletion as well.
       try {
+        // First delete the Firestore document
         await deleteDoc(doc(db, 'sliders', slider.id));
-        // You need storage rules to allow client-side deletion.
-        // const storageRef = ref(storage, slider.storagePath);
-        // await deleteObject(storageRef);
-        toast({ title: 'Success', description: 'Slider database entry deleted.' });
+        
+        // Then delete the file from Storage
+        const storageRef = ref(storage, slider.storagePath);
+        await deleteObject(storageRef);
+
+        toast({ title: 'Success', description: 'Slider deleted successfully.' });
       } catch (error: any) {
         console.error('Error deleting slider:', error);
-        toast({ title: 'Error', description: error.message || 'Failed to delete slider. Check console and storage rules.', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to delete slider. Check console and security rules.', variant: 'destructive' });
       }
   }
 
@@ -213,7 +204,7 @@ export default function SliderAdmin() {
         {uploading && (
             <div className="space-y-2">
                 <Progress value={100} className="animate-pulse" />
-                <p className="text-sm text-muted-foreground text-center">Processing on server...</p>
+                <p className="text-sm text-muted-foreground text-center">Uploading file...</p>
             </div>
         )}
 
@@ -251,7 +242,7 @@ export default function SliderAdmin() {
                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                           <AlertDialogDescription>
                             This action cannot be undone. This will permanently
-                            delete the slider image record. You may need to delete the file from storage manually.
+                            delete the slider image and its database record.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

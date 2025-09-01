@@ -1,12 +1,14 @@
-
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Default deny all access.
-    // All uploads should be handled by the server-side admin action.
-    match /{allPaths=**} {
-      allow read, write: if false;
+    // Only admins can upload files to the 'sliders' path.
+    // The rule checks the 'isAdmin' flag on the user's Firestore document.
+    match /sliders/{allPaths=**} {
+      allow read: if true; // Allow public reads for slider images
+      allow write: if request.auth != null && 
+                    get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow delete: if request.auth != null &&
+                     get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }
