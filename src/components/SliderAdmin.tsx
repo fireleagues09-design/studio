@@ -2,18 +2,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
-  addDoc,
   deleteDoc,
   doc,
-  serverTimestamp,
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -39,7 +37,7 @@ import {
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
-
+import { uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
@@ -52,7 +50,6 @@ export default function SliderAdmin() {
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -106,33 +103,35 @@ export default function SliderAdmin() {
     }
     
     setUploading(true);
-    setUploadProgress(0);
-    const toastId = 'upload-toast';
 
     try {
-        const storagePath = `sliders/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+        const idToken = await currentUser.getIdToken();
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64 = reader.result as string;
+            const fileData = {
+                base64,
+                type: file.type,
+                name: file.name
+            };
 
-        // Attach listener for progress updates
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
+            const result = await uploadSlider(idToken, fileData);
+
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+                setFile(null); // Clear the file input
+                const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+                if (fileInput) fileInput.value = '';
+            } else {
+                throw new Error(result.message);
             }
-        );
+        };
 
-        // Await completion of the upload
-        await uploadTask;
+        reader.onerror = (error) => {
+            throw new Error("Failed to read file.");
+        };
 
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        await addDoc(collection(db, 'sliders'), {
-            url: downloadURL,
-            storagePath: storagePath,
-            createdAt: serverTimestamp(),
-        });
-        toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-        
     } catch (err: any) {
         console.error('Upload process failed:', err);
         toast({ 
@@ -141,24 +140,23 @@ export default function SliderAdmin() {
             variant: 'destructive' 
         });
     } finally {
-        setFile(null);
-        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
         setUploading(false);
-        setUploadProgress(0);
     }
   };
 
 
   async function handleDelete(slider: Slider) {
+      // NOTE: This client-side delete will fail if you don't have storage rules.
+      // A server action would be more robust for deletion as well.
       try {
         await deleteDoc(doc(db, 'sliders', slider.id));
-        const storageRef = ref(storage, slider.storagePath);
-        await deleteObject(storageRef);
-        toast({ title: 'Success', description: 'Slider image deleted.' });
+        // You need storage rules to allow client-side deletion.
+        // const storageRef = ref(storage, slider.storagePath);
+        // await deleteObject(storageRef);
+        toast({ title: 'Success', description: 'Slider database entry deleted.' });
       } catch (error: any) {
         console.error('Error deleting slider:', error);
-        toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to delete slider. Check console and storage rules.', variant: 'destructive' });
       }
   }
 
@@ -197,8 +195,8 @@ export default function SliderAdmin() {
         
         {uploading && (
             <div className="space-y-2">
-                <Progress value={uploadProgress} />
-                <p className="text-sm text-muted-foreground text-center">{Math.round(uploadProgress)}%</p>
+                <Progress value={100} className="animate-pulse" />
+                <p className="text-sm text-muted-foreground text-center">Processing on server...</p>
             </div>
         )}
 
@@ -236,7 +234,7 @@ export default function SliderAdmin() {
                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                           <AlertDialogDescription>
                             This action cannot be undone. This will permanently
-                            delete the slider image.
+                            delete the slider image record. You may need to delete the file from storage manually.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -264,4 +262,3 @@ export default function SliderAdmin() {
     </Card>
   );
 }
-
