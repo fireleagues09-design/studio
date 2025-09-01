@@ -1,15 +1,19 @@
 
 import admin from 'firebase-admin';
 
-// Check if the app is already initialized to prevent errors
+// This is a more robust way to initialize the Firebase Admin SDK.
+// It ensures that we don't try to re-initialize the app if it's already been done.
 if (!admin.apps.length) {
   try {
-    // Use applicationDefault to automatically find credentials in the environment
     admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'fireleagues-drrjw.appspot.com',
+        // The service account credentials should be automatically available
+        // in the App Hosting environment via Application Default Credentials.
+        credential: admin.credential.applicationDefault(),
+        // Explicitly set the project and storage bucket to avoid discovery issues.
+        projectId: 'fireleagues-drrjw',
+        storageBucket: 'fireleagues-drrjw.appspot.com',
     });
-     console.log('Firebase Admin SDK initialized successfully.');
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
     console.error('Firebase Admin SDK initialization error:', error.message);
   }
