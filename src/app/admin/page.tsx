@@ -636,7 +636,7 @@ export default function AdminPage() {
                             <p className="text-xs text-muted-foreground">Pending deposit requests</p>
                         </CardContent>
                     </Card>
-                </Card>
+                </section>
             )}
             
             <section>
@@ -752,10 +752,11 @@ export default function AdminPage() {
                     </CardContent>
                 </Card>
             </section>
-
         </div>
     );
 }
+    
+
     
 
     
