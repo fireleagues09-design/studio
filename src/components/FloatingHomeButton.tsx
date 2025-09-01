@@ -21,13 +21,17 @@ export function FloatingHomeButton() {
   
   useEffect(() => {
     setIsMounted(true);
-    // Set initial position after component mounts to safely access `window`
+    
     if (buttonRef.current) {
-        // Position it at the bottom-right corner
-        const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20; // 20px margin from right
-        const initialY = window.innerHeight - buttonRef.current.offsetHeight - 20; // 20px margin from bottom
-        positionRef.current = { x: initialX, y: initialY };
-        buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
+        const setInitialPosition = () => {
+            if (buttonRef.current) {
+                const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20;
+                const initialY = window.innerHeight - buttonRef.current.offsetHeight - 20;
+                positionRef.current = { x: initialX, y: initialY };
+                buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
+            }
+        };
+        setInitialPosition();
     }
   }, []);
 
@@ -37,7 +41,6 @@ export function FloatingHomeButton() {
     const handleResize = () => {
         if (!buttonRef.current) return;
         const { offsetWidth, offsetHeight } = buttonRef.current;
-        // Keep it within bounds on resize
         const newX = Math.max(16, Math.min(positionRef.current.x, window.innerWidth - offsetWidth - 16));
         const newY = Math.max(16, Math.min(positionRef.current.y, window.innerHeight - offsetHeight - 16));
         positionRef.current = { x: newX, y: newY };
@@ -82,7 +85,6 @@ export function FloatingHomeButton() {
     let newX = clientX - offsetRef.current.x;
     let newY = clientY - offsetRef.current.y;
     
-    // Boundary checks (with a 16px margin)
     newX = Math.max(16, Math.min(newX, window.innerWidth - offsetWidth - 16));
     newY = Math.max(16, Math.min(newY, window.innerHeight - offsetHeight - 16));
 
