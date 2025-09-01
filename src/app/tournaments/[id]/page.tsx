@@ -44,12 +44,12 @@ type TournamentPageProps = {
   };
 };
 
-export default function TournamentPage({ params: { id } }: TournamentPageProps) {
+export default function TournamentPage({ params }: TournamentPageProps) {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const tournamentDocRef = doc(db, 'tournaments', id);
+    const tournamentDocRef = doc(db, 'tournaments', params.id);
     const unsubscribe = onSnapshot(tournamentDocRef, (doc) => {
         if (doc.exists()) {
             setTournament({ id: doc.id, ...doc.data() } as Tournament);
@@ -64,7 +64,7 @@ export default function TournamentPage({ params: { id } }: TournamentPageProps) 
     });
 
     return () => unsubscribe();
-  }, [id]);
+  }, [params.id]);
 
 
   if (loading) {
