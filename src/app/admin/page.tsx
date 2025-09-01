@@ -425,71 +425,33 @@ function UploadSliderButton() {
         setUploading(true);
 
         try {
-            // Check for the first existing banner to replace.
-            const bannersQuery = query(collection(db, 'banners'), orderBy('createdAt', 'asc'));
-            const snapshot = await getDocs(bannersQuery);
-            const bannerDoc = snapshot.docs[0];
-
-            let bannerId: string;
-            let oldImageUrl: string | undefined;
-
-            if (bannerDoc) {
-                // If a banner exists, get its ID and old image URL to replace it.
-                bannerId = bannerDoc.id;
-                oldImageUrl = bannerDoc.data().image;
-            } else {
-                // If no banners exist, create a new document.
-                const newBannerDocRef = doc(collection(db, 'banners'));
-                bannerId = newBannerDocRef.id;
-            }
-            
-            // Define the storage path using the determined banner ID.
+            const newBannerRef = doc(collection(db, 'banners'));
+            const bannerId = newBannerRef.id;
             const storageRef = ref(storage, `banners/${bannerId}`);
 
-            // Upload the new file.
             await uploadBytes(storageRef, file);
-            
-            // Get the download URL for the newly uploaded file.
             const downloadURL = await getDownloadURL(storageRef);
 
-            // Prepare the data to be saved in Firestore.
-            const docData = {
+            await setDoc(newBannerRef, {
                 image: downloadURL,
                 dataAiHint: 'slider image',
                 createdAt: serverTimestamp(),
-            };
-            
-            // Save the new data to Firestore, either creating or merging with the existing doc.
-            await setDoc(doc(db, 'banners', bannerId), docData, { merge: true });
-
-            // If there was an old image, delete it from storage after the new one is confirmed.
-            if (oldImageUrl && oldImageUrl.includes('firebasestorage') && oldImageUrl !== downloadURL) {
-                try {
-                    const oldImageRef = ref(storage, oldImageUrl);
-                    await deleteObject(oldImageRef);
-                } catch (deleteError: any) {
-                     // Log a warning if the old image can't be deleted, but don't block success.
-                    if (deleteError.code !== 'storage/object-not-found') {
-                        console.warn("Could not delete old banner image:", deleteError);
-                    }
-                }
-            }
+            });
 
             toast({
                 title: 'Success!',
-                description: 'Slider image has been updated successfully.',
+                description: 'New slider image has been uploaded.',
             });
 
         } catch (error: any) {
             console.error("Error uploading image:", error);
             toast({
                 title: 'Upload Failed',
-                description: error.message || 'There was an error updating the slider image. Check console for details.',
+                description: error.message || 'There was an error uploading the slider image.',
                 variant: 'destructive',
             });
         } finally {
             setUploading(false);
-            // Reset the file input to allow uploading the same file again if needed.
             if (e.target) {
                 e.target.value = '';
             }
@@ -500,7 +462,7 @@ function UploadSliderButton() {
         <Button asChild variant="outline" disabled={uploading}>
             <Label htmlFor="slider-upload" className="cursor-pointer flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Replace First Slider'}
+                {uploading ? 'Uploading...' : 'Upload New Slider'}
                 <Input
                     id="slider-upload"
                     type="file"
@@ -768,6 +730,4 @@ export default function AdminPage() {
         </div>
     );
 }
-    
-
     
