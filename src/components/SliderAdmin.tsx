@@ -10,11 +10,9 @@ import {
   orderBy,
   deleteDoc,
   doc,
-  addDoc,
-  serverTimestamp,
   getDoc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -41,6 +39,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { uploadSlider } from '@/app/admin/actions';
+
 
 type Slider = {
   id: string;
@@ -91,7 +91,7 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        toast({ title: 'Error', description: 'Could not fetch sliders. Check security rules.', variant: 'destructive'});
+        toast({ title: 'Error', description: 'Could not fetch sliders.', variant: 'destructive'});
         setLoading(false);
       }
     );
@@ -116,46 +116,59 @@ export default function SliderAdmin() {
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive' });
-      return;
+    if (!file || !user) {
+        toast({ title: 'Error', description: 'File or user not available.', variant: 'destructive' });
+        return;
     }
 
-    if (!user || !isAdmin) {
-      toast({ title: 'Permission Denied', description: 'You are not authorized to upload sliders.', variant: 'destructive' });
-      return;
-    }
-    
     setUploading(true);
-    const storagePath = `sliders/${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, storagePath);
-
+    
     try {
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+            const base64data = reader.result as string;
+            const idToken = await user.getIdToken(true);
+            
+            try {
+                const result = await uploadSlider({
+                    fileDataUrl: base64data,
+                    fileName: file.name,
+                    idToken: idToken,
+                });
+                
+                if (result.success) {
+                    toast({ title: 'Success', description: 'Slider uploaded successfully!' });
+                    setFile(null);
+                    const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+                    if (fileInput) fileInput.value = '';
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (err: any) {
+                console.error('Upload process failed:', err);
+                toast({ 
+                    title: 'Upload Failed', 
+                    description: err.message || 'An unknown error occurred.', 
+                    variant: 'destructive' 
+                });
+            } finally {
+                setUploading(false);
+            }
+        };
 
-      await addDoc(collection(db, 'sliders'), {
-        url: downloadURL,
-        storagePath: storagePath,
-        createdAt: serverTimestamp(),
-      });
-
-      toast({ title: 'Success', description: "Slider uploaded successfully!" });
-      setFile(null);
-      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
+        reader.onerror = (error) => {
+            console.error('Error reading file:', error);
+            toast({ title: 'File Read Error', description: 'Could not read the selected file.', variant: 'destructive'});
+            setUploading(false);
+        };
 
     } catch (err: any) {
-        console.error('Upload process failed:', err);
-        toast({ 
-            title: 'Upload Failed', 
-            description: err.message || 'An unknown error occurred. Check console and security rules.', 
-            variant: 'destructive' 
-        });
-    } finally {
+        console.error('Outer handleUpload error:', err);
+        toast({ title: 'Error', description: err.message || 'An unexpected error occurred.', variant: 'destructive' });
         setUploading(false);
     }
-  };
+};
 
 
   async function handleDelete(slider: Slider) {
@@ -171,7 +184,7 @@ export default function SliderAdmin() {
         toast({ title: 'Success', description: 'Slider deleted successfully.' });
       } catch (error: any) {
         console.error('Error deleting slider:', error);
-        toast({ title: 'Error', description: error.message || 'Failed to delete slider. Check console and security rules.', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
       }
   }
 
@@ -211,7 +224,7 @@ export default function SliderAdmin() {
         {uploading && (
             <div className="space-y-2">
                 <Progress value={100} className="animate-pulse" />
-                <p className="text-sm text-muted-foreground text-center">Uploading file...</p>
+                <p className="text-sm text-muted-foreground text-center">Processing on server...</p>
             </div>
         )}
 
