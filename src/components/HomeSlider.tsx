@@ -45,7 +45,7 @@ export function HomeSlider() {
           <CarouselItem key={slider.id}>
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="aspect-[12/5] w-full relative">
+                <div className="aspect-[16/6] w-full relative">
                   <Image
                     src={slider.url}
                     alt={`Promotional slider image ${index + 1}`}
