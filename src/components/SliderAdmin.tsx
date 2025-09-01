@@ -5,15 +5,13 @@ import { useState, useEffect } from 'react';
 import { db, storage } from '@/lib/firebase';
 import {
   collection,
-  addDoc,
-  serverTimestamp,
   onSnapshot,
   query,
   orderBy,
   deleteDoc,
   doc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -37,6 +35,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
@@ -44,11 +44,21 @@ type Slider = {
   storagePath: string;
 };
 
+// Helper function to convert file to base64
+const toBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = (error) => reject(error);
+  });
+
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
@@ -64,79 +74,61 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        alert('Could not fetch sliders. Check Firestore permissions.');
+        toast({ title: 'Error', description: 'Could not fetch sliders.', variant: 'destructive'});
         setLoading(false);
       }
     );
     return () => unsub();
-  }, []);
+  }, [toast]);
 
   async function handleUpload() {
     if (!file) {
-      alert('Please select a file to upload.');
+      toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
 
-    console.log('Starting upload...');
     setUploading(true);
 
-    const storagePath = `sliders/${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, storagePath);
-
     try {
-      // 1. Upload file
-      console.log('Uploading file to Firebase Storage...');
-      await uploadBytes(storageRef, file);
-      console.log('File uploaded successfully.');
-
-      // 2. Get URL
-      console.log('Getting download URL...');
-      const url = await getDownloadURL(storageRef);
-      console.log('Got download URL:', url);
-
-      // 3. Save to Firestore
-      console.log('Saving URL to Firestore...');
-      await addDoc(collection(db, 'sliders'), {
-        url: url,
-        storagePath: storagePath,
-        createdAt: serverTimestamp(),
+      const base64 = await toBase64(file);
+      const result = await uploadSlider({
+        fileBuffer: base64,
+        fileName: file.name,
+        fileType: file.type,
       });
-      console.log('URL saved to Firestore.');
 
-      alert('Slider image uploaded successfully!');
-      setFile(null);
-      // Reset the file input
-      const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-
+      if (result.success) {
+        toast({ title: 'Success', description: result.message });
+        setFile(null);
+        // Reset file input
+        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      } else {
+        throw new Error(result.message);
+      }
     } catch (err: any) {
-      console.error('An error occurred during upload:', err);
-      alert(`Upload failed. Check the developer console for errors. Message: ${err.message}`);
+      console.error('Upload process failed:', err);
+      toast({ title: 'Upload Failed', description: err.message, variant: 'destructive'});
     } finally {
-      console.log('Upload process finished. Resetting loading state.');
       setUploading(false);
     }
   }
 
   async function handleDelete(slider: Slider) {
     try {
-      // Delete from Storage
-      const imageRef = ref(storage, slider.storagePath);
-      await deleteObject(imageRef);
-
-      // Delete from Firestore
+      // Delete from Firestore first
       await deleteDoc(doc(db, 'sliders', slider.id));
-
-      alert('Slider image deleted.');
+      
+      // Then delete from Storage
+      if (slider.storagePath) {
+        const imageRef = ref(storage, slider.storagePath);
+        await deleteObject(imageRef);
+      }
+      
+      toast({ title: 'Success', description: 'Slider image deleted.'});
     } catch (error: any) {
        console.error('Error deleting slider:', error);
-      if (error.code === 'storage/object-not-found') {
-          // If file doesn't exist in storage, just delete the Firestore doc
-          await deleteDoc(doc(db, 'sliders', slider.id));
-           alert('Slider record deleted (image was not found in storage).');
-      } else {
-        alert('Failed to delete slider. Check permissions or console for details.');
-      }
+       toast({ title: 'Error', description: 'Failed to delete slider. Check console for details.', variant: 'destructive'});
     }
   }
 
