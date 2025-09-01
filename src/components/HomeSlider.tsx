@@ -3,12 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import Autoplay from 'embla-carousel-autoplay';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from './ui/skeleton';
 import {
   Carousel,
   CarouselContent,
@@ -20,48 +17,15 @@ type Slider = {
   url: string;
 };
 
+// We'll use the provided URL directly for now.
+const featuredSlider: Slider = {
+    id: 'featured-1',
+    url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBermuda_App_Splash.webp?alt=media&token=0bdaa681-9730-4c12-be7c-053d235e9c09'
+};
+
+
 export function HomeSlider() {
-  const [sliders, setSliders] = useState<Slider[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(
-      q,
-      snapshot => {
-        const sliderData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          url: doc.data().url,
-        }));
-        setSliders(sliderData);
-        setLoading(false);
-      },
-      error => {
-        console.error('Error fetching sliders: ', error);
-        setSliders([]); // Fallback to empty on error
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="w-full">
-        <Skeleton className="aspect-[12/5] w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  // Do not render the carousel if there are no sliders to display
-  if (sliders.length === 0) {
-    return (
-        <div className="w-full aspect-[12/5] flex items-center justify-center bg-muted rounded-xl">
-            <p className="text-muted-foreground">No slides available. Upload one in the admin panel.</p>
-        </div>
-    );
-  }
+  const sliders = [featuredSlider];
 
   return (
     <Carousel
