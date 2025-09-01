@@ -1,8 +1,7 @@
 
-
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -38,9 +37,6 @@ import { db } from '@/lib/firebase';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type TournamentPageProps = {
-  params: { id: string };
-};
 
 type TournamentDetailViewProps = {
     tournamentId: string;
@@ -236,11 +232,17 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     );
 }
 
+interface TournamentPageProps {
+  params: Promise<{ id: string }>;
+}
 
 export default function TournamentPage({ params }: TournamentPageProps) {
+  const { id } = use(params); // ✅ unwrap with use()
+
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <TournamentDetailView key={params.id} tournamentId={params.id} />
+      <TournamentDetailView key={id} tournamentId={id} />
     </div>
   );
 }
+
