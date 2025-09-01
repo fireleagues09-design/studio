@@ -54,7 +54,7 @@ export default function Home() {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+        <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-300">
             Welcome to FireLeagues
@@ -76,7 +76,9 @@ export default function Home() {
            <h2 className="text-3xl font-bold tracking-tight mb-6">
                 Latest Updates
             </h2>
-          <HomeSlider />
+          <div className="md:max-w-2xl">
+            <HomeSlider />
+          </div>
         </section>
 
         <section>
