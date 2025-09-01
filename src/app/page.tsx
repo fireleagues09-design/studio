@@ -112,7 +112,7 @@ export default function Home() {
                 >
                 <CarouselContent>
                     {banners.map((banner, index) => (
-                    <CarouselItem key={index}>
+                    <CarouselItem key={banner.id}>
                         <Card className="overflow-hidden">
                         <div className="relative aspect-video md:aspect-[2.4/1]">
                             <Image

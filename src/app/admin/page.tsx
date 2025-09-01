@@ -425,7 +425,6 @@ function UploadSliderButton() {
         setUploading(true);
 
         try {
-            // 1. Fetch the first banner to replace it
             const bannersQuery = query(collection(db, 'banners'), orderBy('createdAt', 'asc'), limit(1));
             const snapshot = await getDocs(bannersQuery);
             const bannerDoc = snapshot.docs[0];
@@ -434,56 +433,40 @@ function UploadSliderButton() {
             let oldImageUrl: string | undefined;
 
             if (bannerDoc) {
-                // If a banner exists, we'll replace it.
                 bannerId = bannerDoc.id;
                 oldImageUrl = bannerDoc.data().image;
             } else {
-                // If no banner exists, we'll create a new one.
-                bannerId = `banner-${Date.now()}`;
+                const newBannerDocRef = doc(collection(db, 'banners'));
+                bannerId = newBannerDocRef.id;
             }
 
-            // 2. Upload the new image to Firebase Storage
-            const storageRef = ref(storage, `banners/${bannerId}-${file.name}`);
+            const storageRef = ref(storage, `banners/${bannerId}`);
             await uploadBytes(storageRef, file);
-            
-            // 3. Get the download URL of the new image
             const downloadURL = await getDownloadURL(storageRef);
 
-            // 4. If an old banner existed, delete the old image from Storage
-            if (bannerDoc && oldImageUrl && oldImageUrl.includes('firebasestorage')) {
-                try {
-                    const oldImageRef = ref(storage, oldImageUrl);
-                    await deleteObject(oldImageRef);
-                } catch (deleteError: any) {
-                    // It's okay if the old object doesn't exist.
-                    if (deleteError.code !== 'storage/object-not-found') {
-                        console.warn("Could not delete old banner image:", deleteError);
-                    }
-                }
-            }
-
-            // 5. Create or update the Firestore document
             const docData = {
                 image: downloadURL,
                 dataAiHint: 'slider image',
                 createdAt: serverTimestamp(),
             };
 
-            if (bannerDoc) {
-                // Update existing document
-                await updateDoc(doc(db, 'banners', bannerId), docData);
-                toast({
-                    title: 'Success!',
-                    description: 'Slider image has been replaced successfully.',
-                });
-            } else {
-                // Create a new document
-                await setDoc(doc(db, 'banners', bannerId), docData);
-                toast({
-                    title: 'Success!',
-                    description: 'New slider image has been uploaded successfully.',
-                });
+            await setDoc(doc(db, 'banners', bannerId), docData, { merge: true });
+
+            if (oldImageUrl && oldImageUrl.includes('firebasestorage') && oldImageUrl !== downloadURL) {
+                try {
+                    const oldImageRef = ref(storage, oldImageUrl);
+                    await deleteObject(oldImageRef);
+                } catch (deleteError: any) {
+                    if (deleteError.code !== 'storage/object-not-found') {
+                        console.warn("Could not delete old banner image:", deleteError);
+                    }
+                }
             }
+
+            toast({
+                title: 'Success!',
+                description: 'Slider image has been updated successfully.',
+            });
 
         } catch (error: any) {
             console.error("Error uploading image:", error);
@@ -494,7 +477,6 @@ function UploadSliderButton() {
             });
         } finally {
             setUploading(false);
-            // Reset the input value to allow re-uploading the same file
             if (e.target) {
                 e.target.value = '';
             }
@@ -773,16 +755,6 @@ export default function AdminPage() {
         </div>
     );
 }
-    
-
-    
-
-    
-
-    
-
-    
-
     
 
     
