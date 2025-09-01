@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,11 +18,10 @@ export function FloatingHomeButton() {
 
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isInteracting, setIsInteracting] = useState(false);
-
-
+  
   useEffect(() => {
     setIsMounted(true);
+    // Set initial position after component mounts to safely access `window`
     if (buttonRef.current) {
         const initialX = window.innerWidth - 80;
         const initialY = window.innerHeight - 80;
@@ -48,14 +46,15 @@ export function FloatingHomeButton() {
     return () => window.removeEventListener('resize', handleResize);
   }, [pathname]);
 
-
   const handleDragStart = (clientX: number, clientY: number) => {
     if (!buttonRef.current) return;
     isDraggingRef.current = true;
     hasMovedRef.current = false;
-    setIsInteracting(true);
+    buttonRef.current.classList.add('grabbing');
     
     const rect = buttonRef.current.getBoundingClientRect();
+    // We calculate the offset from the top-left of the button element,
+    // not from the overall viewport position.
     offsetRef.current = {
       x: clientX - rect.left,
       y: clientY - rect.top,
@@ -63,13 +62,17 @@ export function FloatingHomeButton() {
     
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchUp);
   };
   
   const handleDragMove = (clientX: number, clientY: number) => {
     if (!isDraggingRef.current || !buttonRef.current) return;
-    hasMovedRef.current = true;
+    
+    // Only set hasMoved to true if it moves more than a small threshold
+    if (!hasMovedRef.current) {
+        hasMovedRef.current = true;
+    }
 
     const { offsetWidth, offsetHeight } = buttonRef.current;
     
@@ -89,7 +92,9 @@ export function FloatingHomeButton() {
         router.push('/');
     }
     isDraggingRef.current = false;
-    setIsInteracting(false);
+    if (buttonRef.current) {
+        buttonRef.current.classList.remove('grabbing');
+    }
     
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
@@ -98,9 +103,15 @@ export function FloatingHomeButton() {
   };
 
   const handleMouseDown = (e: ReactMouseEvent) => handleDragStart(e.clientX, e.clientY);
-  const handleTouchStart = (e: ReactTouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  const handleTouchStart = (e: ReactTouchEvent) => {
+    e.preventDefault(); // Prevents scrolling on touch devices
+    handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
+  };
   const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
-  const handleTouchMove = (e: TouchEvent) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  };
   const handleMouseUp = () => handleDragEnd();
   const handleTouchUp = () => handleDragEnd();
 
@@ -112,12 +123,13 @@ export function FloatingHomeButton() {
     <div
       ref={buttonRef}
       className={cn(
-        'fixed top-0 left-0 z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
+        'fixed top-0 left-0 z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-opacity duration-300',
         'hover:shadow-primary/40 hover:shadow-[0_0_15px_5px_hsl(var(--primary))]',
-        isInteracting && 'cursor-grabbing scale-105 shadow-primary/40 shadow-[0_0_15px_5px_hsl(var(--primary))]',
+        'active:cursor-grabbing active:scale-105 active:shadow-primary/40 active:shadow-[0_0_15px_5px_hsl(var(--primary))]',
+        'grabbing',
         isVisible ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
       )}
-      style={{ touchAction: 'none' }} // Prevent scrolling on mobile while dragging
+      style={{ touchAction: 'none' }} 
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
