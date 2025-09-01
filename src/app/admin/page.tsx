@@ -438,6 +438,22 @@ function ManageSlidersDialog() {
         setUploading(bannerId);
 
         try {
+            // Get the old banner to delete the old image from storage
+            const oldBannerDoc = await getDoc(doc(db, 'banners', bannerId));
+            const oldBannerData = oldBannerDoc.data();
+            if (oldBannerData?.image) {
+                try {
+                    const oldImageRef = ref(storage, oldBannerData.image);
+                    await deleteObject(oldImageRef);
+                } catch (deleteError: any) {
+                    // It's okay if the old image doesn't exist, maybe it was a placeholder
+                    if (deleteError.code !== 'storage/object-not-found') {
+                        console.warn("Could not delete old banner image:", deleteError);
+                    }
+                }
+            }
+
+
             // Create a storage reference
             const storageRef = ref(storage, `banners/${bannerId}-${Date.now()}`);
 
@@ -506,7 +522,7 @@ function ManageSlidersDialog() {
                                     <p className="font-semibold">Slider {index + 1}</p>
                                 </div>
                                 <Button asChild variant="outline" size="sm" disabled={uploading === banner.id}>
-                                    <Label htmlFor={`slider-upload-${banner.id}`}>
+                                    <Label htmlFor={`slider-upload-${banner.id}`} className="cursor-pointer">
                                         {uploading === banner.id ? 'Uploading...' : 'Upload'}
                                         <Input 
                                             id={`slider-upload-${banner.id}`}
