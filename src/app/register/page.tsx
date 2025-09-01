@@ -98,10 +98,6 @@ export default function RegisterPage() {
             setLoading(false);
             return;
         }
-        
-        // This is the definitive fix: create an admin user with a specific number.
-        // In a real app, this would be handled differently (e.g., via an admin panel).
-        const isAdmin = phone === '0000000000';
 
         await setDoc(userDocRef, {
           inGameName: inGameName,
@@ -112,13 +108,13 @@ export default function RegisterPage() {
             winning: 0,
             bonus: 0,
           },
-          isAdmin: isAdmin,
+          isAdmin: false,
           registeredOn: serverTimestamp(),
         });
         
         toast({
           title: "Success",
-          description: `Account created successfully! ${isAdmin ? 'You have been registered as an administrator.' : ''}`,
+          description: "Account created successfully!",
         });
 
         router.push("/");
@@ -142,7 +138,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            Create your account to join tournaments. Use phone number `0000000000` to register as admin.
+            Create your account to join tournaments.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
