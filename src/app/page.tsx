@@ -12,6 +12,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
+import SliderGallery from "@/components/SliderGallery";
 
 export default function Home() {
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
@@ -72,6 +73,10 @@ export default function Home() {
 
       <main className="container mx-auto px-4 flex flex-col gap-12 md:gap-16">
         <section>
+          <SliderGallery />
+        </section>
+
+        <section>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold tracking-tight">
               Upcoming Tournaments
@@ -107,4 +112,6 @@ export default function Home() {
     </div>
   );
 }
+    
+
     

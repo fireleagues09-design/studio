@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, getDocs, limit } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import SliderAdmin from '@/components/SliderAdmin';
 
 
 function CreateTournamentDialog() {
@@ -544,6 +545,10 @@ export default function AdminPage() {
             )}
 
             <section>
+                <SliderAdmin />
+            </section>
+
+            <section>
                 <Card>
                     <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
@@ -647,4 +652,6 @@ export default function AdminPage() {
         </div>
     );
 }
+    
+
     
