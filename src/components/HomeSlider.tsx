@@ -30,8 +30,8 @@ const AUTHENTICATED_SLIDERS: Slider[] = [
 ];
 
 const GUEST_SLIDERS: Slider[] = [
-    { id: 'guest1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FRegister_Now_Banner.png?alt=media&token=e9c8f85f-8f11-4e7a-9b48-1123a1a5b8e9' },
-    { id: 'guest2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FWelcome_Bonus_Banner.png?alt=media&token=48c3b9b4-b49c-4e89-8d76-5a417539c3a3' }
+    { id: 'guest1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FA%20R%20A%20G%20AT%20O.jpeg?alt=media&token=176f0a74-a381-4f91-ae32-1172c0190ece' },
+    { id: 'guest2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBlack%20and%20White%20PC%20Wallpaper%204K.jpeg?alt=media&token=aa55fbd2-5647-435b-8574-8d5aabc866de' }
 ];
 
 
