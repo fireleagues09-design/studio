@@ -29,14 +29,13 @@ function CreateTournamentDialog() {
     const [time, setTime] = useState('');
     const [entryFee, setEntryFee] = useState('');
     const [prize, setPrize] = useState('');
-    const [slots, setSlots] = useState('');
+    const [slots, setSlots]_useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
     const [status, setStatus] = useState<TournamentType['status']>('Upcoming');
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
     const [prizePerKill, setPrizePerKill] = useState('');
-    const [rules, setRules] = useState<string[]>(Array(10).fill('•'));
     
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -55,21 +54,6 @@ function CreateTournamentDialog() {
     const removePrizeRow = (index: number) => {
         const newDistribution = prizeDistribution.filter((_, i) => i !== index);
         setPrizeDistribution(newDistribution);
-    };
-    
-    const handleRuleChange = (index: number, value: string) => {
-        const newRules = [...rules];
-        newRules[index] = value;
-        setRules(newRules);
-    };
-
-    const addRuleRow = () => {
-        setRules([...rules, '•']);
-    };
-
-    const removeRuleRow = (index: number) => {
-        const newRules = rules.filter((_, i) => i !== index);
-        setRules(newRules);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +75,6 @@ function CreateTournamentDialog() {
         setBannerFile(null);
         setPrizeDistribution([{ place: '1st', prize: '' }]);
         setPrizePerKill('');
-        setRules(Array(10).fill('•'));
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +114,7 @@ function CreateTournamentDialog() {
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
-                rules: rules.filter(r => r.trim() !== '•' && r.trim() !== ''),
+                rules: [],
                 prizeDistribution: finalPrizeDistribution,
                 createdAt: serverTimestamp()
             });
@@ -263,23 +246,6 @@ function CreateTournamentDialog() {
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>Tournament Rules</Label>
-                        <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
-                            {rules.map((rule, index) => (
-                                <div key={index} className="grid grid-cols-[1fr,auto] gap-2 items-center">
-                                    <Input value={rule} onChange={e => handleRuleChange(index, e.target.value)} placeholder={`Rule ${index + 1}`} />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRuleRow(index)}>
-                                        <MinusCircleIcon className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                            <Button type="button" variant="outline" size="sm" onClick={addRuleRow}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
-                            </Button>
-                        </div>
-                    </div>
-
                     <div className="grid gap-2">
                         <Label htmlFor="create-banner">Tournament Banner</Label>
                         <Input id="create-banner" type="file" onChange={handleFileChange} accept="image/*" />
@@ -307,26 +273,10 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
     const [status, setStatus] = useState<TournamentType['status']>(tournament.status || 'Upcoming');
-    const [rules, setRules] = useState(tournament.rules || []);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     
-    const handleRuleChange = (index: number, value: string) => {
-        const newRules = [...rules];
-        newRules[index] = value;
-        setRules(newRules);
-    };
-
-    const addRuleRow = () => {
-        setRules([...rules, '•']);
-    };
-
-    const removeRuleRow = (index: number) => {
-        const newRules = rules.filter((_, i) => i !== index);
-        setRules(newRules);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -340,7 +290,6 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 prize,
                 slots: Number(slots),
                 status,
-                rules: rules.filter(r => r.trim() !== '•' && r.trim() !== '')
             });
             toast({
                 title: 'Success',
@@ -415,23 +364,6 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                                    <SelectItem value="Finished">Finished</SelectItem>
                                </SelectContent>
                            </Select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Tournament Rules</Label>
-                        <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
-                            {rules.map((rule, index) => (
-                                <div key={index} className="grid grid-cols-[1fr,auto] gap-2 items-center">
-                                    <Input value={rule} onChange={e => handleRuleChange(index, e.target.value)} placeholder={`Rule ${index + 1}`} />
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRuleRow(index)}>
-                                        <MinusCircleIcon className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                            <Button type="button" variant="outline" size="sm" onClick={addRuleRow}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Rule
-                            </Button>
                         </div>
                     </div>
 
@@ -736,4 +668,5 @@ export default function AdminPage() {
 
         </div>
     );
-}
+
+    
