@@ -12,7 +12,6 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  getDoc
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
@@ -80,13 +79,14 @@ export default function SliderAdmin() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-        if (selectedFile.size > 5 * 1024 * 1024) {
+        if (selectedFile.size > 5 * 1024 * 1024) { // 5MB limit
             toast({
                 title: 'File too large',
                 description: 'Please select a file smaller than 5MB.',
                 variant: 'destructive',
             });
-            e.target.value = '';
+            setFile(null);
+            e.target.value = ''; // Reset file input
             return;
         }
         setFile(selectedFile);
@@ -117,6 +117,10 @@ export default function SliderAdmin() {
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 setUploadProgress(progress);
+                toast({
+                    title: 'Uploading...',
+                    description: `Upload is ${Math.round(progress)}% complete.`,
+                });
             },
             (error) => {
                 console.error("Upload failed:", error);
@@ -125,7 +129,7 @@ export default function SliderAdmin() {
                     description: `Error: ${error.message}`,
                     variant: 'destructive',
                 });
-                setUploading(false);
+                setUploading(false); // Ensure uploading state is reset on error
             },
             async () => {
                 try {
@@ -172,7 +176,7 @@ export default function SliderAdmin() {
       <CardHeader>
         <CardTitle>Manage Sliders</CardTitle>
         <CardDescription>
-          Upload new images for the homepage slider gallery. Recommended size: 1200x500px.
+          Upload new images for the homepage slider gallery. Recommended size: 1200x500px, max 5MB.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
