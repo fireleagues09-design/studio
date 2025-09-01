@@ -45,12 +45,15 @@ type TournamentPageProps = {
 };
 
 type TournamentDetailViewProps = {
-    tournamentId: string;
+    params: {
+        id: string;
+    }
 }
 
-function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
+function TournamentDetailView({ params }: TournamentDetailViewProps) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
+    const tournamentId = params.id;
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -241,7 +244,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 export default function TournamentPage({ params }: TournamentPageProps) {
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <TournamentDetailView key={params.id} tournamentId={params.id} />
+      <TournamentDetailView key={params.id} params={params} />
     </div>
   );
 }
