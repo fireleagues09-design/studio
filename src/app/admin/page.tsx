@@ -23,6 +23,7 @@ import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 
 type Banner = {
@@ -425,7 +426,7 @@ function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBa
             try {
                 // Find the original banner to get the old image URL for deletion
                 const originalBanner = banners.find(b => b.id === bannerId);
-                if (originalBanner) {
+                if (originalBanner && originalBanner.image.includes('firebasestorage')) {
                     const oldImageRef = ref(storage, originalBanner.image);
                     await deleteObject(oldImageRef).catch(error => {
                         // It's okay if the old image doesn't exist, just log it.
@@ -548,7 +549,7 @@ export default function AdminPage() {
             setDataLoading(false);
         });
 
-        const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
+        const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "asc"));
         const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
             const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
             setBanners(bannersData);
@@ -635,7 +636,7 @@ export default function AdminPage() {
                             <p className="text-xs text-muted-foreground">Pending deposit requests</p>
                         </CardContent>
                     </Card>
-                </section>
+                </Card>
             )}
             
             <section>
@@ -755,4 +756,6 @@ export default function AdminPage() {
         </div>
     );
 }
+    
+
     

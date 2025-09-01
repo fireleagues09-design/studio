@@ -20,7 +20,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 type Banner = {
   id: string;
@@ -42,7 +42,7 @@ export default function Home() {
       setLoadingAuth(false);
     });
 
-    const tournamentsQuery = query(collection(db, "tournaments"), limit(4));
+    const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"), limit(4));
     const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
         const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         setUpcomingTournaments(tournamentsData);
@@ -52,7 +52,7 @@ export default function Home() {
         setLoadingTournaments(false);
     });
 
-    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "desc"));
+    const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "asc"));
     const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
         const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
         setBanners(bannersData);
@@ -102,33 +102,35 @@ export default function Home() {
         {loadingBanners ? (
             <Skeleton className="w-full aspect-video md:aspect-[2.4/1]" />
         ) : (
-            <Carousel
-            opts={{
-                align: "start",
-                loop: true,
-            }}
-            className="w-full"
-            >
-            <CarouselContent>
-                {banners.map((banner, index) => (
-                <CarouselItem key={index}>
-                    <Card className="overflow-hidden">
-                    <div className="relative aspect-video md:aspect-[2.4/1]">
-                        <Image
-                        src={banner.image}
-                        alt={`Promotional banner ${index + 1}`}
-                        data-ai-hint={banner.dataAiHint}
-                        fill
-                        className="object-cover"
-                        />
-                    </div>
-                    </Card>
-                </CarouselItem>
-                ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden sm:flex" />
-            <CarouselNext className="hidden sm:flex" />
-            </Carousel>
+            banners.length > 0 && (
+                <Carousel
+                opts={{
+                    align: "start",
+                    loop: true,
+                }}
+                className="w-full"
+                >
+                <CarouselContent>
+                    {banners.map((banner, index) => (
+                    <CarouselItem key={index}>
+                        <Card className="overflow-hidden">
+                        <div className="relative aspect-video md:aspect-[2.4/1]">
+                            <Image
+                            src={banner.image}
+                            alt={`Promotional banner ${index + 1}`}
+                            data-ai-hint={banner.dataAiHint}
+                            fill
+                            className="object-cover"
+                            />
+                        </div>
+                        </Card>
+                    </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden sm:flex" />
+                <CarouselNext className="hidden sm:flex" />
+                </Carousel>
+            )
         )}
       </div>
       
@@ -169,4 +171,6 @@ export default function Home() {
     </div>
   );
 }
+    
+
     
