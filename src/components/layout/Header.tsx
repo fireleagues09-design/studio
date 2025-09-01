@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -17,7 +16,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type WalletData = {
     deposit: number;
@@ -30,8 +30,6 @@ type UserProfile = {
     isAdmin?: boolean;
 }
 
-
-
 export function Header() {
   const pathname = usePathname();
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -39,26 +37,27 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
-      setUser(currentUser);
-      
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        if (currentUser) {
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
+                if (doc.exists()) {
+                    setProfile(doc.data() as UserProfile);
+                } else {
+                    setProfile(null);
+                }
+                 setLoading(false);
+            });
+            return () => unsubscribeProfile();
         } else {
             setProfile(null);
+            setLoading(false);
         }
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
     });
 
     return () => unsubscribeAuth();
-  }, [pathname]); // Re-fetch on path change to keep data fresh
+  }, []);
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
@@ -98,7 +97,12 @@ export function Header() {
 
         <div className="flex flex-1 justify-end">
           <div className="hidden md:flex items-center space-x-2">
-            {loading ? null : user ? (
+            {loading ? (
+                <div className="flex items-center space-x-2">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                </div>
+            ) : user ? (
               <>
                 {profile?.isAdmin && (
                    <Button variant="ghost" size="sm" asChild>
@@ -162,7 +166,12 @@ export function Header() {
                     </Link>
                   ))}
                   <div className="border-t pt-4 flex flex-col space-y-3">
-                    {loading ? null : user ? (
+                    {loading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    ) : user ? (
                        <div className="space-y-2">
                          {profile?.isAdmin && (
                             <Button variant="ghost" asChild className="w-full justify-start">
