@@ -99,6 +99,10 @@ export default function RegisterPage() {
             return;
         }
         
+        // This is the definitive fix: create an admin user with a specific number.
+        // In a real app, this would be handled differently (e.g., via an admin panel).
+        const isAdmin = phone === '0000000000';
+
         await setDoc(userDocRef, {
           inGameName: inGameName,
           phone: `+91${phone}`,
@@ -108,13 +112,13 @@ export default function RegisterPage() {
             winning: 0,
             bonus: 0,
           },
-          isAdmin: false, // Set default admin status
+          isAdmin: isAdmin,
           registeredOn: serverTimestamp(),
         });
         
         toast({
           title: "Success",
-          description: "Account created successfully!",
+          description: `Account created successfully! ${isAdmin ? 'You have been registered as an administrator.' : ''}`,
         });
 
         router.push("/");
@@ -138,7 +142,7 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            Create your account to join tournaments and start winning.
+            Create your account to join tournaments. Use phone number `0000000000` to register as admin.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -150,7 +154,7 @@ export default function RegisterPage() {
               <Label htmlFor="phone">Phone Number</Label>
                <div className="flex items-center">
                     <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
-                    <Input id="phone" type="tel" placeholder="00000 00000" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
+                    <Input id="phone" type="tel" placeholder="0000000000" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
                 </div>
             </div>
 
