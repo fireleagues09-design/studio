@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 
 export function FloatingHomeButton() {
   const pathname = usePathname();
-  // Initialize position state without window object
   const [position, setPosition] = useState({ x: 20, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -131,7 +130,7 @@ export function FloatingHomeButton() {
     <div
       ref={buttonRef}
       className={cn(
-        'fixed z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
+        'fixed z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
         'hover:shadow-primary/40 hover:shadow-[0_0_15px_5px_hsl(var(--primary))]',
         isDragging && 'cursor-grabbing scale-105 shadow-primary/40 shadow-[0_0_15px_5px_hsl(var(--primary))]',
         isVisible ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
@@ -141,7 +140,7 @@ export function FloatingHomeButton() {
       onTouchStart={handleTouchStart}
     >
       <Link href="/" className="w-full h-full flex items-center justify-center" draggable="false" onClick={(e) => isDragging && e.preventDefault()}>
-        <Home className="h-5 w-5" />
+        <Home className="h-5 w-5 text-[hsl(var(--primary-foreground))]" />
       </Link>
     </div>
   );
