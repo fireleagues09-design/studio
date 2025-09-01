@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
+import { FloatingHomeButton } from "@/components/FloatingHomeButton";
 
 export const metadata: Metadata = {
   title: "FireLeagues - Free Fire Tournaments",
@@ -36,6 +37,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
+        <FloatingHomeButton />
         <Toaster />
       </body>
     </html>
