@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -39,22 +41,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { deleteSlider, uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
   url: string;
   storagePath: string;
 };
-
-function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = error => reject(error);
-    });
-}
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
@@ -120,24 +112,33 @@ export default function SliderAdmin() {
     setUploading(true);
 
     try {
-        const idToken = await user.getIdToken(true);
-        const fileData = await fileToBase64(file);
+        // Step 1: Verify user is admin on the client side before any upload attempt
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
+            throw new Error("Permission denied: User is not an admin.");
+        }
 
-        const result = await uploadSlider({
-            fileData: fileData,
-            contentType: file.type,
-            fileName: file.name,
-            idToken: idToken,
+        // Step 2: Upload to Firebase Storage
+        const storagePath = `sliders/${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, file);
+
+        // Step 3: Get download URL
+        const url = await getDownloadURL(storageRef);
+        
+        // Step 4: Save to Firestore
+        await addDoc(collection(db, 'sliders'), {
+            url: url,
+            storagePath: storagePath,
+            createdAt: serverTimestamp(),
         });
 
-        if (result.success) {
-            toast({ title: 'Success', description: result.message });
-            setFile(null);
-            const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-            if (fileInput) fileInput.value = '';
-        } else {
-            throw new Error(result.message);
-        }
+        toast({ title: 'Success', description: "Slider uploaded successfully!" });
+        setFile(null);
+        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+
     } catch (err: any) {
         console.error('Upload process failed:', err);
         toast({ 
@@ -156,15 +157,10 @@ export default function SliderAdmin() {
         return;
     }
     try {
-        const idToken = await user.getIdToken(true);
-        const result = await deleteSlider({slider, idToken});
-
-        if (result.success) {
-            toast({ title: 'Success', description: result.message });
-        } else {
-             throw new Error(result.message);
-        }
-
+        const storageRef = ref(storage, slider.storagePath);
+        await deleteObject(storageRef);
+        await deleteDoc(doc(db, 'sliders', slider.id));
+        toast({ title: 'Success', description: 'Slider deleted successfully' });
     } catch (error: any) {
         console.error('Error deleting slider:', error);
         toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive' });
@@ -207,7 +203,7 @@ export default function SliderAdmin() {
         {uploading && (
              <div className="space-y-2">
                 <Progress value={undefined} className="[&>div]:animate-pulse" />
-                <p className="text-sm text-muted-foreground text-center">Uploading and processing on server...</p>
+                <p className="text-sm text-muted-foreground text-center">Uploading and processing...</p>
             </div>
         )}
 
