@@ -23,7 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
@@ -50,7 +49,6 @@ export default function SliderAdmin() {
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
@@ -66,65 +64,56 @@ export default function SliderAdmin() {
       },
       error => {
         console.error('Error fetching sliders: ', error);
-        toast({
-          title: 'Error',
-          description: 'Could not fetch sliders. Check Firestore permissions.',
-          variant: 'destructive',
-        });
+        alert('Could not fetch sliders. Check Firestore permissions.');
         setLoading(false);
       }
     );
     return () => unsub();
-  }, [toast]);
+  }, []);
 
   async function handleUpload() {
     if (!file) {
-      toast({
-        title: 'No File Selected',
-        description: 'Please select a file to upload.',
-        variant: 'destructive',
-      });
+      alert('Please select a file to upload.');
       return;
     }
 
+    console.log('Starting upload...');
     setUploading(true);
+
     const storagePath = `sliders/${Date.now()}-${file.name}`;
     const storageRef = ref(storage, storagePath);
 
     try {
-      // 1. Upload file to Firebase Storage
+      // 1. Upload file
+      console.log('Uploading file to Firebase Storage...');
       await uploadBytes(storageRef, file);
-      
-      // 2. Get download URL
-      const url = await getDownloadURL(storageRef);
+      console.log('File uploaded successfully.');
 
-      // 3. Save URL and path to Firestore
+      // 2. Get URL
+      console.log('Getting download URL...');
+      const url = await getDownloadURL(storageRef);
+      console.log('Got download URL:', url);
+
+      // 3. Save to Firestore
+      console.log('Saving URL to Firestore...');
       await addDoc(collection(db, 'sliders'), {
         url: url,
-        storagePath: storagePath, // Store path for deletion
+        storagePath: storagePath,
         createdAt: serverTimestamp(),
       });
+      console.log('URL saved to Firestore.');
 
+      alert('Slider image uploaded successfully!');
       setFile(null);
+      // Reset the file input
       const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-      toast({
-        title: 'Success',
-        description: 'Slider image uploaded successfully!',
-      });
     } catch (err: any) {
-      console.error('Upload failed:', err);
-      toast({
-        title: 'Upload Failed',
-        description:
-          err.code === 'storage/unauthorized' 
-            ? 'Permission denied. Check Firebase Storage rules.'
-            : 'Could not upload image. Check console for details.',
-        variant: 'destructive',
-      });
+      console.error('An error occurred during upload:', err);
+      alert(`Upload failed. Check the developer console for errors. Message: ${err.message}`);
     } finally {
-      // This GUARANTEES the loading state is reset
+      console.log('Upload process finished. Resetting loading state.');
       setUploading(false);
     }
   }
@@ -138,19 +127,15 @@ export default function SliderAdmin() {
       // Delete from Firestore
       await deleteDoc(doc(db, 'sliders', slider.id));
 
-      toast({ title: 'Success', description: 'Slider image deleted.' });
+      alert('Slider image deleted.');
     } catch (error: any) {
        console.error('Error deleting slider:', error);
       if (error.code === 'storage/object-not-found') {
           // If file doesn't exist in storage, just delete the Firestore doc
           await deleteDoc(doc(db, 'sliders', slider.id));
-           toast({ title: 'Success', description: 'Slider record deleted (image was not found in storage).' });
+           alert('Slider record deleted (image was not found in storage).');
       } else {
-        toast({
-            title: 'Error Deleting',
-            description: 'Failed to delete slider. Check permissions or console for details.',
-            variant: 'destructive',
-        });
+        alert('Failed to delete slider. Check permissions or console for details.');
       }
     }
   }
