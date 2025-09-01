@@ -63,7 +63,7 @@ function CreateTournamentDialog() {
     };
 
     const addRuleRow = () => {
-        setRules([...rules, '']);
+        setRules([...rules, '•']);
     };
 
     const removeRuleRow = (index: number) => {
@@ -124,7 +124,7 @@ function CreateTournamentDialog() {
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
-                rules: rules.filter(r => r.trim() !== ''),
+                rules: rules.filter(r => r.trim() !== '•' && r.trim() !== ''),
                 prizeDistribution: finalPrizeDistribution,
                 createdAt: serverTimestamp()
             });
@@ -297,7 +297,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     };
 
     const addRuleRow = () => {
-        setRules([...rules, '']);
+        setRules([...rules, '•']);
     };
 
     const removeRuleRow = (index: number) => {
@@ -317,7 +317,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 entryFee,
                 prize,
                 slots: Number(slots),
-                rules: rules.filter(r => r.trim() !== '')
+                rules: rules.filter(r => r.trim() !== '•' && r.trim() !== '')
             });
             toast({
                 title: 'Success',
