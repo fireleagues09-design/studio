@@ -13,7 +13,6 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -40,12 +39,22 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from './ui/progress';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { deleteSlider, uploadSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
   url: string;
   storagePath: string;
 };
+
+function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = error => reject(error);
+    });
+}
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
@@ -107,37 +116,28 @@ export default function SliderAdmin() {
       toast({ title: 'Error', description: 'No file selected or you are not logged in.', variant: 'destructive' });
       return;
     }
+
     setUploading(true);
 
     try {
-        // Step 1: Verify the user is an admin before proceeding
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const idToken = await user.getIdToken(true);
+        const fileData = await fileToBase64(file);
 
-        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
-            throw new Error("Permission denied: You are not an administrator.");
-        }
-
-        // Step 2: Upload file to Storage
-        const storagePath = `sliders/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, file);
-
-        // Step 3: Get download URL
-        const downloadURL = await getDownloadURL(storageRef);
-
-        // Step 4: Save to Firestore
-        await addDoc(collection(db, 'sliders'), {
-            url: downloadURL,
-            storagePath: storagePath,
-            createdAt: serverTimestamp(),
+        const result = await uploadSlider({
+            fileData: fileData,
+            contentType: file.type,
+            fileName: file.name,
+            idToken: idToken,
         });
-        
-        toast({ title: 'Success', description: 'Slider uploaded successfully!' });
-        setFile(null);
-        const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
 
+        if (result.success) {
+            toast({ title: 'Success', description: result.message });
+            setFile(null);
+            const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+        } else {
+            throw new Error(result.message);
+        }
     } catch (err: any) {
         console.error('Upload process failed:', err);
         toast({ 
@@ -156,19 +156,14 @@ export default function SliderAdmin() {
         return;
     }
     try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const idToken = await user.getIdToken(true);
+        const result = await deleteSlider({slider, idToken});
 
-        if (!userDoc.exists() || userDoc.data()?.isAdmin !== true) {
-            throw new Error("Permission denied: You are not an administrator.");
+        if (result.success) {
+            toast({ title: 'Success', description: result.message });
+        } else {
+             throw new Error(result.message);
         }
-        // Delete from Storage
-        const storageRef = ref(storage, slider.storagePath);
-        await deleteObject(storageRef);
-        // Delete from Firestore
-        await deleteDoc(doc(db, 'sliders', slider.id));
-        
-        toast({ title: 'Success', description: 'Slider deleted successfully.' });
 
     } catch (error: any) {
         console.error('Error deleting slider:', error);
@@ -210,9 +205,9 @@ export default function SliderAdmin() {
         </div>
         
         {uploading && (
-            <div className="space-y-2">
-                <Progress value={100} className="animate-pulse" />
-                <p className="text-sm text-muted-foreground text-center">Uploading and processing...</p>
+             <div className="space-y-2">
+                <Progress value={undefined} className="[&>div]:animate-pulse" />
+                <p className="text-sm text-muted-foreground text-center">Uploading and processing on server...</p>
             </div>
         )}
 
