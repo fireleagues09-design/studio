@@ -4,12 +4,9 @@ import { Flame } from "lucide-react";
 export function Footer() {
   return (
     <footer className="border-t">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            &copy; 2025 FireLeagues. All rights reserved.
-          </p>
-          <div className="flex items-center space-x-2">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center gap-6">
+           <div className="flex items-center space-x-2">
             <Flame className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">FireLeagues</span>
           </div>
@@ -24,6 +21,9 @@ export function Footer() {
               Refund Policy
             </Link>
           </nav>
+           <p className="text-sm text-muted-foreground">
+            &copy; 2025 FireLeagues. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

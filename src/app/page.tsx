@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-12 md:gap-16 lg:gap-20 pb-12 md:pb-16 lg:pb-20">
       
-      <section className="container mx-auto px-0 sm:px-4">
+      <section className="container mx-auto px-4">
         <HomeSlider />
       </section>
 
