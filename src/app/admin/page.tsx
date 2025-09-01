@@ -32,6 +32,7 @@ function CreateTournamentDialog() {
     const [slots, setSlots] = useState('');
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
+    const [status, setStatus] = useState<TournamentType['status']>('Upcoming');
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
     const [prizePerKill, setPrizePerKill] = useState('');
@@ -86,6 +87,7 @@ function CreateTournamentDialog() {
         setSlots('');
         setCategory('Clash Squad 4v4');
         setTeamType('Squad');
+        setStatus('Upcoming');
         setBannerFile(null);
         setPrizeDistribution([{ place: '1st', prize: '' }]);
         setPrizePerKill('');
@@ -125,6 +127,7 @@ function CreateTournamentDialog() {
                 slots: Number(slots),
                 category,
                 teamType,
+                status,
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
@@ -246,6 +249,20 @@ function CreateTournamentDialog() {
                         </div>
                     </div>
 
+                     <div className="grid gap-2">
+                        <Label htmlFor="create-status">Status</Label>
+                        <Select value={status} onValueChange={(value) => setStatus(value as TournamentType['status'])}>
+                            <SelectTrigger id="create-status">
+                                <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                <SelectItem value="Ongoing">Ongoing</SelectItem>
+                                <SelectItem value="Finished">Finished</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-2">
                         <Label>Tournament Rules</Label>
                         <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
@@ -289,6 +306,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [entryFee, setEntryFee] = useState(tournament.entryFee);
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
+    const [status, setStatus] = useState<TournamentType['status']>(tournament.status || 'Upcoming');
     const [rules, setRules] = useState(tournament.rules || []);
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -321,6 +339,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 entryFee,
                 prize,
                 slots: Number(slots),
+                status,
                 rules: rules.filter(r => r.trim() !== '•' && r.trim() !== '')
             });
             toast({
@@ -379,9 +398,24 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                             <Input id="prize" value={prize} onChange={e => setPrize(e.target.value)} />
                         </div>
                     </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="slots">Total Slots</Label>
-                        <Input id="slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} />
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                           <Label htmlFor="slots">Total Slots</Label>
+                           <Input id="slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} />
+                        </div>
+                         <div className="grid gap-2">
+                           <Label htmlFor="edit-status">Status</Label>
+                           <Select value={status} onValueChange={(value) => setStatus(value as TournamentType['status'])}>
+                               <SelectTrigger id="edit-status">
+                                   <SelectValue placeholder="Select status" />
+                               </SelectTrigger>
+                               <SelectContent>
+                                   <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                   <SelectItem value="Ongoing">Ongoing</SelectItem>
+                                   <SelectItem value="Finished">Finished</SelectItem>
+                               </SelectContent>
+                           </Select>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -622,7 +656,7 @@ export default function AdminPage() {
                                             <TableHead>Name</TableHead>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Slots</TableHead>
-                                            <TableHead>Entry Fee</TableHead>
+                                            <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Prize</TableHead>
                                             <TableHead className="text-center">Actions</TableHead>
                                         </TableRow>
@@ -633,7 +667,15 @@ export default function AdminPage() {
                                                 <TableCell className="font-medium">{tournament.name}</TableCell>
                                                 <TableCell>{tournament.date} @ {tournament.time}</TableCell>
                                                 <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
-                                                <TableCell>₹{tournament.entryFee}</TableCell>
+                                                <TableCell>
+                                                     <Badge variant={
+                                                         tournament.status === 'Finished' ? 'destructive' :
+                                                         tournament.status === 'Ongoing' ? 'default' :
+                                                         'secondary'
+                                                     }>
+                                                        {tournament.status}
+                                                     </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right">₹{tournament.prize}</TableCell>
                                                 <TableCell className="text-center flex items-center justify-center gap-1">
                                                     <EditTournamentDialog tournament={tournament} />
@@ -695,5 +737,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    

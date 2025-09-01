@@ -14,6 +14,7 @@ export type Tournament = {
   time: string;
   rules: string[];
   prizeDistribution: { place: string; prize: string }[];
+  status: 'Upcoming' | 'Ongoing' | 'Finished';
 };
 
 export const MOCK_BANNERS = [
@@ -56,7 +57,8 @@ export const tournaments: Tournament[] = [
         { place: "1st", prize: "25,000" },
         { place: "2nd", prize: "15,000" },
         { place: "3rd", prize: "10,000" },
-    ]
+    ],
+    status: 'Upcoming'
   },
   {
     id: "t2",
@@ -76,7 +78,8 @@ export const tournaments: Tournament[] = [
         { place: "1st", prize: "5,000" },
         { place: "2nd", prize: "3,000" },
         { place: "3rd", prize: "2,000" },
-    ]
+    ],
+    status: 'Finished'
   },
   {
     id: "t3",
@@ -96,7 +99,8 @@ export const tournaments: Tournament[] = [
         { place: "1st", prize: "2,500" },
         { place: "2nd", prize: "1,500" },
         { place: "3rd", prize: "1,000" },
-    ]
+    ],
+    status: 'Upcoming'
   },
   {
     id: "t4",
@@ -116,7 +120,8 @@ export const tournaments: Tournament[] = [
         { place: "1st", prize: "10,000" },
         { place: "2nd", prize: "6,000" },
         { place: "3rd-4th", prize: "2,000" },
-    ]
+    ],
+    status: 'Ongoing'
   },
   {
     id: "t5",
@@ -137,7 +142,8 @@ export const tournaments: Tournament[] = [
         { place: "2nd", prize: "4,000" },
         { place: "3rd", prize: "2,000" },
         { place: "4th-10th", prize: "285 each"},
-    ]
+    ],
+    status: 'Upcoming'
   },
    {
     id: "t6",
@@ -157,7 +163,8 @@ export const tournaments: Tournament[] = [
         { place: "1st", prize: "4,000" },
         { place: "2nd", prize: "2,500" },
         { place: "3rd", prize: "1,500" },
-    ]
+    ],
+    status: 'Upcoming'
   },
 ];
 
