@@ -33,7 +33,6 @@ function CreateTournamentDialog() {
     const [category, setCategory] = useState('Clash Squad 4v4');
     const [teamType, setTeamType] = useState('Squad');
     const [status, setStatus] = useState<TournamentType['status']>('Upcoming');
-    const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
     const [prizePerKill, setPrizePerKill] = useState('');
     
@@ -56,12 +55,6 @@ function CreateTournamentDialog() {
         setPrizeDistribution(newDistribution);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setBannerFile(e.target.files[0]);
-        }
-    };
-
     const resetForm = () => {
         setName('');
         setDate('');
@@ -72,7 +65,6 @@ function CreateTournamentDialog() {
         setCategory('Clash Squad 4v4');
         setTeamType('Squad');
         setStatus('Upcoming');
-        setBannerFile(null);
         setPrizeDistribution([{ place: '1st', prize: '' }]);
         setPrizePerKill('');
     }
@@ -81,17 +73,10 @@ function CreateTournamentDialog() {
         e.preventDefault();
         setLoading(true);
 
-        let imageUrl = 'https://picsum.photos/600/400';
-        let dataAiHint = 'gaming abstract';
+        const imageUrl = 'https://picsum.photos/600/400';
+        const dataAiHint = 'gaming abstract';
 
         try {
-            if (bannerFile) {
-                const storageRef = ref(storage, `tournament-banners/${Date.now()}_${bannerFile.name}`);
-                const snapshot = await uploadBytes(storageRef, bannerFile);
-                imageUrl = await getDownloadURL(snapshot.ref);
-                dataAiHint = 'custom tournament banner';
-            }
-
             const finalPrizeDistribution = prizeDistribution.filter(p => p.place && p.prize);
             if (prizePerKill) {
                 finalPrizeDistribution.push({ place: 'Per Kill', prize: prizePerKill });
@@ -246,11 +231,6 @@ function CreateTournamentDialog() {
                         </Select>
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="create-banner">Tournament Banner</Label>
-                        <Input id="create-banner" type="file" onChange={handleFileChange} accept="image/*" />
-                        <p className="text-xs text-muted-foreground">Optional. If not provided, a default image will be used.</p>
-                    </div>
                     <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
                         <DialogClose asChild>
                             <Button type="button" variant="secondary">Cancel</Button>
@@ -668,6 +648,8 @@ export default function AdminPage() {
 
         </div>
     );
+
+    
 
     
 
