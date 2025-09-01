@@ -2,19 +2,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
-  addDoc,
-  serverTimestamp,
   deleteDoc,
   doc,
-  getDoc,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -39,12 +35,21 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { uploadSlider, deleteSlider } from '@/app/admin/actions';
 
 type Slider = {
   id: string;
   url: string;
   storagePath: string;
 };
+
+// Helper to convert file to base64
+const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+});
 
 export default function SliderAdmin() {
   const [file, setFile] = useState<File | null>(null);
@@ -96,38 +101,20 @@ export default function SliderAdmin() {
       return;
     }
     
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive'});
-        return;
-    }
-
     setUploading(true);
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
-          throw new Error("Permission Denied. User is not an admin.");
+        const base64Data = await toBase64(file);
+        const result = await uploadSlider(base64Data, file.type, file.name);
+
+       if (result.success) {
+            toast({ title: 'Success', description: "Slider uploaded successfully!" });
+            setFile(null);
+            if (fileInput) fileInput.value = '';
+        } else {
+            throw new Error(result.message);
         }
-
-        const storagePath = `sliders/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, storagePath);
-
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-
-        await addDoc(collection(db, 'sliders'), {
-            url: downloadURL,
-            storagePath: storagePath,
-            createdAt: serverTimestamp(),
-        });
-        
-        toast({ title: 'Success', description: "Slider uploaded successfully!" });
-        setFile(null);
-        if (fileInput) fileInput.value = '';
-
      } catch (err: any) {
        console.error('Upload process failed:', err);
        toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
@@ -138,22 +125,12 @@ export default function SliderAdmin() {
 
   async function handleDelete(slider: Slider) {
     try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-           throw new Error('You must be logged in to delete.');
+        const result = await deleteSlider(slider.id, slider.storagePath);
+        if (result.success) {
+            toast({ title: 'Success', description: 'Slider image deleted.'});
+        } else {
+            throw new Error(result.message);
         }
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
-          throw new Error("Permission Denied. User is not an admin.");
-        }
-
-        await deleteDoc(doc(db, 'sliders', slider.id));
-        const storageRef = ref(storage, slider.storagePath);
-        await deleteObject(storageRef);
-
-        toast({ title: 'Success', description: 'Slider image deleted.'});
-
     } catch (error: any) {
        console.error('Error deleting slider:', error);
        toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive'});
