@@ -5,16 +5,19 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Allow public read access to all slider images
     match /sliders/{allPaths=**} {
-      allow read;
-      // Allow write access (uploads, deletes) only to authenticated admin users
+      allow read: if true;
+      
+      // Allow writes only if the user is authenticated and is an admin
       allow write: if request.auth != null && 
                     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Secure all other paths
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
+    // You can add other rules for other paths here
+    // For example, for user profile pictures:
+    // match /profile-pictures/{userId}/{allPaths=**} {
+    //   allow read: if true;
+    //   allow write: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }

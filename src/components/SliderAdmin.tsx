@@ -124,6 +124,7 @@ export default function SliderAdmin() {
         variant: 'destructive',
       });
     } finally {
+      // This GUARANTEES the loading state is reset
       setUploading(false);
     }
   }
