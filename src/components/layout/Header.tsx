@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LogIn, Menu, User, UserPlus, Wallet, Shield } from "lucide-react";
+import { LogIn, Menu, User, UserPlus, Wallet, Shield, Flame } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -42,9 +42,8 @@ function Logo() {
             strokeLinejoin="round"
             className="h-8 w-8 text-primary"
         >
-            <path d="M14.5 4.5c-2-2-5-2-7 0s-2 5 0 7c2 2 5 2 7 0s2-5 0-7z" />
-            <path d="M12 17a7 7 0 0 0 5-12.5" />
-            <path d="M12 17a4 4 0 0 0 4-8" />
+           <path d="M14.5 4.5c-2-2-5-2-7 0s-2 5 0 7c2 2 5 2 7 0s2-5 0-7z" />
+           <path d="M12 17a7 7 0 0 0 5-12.5" />
         </svg>
     )
 }
@@ -91,7 +90,7 @@ export function Header() {
       <div className="container flex h-16 items-center px-4">
         <div className="flex-1 md:flex-none">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Logo />
+              <Flame className="h-8 w-8 text-primary" />
               <span className="font-bold text-lg hidden sm:inline-block">FireLeagues</span>
             </Link>
         </div>
@@ -169,7 +168,7 @@ export function Header() {
                 <SheetHeader>
                   <SheetTitle>
                     <Link href="/" className="flex items-center space-x-2">
-                      <Logo />
+                      <Flame className="h-8 w-8 text-primary" />
                       <span className="font-bold text-lg">FireLeagues</span>
                     </Link>
                   </SheetTitle>
