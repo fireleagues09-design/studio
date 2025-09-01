@@ -2,13 +2,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, auth } from '@/lib/firebase';
+import { db, auth, storage } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -33,8 +39,6 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { uploadSlider, deleteSlider } from '@/app/admin/actions';
-
 
 type Slider = {
   id: string;
@@ -73,14 +77,13 @@ export default function SliderAdmin() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-        // Limit file size to 5MB
         if (selectedFile.size > 5 * 1024 * 1024) {
             toast({
                 title: 'File too large',
                 description: 'Please select a file smaller than 5MB.',
                 variant: 'destructive',
             });
-            e.target.value = ''; // Reset file input
+            e.target.value = '';
             return;
         }
         setFile(selectedFile);
@@ -103,27 +106,33 @@ export default function SliderAdmin() {
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
-        const token = await currentUser.getIdToken();
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
+        // First, verify the user is an admin
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+          throw new Error("Permission Denied. User is not an admin.");
+        }
+
+        const storagePath = `sliders/${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, storagePath);
+
+        // Upload the file
+        await uploadBytes(storageRef, file);
+
+        // Get the download URL
+        const downloadURL = await getDownloadURL(storageRef);
+
+        // Save slider metadata to Firestore
+        await addDoc(collection(db, 'sliders'), {
+            url: downloadURL,
+            storagePath: storagePath,
+            createdAt: serverTimestamp(),
+        });
         
-        reader.onloadend = async () => {
-            const base64String = reader.result as string;
-            const result = await uploadSlider(token, base64String, file.name, file.type);
+        toast({ title: 'Success', description: "Slider uploaded successfully!" });
+        setFile(null);
+        if (fileInput) fileInput.value = '';
 
-            if (result.success) {
-                toast({ title: 'Success', description: "Slider uploaded successfully!" });
-                setFile(null);
-                if (fileInput) fileInput.value = '';
-            } else {
-                throw new Error(result.message);
-            }
-        };
-
-        reader.onerror = () => {
-            throw new Error('Failed to read file.');
-        };
-     
      } catch (err: any) {
        console.error('Upload process failed:', err);
        toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive'});
@@ -139,13 +148,21 @@ export default function SliderAdmin() {
         return;
     }
     try {
-        const token = await currentUser.getIdToken();
-        const result = await deleteSlider(token, slider.id, slider.storagePath);
-        if (result.success) {
-            toast({ title: 'Success', description: 'Slider image deleted.'});
-        } else {
-            throw new Error(result.message);
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists() || !userDoc.data()?.isAdmin) {
+          throw new Error("Permission Denied. User is not an admin.");
         }
+
+        // Delete the Firestore document
+        await deleteDoc(doc(db, 'sliders', slider.id));
+
+        // Delete the file from Firebase Storage
+        const storageRef = ref(storage, slider.storagePath);
+        await deleteObject(storageRef);
+
+        toast({ title: 'Success', description: 'Slider image deleted.'});
+
     } catch (error: any) {
        console.error('Error deleting slider:', error);
        toast({ title: 'Error', description: error.message || 'Failed to delete slider.', variant: 'destructive'});
