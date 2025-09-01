@@ -10,9 +10,10 @@ import type { Tournament } from "@/lib/mock-data";
 
 type TournamentCardProps = {
   tournament: Tournament;
+  isAuthenticated: boolean;
 };
 
-export default function TournamentCard({ tournament }: TournamentCardProps) {
+export default function TournamentCard({ tournament, isAuthenticated }: TournamentCardProps) {
   const {
     id,
     name,
@@ -20,9 +21,10 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
     dataAiHint,
   } = tournament;
   
+  const linkHref = isAuthenticated ? `/tournaments/${id}` : '/register';
 
   return (
-    <Link href={`/tournaments/${id}`} className="group">
+    <Link href={linkHref} className="group">
         <Card className="flex flex-col overflow-hidden transition-transform transform hover:-translate-y-1 hover:shadow-primary/20 hover:shadow-lg w-full aspect-square relative">
             <Image
             src={image}

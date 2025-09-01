@@ -7,19 +7,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import type { Tournament } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 
 export default function TournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+    });
+
     const tournamentsQuery = query(collection(db, "tournaments"));
-    const unsubscribe = onSnapshot(tournamentsQuery, (snapshot) => {
+    const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
         const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         setTournaments(tournamentsData);
         setLoading(false);
@@ -28,7 +35,10 @@ export default function TournamentsPage() {
         setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeTournaments();
+    };
   }, []);
 
   const filteredTournaments = tournaments.filter((t) =>
@@ -80,28 +90,28 @@ export default function TournamentsPage() {
           <TabsTrigger value="cs">Clash Squad</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="mt-6">
-            {loading ? renderSkeletons() : (
+            {loading || loadingAuth ? renderSkeletons() : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredTournaments.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
+                    <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
                     ))}
                 </div>
             )}
         </TabsContent>
         <TabsContent value="classic" className="mt-6">
-           {loading ? renderSkeletons() : (
+           {loading || loadingAuth ? renderSkeletons() : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {classicTournaments.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
+                    <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
                     ))}
                 </div>
             )}
         </TabsContent>
         <TabsContent value="cs" className="mt-6">
-           {loading ? renderSkeletons() : (
+           {loading || loadingAuth ? renderSkeletons() : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {csTournaments.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
+                    <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
                     ))}
                 </div>
             )}
@@ -116,5 +126,3 @@ export default function TournamentsPage() {
     </div>
   );
 }
-
-    

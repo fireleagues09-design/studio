@@ -63,7 +63,7 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          {loadingTournaments ? (
+          {loadingTournaments || loadingAuth ? (
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="space-y-2">
@@ -75,7 +75,7 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {upcomingTournaments.map((tournament) => (
-                <TournamentCard key={tournament.id} tournament={tournament} />
+                <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
                 ))}
             </div>
           )}
