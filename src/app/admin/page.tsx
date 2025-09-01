@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -414,91 +414,12 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
     );
 }
 
-function BannerManagerDialog({ banners, setBanners }: { banners: Banner[], setBanners: React.Dispatch<React.SetStateAction<Banner[]>> }) {
-    const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const { toast } = useToast();
-    
-    const handleImageChange = async (bannerId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            setLoading(true);
-            try {
-                // Find the original banner to get the old image URL for deletion
-                const originalBanner = banners.find(b => b.id === bannerId);
-                if (originalBanner && originalBanner.image.includes('firebasestorage')) {
-                    const oldImageRef = ref(storage, originalBanner.image);
-                    await deleteObject(oldImageRef).catch(error => {
-                        // It's okay if the old image doesn't exist, just log it.
-                        console.warn("Could not delete old image, it might not exist: ", error);
-                    });
-                }
-
-                const storageRef = ref(storage, `banners/${bannerId}_${Date.now()}`);
-                await uploadBytes(storageRef, file);
-                const imageUrl = await getDownloadURL(storageRef);
-                
-                const bannerDocRef = doc(db, 'banners', bannerId);
-                await updateDoc(bannerDocRef, { image: imageUrl });
-                
-                setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, image: imageUrl } : b));
-                toast({ title: "Success", description: "Banner image updated." });
-            } catch (error) {
-                console.error("Error updating banner image: ", error);
-                toast({ title: "Error", description: "Failed to update image.", variant: "destructive" });
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
-
-    return (
-         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                 <Button variant="outline">
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    Manage Banners
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>Homepage Banner Management</DialogTitle>
-                    <DialogDescription>Change the images in the homepage carousel.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-                    {banners.map((banner, index) => (
-                        <Card key={banner.id}>
-                            <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
-                               <div className="font-medium text-lg">Slot {index + 1}</div>
-                                <div className="relative w-full md:w-48 h-28 flex-shrink-0 rounded-md overflow-hidden">
-                                     <Image src={banner.image} alt={`Banner ${index + 1}`} fill className="object-cover" />
-                                </div>
-                                <div className="flex-grow">
-                                     <Label htmlFor={`image-upload-${banner.id}`} className={cn("w-full", loading && "opacity-50")}>
-                                         <Input id={`image-upload-${banner.id}`} type="file" className="w-full" accept="image/*" onChange={(e) => handleImageChange(banner.id, e)} disabled={loading}/>
-                                     </Label>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="secondary">Close</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [users, setUsers] = useState<any[]>([]);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
-    const [banners, setBanners] = useState<Banner[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const router = useRouter();
@@ -549,18 +470,10 @@ export default function AdminPage() {
             setDataLoading(false);
         });
 
-        const bannersQuery = query(collection(db, "banners"), orderBy("createdAt", "asc"));
-        const unsubscribeBanners = onSnapshot(bannersQuery, (snapshot) => {
-            const bannersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Banner));
-            setBanners(bannersData);
-        }, (error) => console.error("Error fetching banners:", error));
-
-
         return () => {
             unsubscribeUsers();
             unsubscribeTransactions();
             unsubscribeTournaments();
-            unsubscribeBanners();
         };
     }, [isAdmin]);
     
@@ -638,18 +551,6 @@ export default function AdminPage() {
                     </Card>
                 </section>
             )}
-            
-            <section>
-                 <Card>
-                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <CardTitle>Homepage Banners</CardTitle>
-                            <CardDescription>Manage the images in the homepage carousel.</CardDescription>
-                        </div>
-                        <BannerManagerDialog banners={banners} setBanners={setBanners} />
-                    </CardHeader>
-                </Card>
-            </section>
 
             <section>
                 <Card>
