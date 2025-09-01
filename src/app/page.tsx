@@ -42,6 +42,7 @@ export default function Home() {
     };
   }, []);
 
+  const viewAllLink = !loadingAuth && user ? "/tournaments" : "/register";
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -58,7 +59,7 @@ export default function Home() {
               Upcoming Tournaments
             </h2>
             <Button variant="link" asChild>
-              <Link href="/tournaments">
+              <Link href={viewAllLink}>
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

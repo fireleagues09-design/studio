@@ -30,10 +30,7 @@ type UserProfile = {
     isAdmin?: boolean;
 }
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/tournaments", label: "Tournaments" },
-];
+
 
 export function Header() {
   const pathname = usePathname();
@@ -65,6 +62,11 @@ export function Header() {
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
+
+  const navLinks = [
+    { href: "/", label: "Home" },
+    { href: !loading && user ? "/tournaments" : "/register", label: "Tournaments" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
