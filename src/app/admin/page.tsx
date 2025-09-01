@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, writeBatch, limit, getDocs } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -435,6 +435,7 @@ function UploadSliderButton() {
                     description: 'No banners found to replace. Please create a banner first.',
                     variant: 'destructive'
                 });
+                setUploading(false);
                 return;
             }
 
@@ -479,15 +480,17 @@ function UploadSliderButton() {
         } finally {
             setUploading(false);
             // Reset file input
-            e.target.value = '';
+            if(e.target) {
+                e.target.value = '';
+            }
         }
     };
 
     return (
         <Button asChild variant="outline" disabled={uploading}>
-            <Label htmlFor="slider-upload" className="cursor-pointer">
+            <Label htmlFor="slider-upload" className="cursor-pointer flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
                 {uploading ? 'Uploading...' : 'Replace First Slider'}
-                <ImageIcon className="mr-2 h-4 w-4" />
                 <Input
                     id="slider-upload"
                     type="file"
