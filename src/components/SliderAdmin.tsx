@@ -2,14 +2,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   onSnapshot,
   query,
   orderBy,
-  deleteDoc,
-  doc,
 } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -100,13 +98,20 @@ export default function SliderAdmin() {
       toast({ title: 'No file selected', description: 'Please select a file to upload.', variant: 'destructive'});
       return;
     }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        toast({ title: 'Authentication Error', description: 'You must be logged in to upload.', variant: 'destructive'});
+        return;
+    }
     
     setUploading(true);
     const fileInput = document.getElementById('slider-file-input') as HTMLInputElement;
 
     try {
+        const token = await currentUser.getIdToken();
         const base64Data = await toBase64(file);
-        const result = await uploadSlider(base64Data, file.type, file.name);
+        const result = await uploadSlider(token, base64Data, file.type, file.name);
 
        if (result.success) {
             toast({ title: 'Success', description: "Slider uploaded successfully!" });
@@ -124,8 +129,15 @@ export default function SliderAdmin() {
   };
 
   async function handleDelete(slider: Slider) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        toast({ title: 'Authentication Error', description: 'You must be logged in to delete.', variant: 'destructive'});
+        return;
+    }
+
     try {
-        const result = await deleteSlider(slider.id, slider.storagePath);
+        const token = await currentUser.getIdToken();
+        const result = await deleteSlider(token, slider.id, slider.storagePath);
         if (result.success) {
             toast({ title: 'Success', description: 'Slider image deleted.'});
         } else {

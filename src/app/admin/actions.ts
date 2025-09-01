@@ -3,7 +3,6 @@
 
 import { auth, db, storage } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 async function verifyAdmin(token: string) {
@@ -20,10 +19,7 @@ async function verifyAdmin(token: string) {
     }
 }
 
-export async function uploadSlider(base64Data: string, contentType: string, fileName: string) {
-    const cookieStore = cookies();
-    const token = cookieStore.get('firebaseIdToken')?.value;
-
+export async function uploadSlider(token: string | null, base64Data: string, contentType: string, fileName: string) {
     if (!token) {
         return { success: false, message: 'User not authenticated.' };
     }
@@ -69,10 +65,7 @@ export async function uploadSlider(base64Data: string, contentType: string, file
     }
 }
 
-export async function deleteSlider(sliderId: string, storagePath: string) {
-     const cookieStore = cookies();
-    const token = cookieStore.get('firebaseIdToken')?.value;
-
+export async function deleteSlider(token: string | null, sliderId: string, storagePath: string) {
     if (!token) {
         return { success: false, message: 'User not authenticated.' };
     }
