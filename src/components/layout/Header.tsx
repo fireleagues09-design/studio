@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LogIn, Menu, User, UserPlus, Wallet, Shield, Flame } from "lucide-react";
+import { LogIn, Menu, User, UserPlus, Wallet, Shield } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -89,8 +89,8 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-4">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Flame className="h-8 w-8 text-primary" />
-            <span className="font-bold text-lg hidden sm:inline-block">FireLeagues</span>
+            <Logo />
+            <span className="font-bold text-lg">FireLeagues</span>
         </Link>
         
         <div className="flex-1 flex justify-center">
@@ -129,7 +129,7 @@ export function Header() {
                      </Link>
                    </Button>
                 )}
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="ghost" size="sm" asChild>
                     <Link href="/wallet">
                     <Wallet className="mr-2 h-4 w-4 text-primary" />
                     ₹{totalBalance.toFixed(2)}
@@ -167,7 +167,7 @@ export function Header() {
                 <SheetHeader>
                   <SheetTitle>
                     <Link href="/" className="flex items-center space-x-2">
-                      <Flame className="h-8 w-8 text-primary" />
+                      <Logo />
                       <span className="font-bold text-lg">FireLeagues</span>
                     </Link>
                   </SheetTitle>
