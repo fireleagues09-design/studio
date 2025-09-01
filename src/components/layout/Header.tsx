@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Flame, LogIn, Menu, User, UserPlus, Wallet, Shield } from "lucide-react";
+import { LogIn, Menu, User, UserPlus, Wallet, Shield } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -28,6 +28,26 @@ type WalletData = {
 type UserProfile = {
     wallet: WalletData;
     isAdmin?: boolean;
+}
+
+function Logo() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-8 w-8 text-primary"
+        >
+            <path d="M15.5 2.8a2 2 0 0 0-2.8 0L8.7 6.8a2 2 0 0 0 0 2.8l4 4a2 2 0 0 0 2.8 0l4-4a2 2 0 0 0 0-2.8z"></path>
+            <path d="M2.8 15.5a2 2 0 0 0 0 2.8l4 4a2 2 0 0 0 2.8 0l4-4a2 2 0 0 0 0-2.8z"></path>
+            <path d="m13.4 7.6 5.1 5.1"></path>
+            <path d="m7.6 13.4 5.1 5.1"></path>
+        </svg>
+    )
 }
 
 export function Header() {
@@ -72,8 +92,8 @@ export function Header() {
       <div className="container flex h-16 items-center px-4">
         <div className="flex-1 md:flex-none">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Flame className="h-6 w-6 text-primary" />
-              <span className="font-bold text-lg hidden sm:inline-block">FireLeagues</span>
+              <Logo />
+              <span className="font-bold text-lg">FireLeagues</span>
             </Link>
         </div>
 
@@ -150,7 +170,7 @@ export function Header() {
                 <SheetHeader>
                   <SheetTitle>
                     <Link href="/" className="flex items-center space-x-2">
-                      <Flame className="h-6 w-6 text-primary" />
+                      <Logo />
                       <span className="font-bold text-lg">FireLeagues</span>
                     </Link>
                   </SheetTitle>
