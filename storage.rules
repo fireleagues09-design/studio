@@ -3,17 +3,14 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Only admins can upload to the sliders folder.
-    match /sliders/{allPaths=**} {
-      allow write: if request.auth != null && 
-                   request.auth.uid != null &&
-                   get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    // Only admins can upload to the 'sliders' folder.
+    match /sliders/{fileName} {
+      allow write: if request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // Any authenticated user can read files. This is broad but often acceptable.
-    // You might want to lock this down further based on your needs.
+    // Allow public read access to all files.
     match /{allPaths=**} {
-      allow read;
+      allow read: if true;
     }
   }
 }
