@@ -80,9 +80,22 @@ export default function RegisterPage() {
 
   const handleSendOtp = async () => {
     if (!inGameName || !phone || !inGameUid) {
-      toast({ title: "Error", description: "Please fill in all required fields.", variant: "destructive" });
+      toast({ title: "Error", description: "Please fill in all required personal fields.", variant: "destructive" });
       return;
     }
+
+    if (teamType) {
+        const areTeammatesValid = teammates.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
+        if (!areTeammatesValid) {
+             toast({
+                title: "Incomplete Team",
+                description: `Please fill out all In-Game Names and UIDs for your ${teamType} members, or deselect the team type.`,
+                variant: "destructive",
+            });
+            return;
+        }
+    }
+
     setLoading(true);
     try {
       const phoneNumber = `+91${phone}`;
@@ -225,8 +238,18 @@ export default function RegisterPage() {
                     {Array.from({ length: teammateFieldsCount }).map((_, index) => (
                        <div key={index} className="p-3 border rounded-md space-y-2 bg-secondary/30">
                            <Label>Teammate {index + 1}</Label>
-                           <Input placeholder="In-Game Name" value={teammates[index]?.inGameName || ''} onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} />
-                           <Input placeholder="In-Game UID" value={teammates[index]?.inGameUid || ''} onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} />
+                           <Input 
+                                placeholder="In-Game Name" 
+                                value={teammates[index]?.inGameName || ''} 
+                                onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} 
+                                required={!!teamType}
+                            />
+                           <Input 
+                                placeholder="In-Game UID" 
+                                value={teammates[index]?.inGameUid || ''} 
+                                onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} 
+                                required={!!teamType}
+                            />
                        </div>
                     ))}
                 </CollapsibleContent>
