@@ -114,6 +114,7 @@ function CreateTournamentDialog() {
                 status,
                 image: imageUrl,
                 slotsFilled: 0,
+                registeredPlayers: [],
                 dataAiHint,
                 rules: rules,
                 prizeDistribution: finalPrizeDistribution,
@@ -686,3 +687,4 @@ export default function AdminPage() {
     
 
     
+

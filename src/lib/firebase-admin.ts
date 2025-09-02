@@ -1,5 +1,6 @@
 
 import admin from 'firebase-admin';
+import { ServiceAccount } from 'firebase-admin';
 
 // This is a more robust way to initialize the Firebase Admin SDK.
 // It ensures that we don't try to re-initialize the app if it's already been done.
@@ -12,12 +13,19 @@ if (!admin.apps.length) {
     }
 
     const storageBucket = `${projectId}.appspot.com`;
+    
+    let credential;
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        credential = admin.credential.cert(serviceAccount as ServiceAccount);
+    } else {
+        // Use Application Default Credentials if the service account key is not set
+        credential = admin.credential.applicationDefault();
+    }
+
 
     admin.initializeApp({
-      // The service account credentials should be automatically available
-      // in the App Hosting environment via Application Default Credentials.
-      credential: admin.credential.applicationDefault(),
-      // Explicitly set the project and storage bucket to avoid discovery issues.
+      credential,
       projectId: projectId,
       storageBucket: storageBucket,
     });

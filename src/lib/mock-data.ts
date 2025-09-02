@@ -17,6 +17,7 @@ export type Tournament = {
   status: 'Upcoming' | 'Ongoing' | 'Finished';
   roomId?: string;
   roomPassword?: string;
+  registeredPlayers?: string[];
 };
 
 export const MOCK_BANNERS = [
