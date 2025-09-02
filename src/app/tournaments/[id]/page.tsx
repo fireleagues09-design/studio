@@ -196,6 +196,15 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             return;
         }
 
+        if (tournament?.status !== 'Upcoming') {
+            toast({
+                title: "Registration Closed",
+                description: "This tournament is not open for registration.",
+                variant: "destructive"
+            });
+            return;
+        }
+
         setRegistrationLoading(true);
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
 
@@ -278,10 +287,35 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         prizeDistribution,
         roomId,
         roomPassword,
+        status
     } = tournament;
 
     const progress = (slotsFilled / slots) * 100;
     const isFilled = slotsFilled >= slots;
+    const isUpcoming = status === 'Upcoming';
+
+    const getButtonState = () => {
+        if (registrationLoading) {
+            return { text: 'Processing...', disabled: true, variant: 'default' as const };
+        }
+        if (isRegistered) {
+            if (isUpcoming) {
+                return { text: 'Leave Tournament', disabled: false, variant: 'destructive' as const };
+            } else {
+                return { text: 'Registered', disabled: true, variant: 'default' as const };
+            }
+        }
+        if (!isUpcoming) {
+             if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true, variant: 'default' as const };
+             if (status === 'Finished') return { text: 'Tournament Finished', disabled: true, variant: 'default' as const };
+        }
+        if (isFilled) {
+            return { text: 'Registrations Closed', disabled: true, variant: 'default' as const };
+        }
+        return { text: 'Register Your Team', disabled: false, variant: 'default' as const };
+    };
+
+    const buttonState = getButtonState();
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -402,18 +436,11 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 <Button 
                     size="lg" 
                     className="w-full font-bold" 
-                    disabled={(!isRegistered && isFilled) || registrationLoading}
+                    disabled={buttonState.disabled}
                     onClick={handleRegistration}
-                    variant={isRegistered ? 'destructive' : 'default'}
+                    variant={buttonState.variant}
                 >
-                    {registrationLoading 
-                        ? 'Processing...' 
-                        : isRegistered 
-                            ? 'Leave Tournament' 
-                            : isFilled 
-                                ? 'Registrations Closed' 
-                                : 'Register Your Team'
-                    }
+                    {buttonState.text}
                 </Button>
             </div>
           </Card>
@@ -456,5 +483,3 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
-
-    
