@@ -36,6 +36,7 @@ export default function TournamentCard({ tournament, isAuthenticated }: Tourname
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             <CardContent className="relative flex flex-col justify-end flex-grow p-3 text-white">
                  <h3 className="text-base font-bold leading-tight line-clamp-2">{name}</h3>
+                 <p className="text-xs text-primary font-mono mt-1">ID: {id}</p>
             </CardContent>
         </Card>
     </Link>
