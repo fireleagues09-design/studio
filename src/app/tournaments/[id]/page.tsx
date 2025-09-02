@@ -40,10 +40,11 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 
 type SoloRegistrationDialogProps = {
     tournament: Tournament;
+    user: FirebaseUser | null;
     onSuccess: () => void;
 }
 
-function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialogProps) {
+function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistrationDialogProps) {
     const [inGameName, setInGameName] = useState('');
     const [inGameUid, setInGameUid] = useState('');
     const [loading, setLoading] = useState(false);
@@ -52,6 +53,10 @@ function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialo
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!user) {
+             toast({ title: 'Error', description: 'You must be logged in to register.', variant: 'destructive' });
+             return;
+        }
         if (!inGameName || !inGameUid) {
             toast({ title: 'Error', description: 'Please fill in all fields.', variant: 'destructive' });
             return;
@@ -59,7 +64,8 @@ function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialo
         setLoading(true);
 
         try {
-            const result = await registerSoloPlayer(tournament.id, inGameName, inGameUid);
+            const idToken = await user.getIdToken();
+            const result = await registerSoloPlayer(tournament.id, inGameName, inGameUid, idToken);
             if (result.success) {
                 toast({
                     title: 'Registration Successful!',
@@ -499,7 +505,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             </CardContent>
             <div className="p-6 pt-0">
                 { isSoloTournament && user && !isRegistered && isUpcoming ? (
-                    <SoloRegistrationDialog tournament={tournament} onSuccess={() => setIsRegistered(true)} />
+                    <SoloRegistrationDialog tournament={tournament} user={user} onSuccess={() => setIsRegistered(true)} />
                 ) : (
                      <Button 
                         size="lg" 
@@ -552,5 +558,3 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
-
-    

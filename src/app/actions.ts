@@ -39,10 +39,9 @@ export async function isUserRegisteredForTournament(tournamentId: string): Promi
 export async function registerSoloPlayer(
     tournamentId: string, 
     inGameName: string, 
-    inGameUid: string
+    inGameUid: string,
+    idToken: string
 ): Promise<{success: boolean; message: string}> {
-    const idToken = headers().get('Authorization')?.split('Bearer ')[1];
-    
     if (!idToken) {
        return { success: false, message: 'Authorization required.'};
     }
