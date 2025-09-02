@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -133,7 +134,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             <TabsContent value="rules" className="mt-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Tournament Rules</CardTitle>
+                  <CardTitle>Please Read All Rules Before Playing</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
@@ -245,4 +246,5 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
+
 
