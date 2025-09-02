@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 
 
-const DEFAULT_TOURNAMENT_RULES = [
+const FULL_MAP_RULES = [
     'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
     'Always On Screen Recording While Playing FireLeagues Tournament matches ( if your own goods and in any major issues screenshot will not accepted ).',
     'Minimum Game Level Should be 40.',
@@ -89,6 +89,8 @@ function CreateTournamentDialog() {
 
         const imageUrl = 'https://picsum.photos/600/400';
         const dataAiHint = 'gaming abstract';
+        
+        const rules = category === 'Classic Full Map' ? FULL_MAP_RULES : [];
 
         try {
             const finalPrizeDistribution = prizeDistribution.filter(p => p.place && p.prize);
@@ -113,7 +115,7 @@ function CreateTournamentDialog() {
                 image: imageUrl,
                 slotsFilled: 0,
                 dataAiHint,
-                rules: DEFAULT_TOURNAMENT_RULES,
+                rules: rules,
                 prizeDistribution: finalPrizeDistribution,
                 createdAt: serverTimestamp()
             });
