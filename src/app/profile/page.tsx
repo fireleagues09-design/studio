@@ -9,18 +9,158 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { User, KeySquare, Pencil, Fingerprint, Users, PlusCircle } from 'lucide-react';
+import { User, KeySquare, Pencil, Fingerprint, Users, PlusCircle, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import type { Team, TeamMember } from '@/lib/mock-data';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { updateTeam } from './actions';
+
 
 type UserProfile = {
     inGameName: string;
     inGameUid: string;
     phone: string;
     email: string;
+    team?: Team;
 };
+
+function EditTeamDialog({ user, profile }: { user: FirebaseUser, profile: UserProfile }) {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [teamName, setTeamName] = useState(profile.team?.name || '');
+    const [teamType, setTeamType] = useState<'Duo' | 'Squad'>(profile.team?.type || 'Duo');
+    const [teammates, setTeammates] = useState<TeamMember[]>(profile.team?.members || []);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        // Reset form when dialog opens
+        if (open) {
+            const currentTeam = profile.team;
+            setTeamName(currentTeam?.name || '');
+            setTeamType(currentTeam?.type || 'Duo');
+            const initialMembers = currentTeam?.members || [];
+            
+            const maxMembers = (currentTeam?.type || 'Duo') === 'Duo' ? 1 : 3;
+            const filledMembers = Array(maxMembers).fill(null).map((_, i) => initialMembers[i] || { inGameName: '', inGameUid: '' });
+            setTeammates(filledMembers);
+        }
+    }, [open, profile]);
+
+    const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string) => {
+        const newTeammates = [...teammates];
+        newTeammates[index] = { ...newTeammates[index], [field]: value };
+        setTeammates(newTeammates);
+    };
+    
+    const handleTypeChange = (type: 'Duo' | 'Squad') => {
+        setTeamType(type);
+        const maxMembers = type === 'Duo' ? 1 : 3;
+        // Keep existing members up to the new limit
+        const currentMembers = teammates.slice(0, maxMembers);
+        // Pad with empty members if needed
+        const filledMembers = Array(maxMembers).fill(null).map((_, i) => currentMembers[i] || { inGameName: '', inGameUid: '' });
+        setTeammates(filledMembers);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const idToken = await user.getIdToken();
+            const teamData: Team = {
+                name: teamName,
+                type: teamType,
+                members: teammates.filter(m => m.inGameName && m.inGameUid) // Only save non-empty members
+            };
+            const result = await updateTeam(idToken, teamData);
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: 'Your team has been updated.'
+                });
+                setOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            console.error("Error updating team:", error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update team. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const teammateFields = Array.from({ length: teamType === 'Duo' ? 1 : 3 });
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm">
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {profile.team ? 'Edit Team' : 'Create Team'}
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>{profile.team ? 'Edit Team' : 'Create Your Team'}</DialogTitle>
+                    <DialogDescription>
+                        Manage your team members for Duo and Squad tournaments.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
+                     <div className="grid gap-2">
+                        <Label htmlFor="team-name">Team Name (Optional)</Label>
+                        <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="team-type">Team Type</Label>
+                        <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad') => handleTypeChange(value)}>
+                           <SelectTrigger id="team-type"><SelectValue /></SelectTrigger>
+                           <SelectContent>
+                               <SelectItem value="Duo">Duo</SelectItem>
+                               <SelectItem value="Squad">Squad</SelectItem>
+                           </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-4">
+                        <Label>Teammates</Label>
+                        {teammateFields.map((_, index) => (
+                           <div key={index} className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                               <p className="text-sm font-medium">Teammate {index + 1}</p>
+                               <div className="grid gap-2">
+                                   <Label htmlFor={`tm-name-${index}`}>In-Game Name</Label>
+                                   <Input id={`tm-name-${index}`} value={teammates[index]?.inGameName || ''} onChange={e => handleMemberChange(index, 'inGameName', e.target.value)} />
+                               </div>
+                                <div className="grid gap-2">
+                                   <Label htmlFor={`tm-uid-${index}`}>In-Game UID</Label>
+                                   <Input id={`tm-uid-${index}`} value={teammates[index]?.inGameUid || ''} onChange={e => handleMemberChange(index, 'inGameUid', e.target.value)} />
+                               </div>
+                           </div>
+                        ))}
+                    </div>
+
+                    <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Team'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function ProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -63,9 +203,9 @@ export default function ProfilePage() {
         window.location.href = '/';
     };
 
-    if (loading) {
+    if (loading || !user || !profile) {
         return (
-            <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl">
+            <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-8 w-48" />
@@ -81,14 +221,15 @@ export default function ProfilePage() {
                          <Skeleton className="h-10 w-24" />
                     </CardFooter>
                 </Card>
-            </div>
-        )
-    }
-
-    if (!profile) {
-        return (
-             <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl text-center">
-                <p>Could not load profile information.</p>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-5 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                </Card>
             </div>
         )
     }
@@ -124,6 +265,41 @@ export default function ProfilePage() {
                     <Button variant="ghost" onClick={handleLogout}>Logout</Button>
                 </CardFooter>
             </Card>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>My Team</CardTitle>
+                        <CardDescription>Your registered Duo or Squad teammates.</CardDescription>
+                    </div>
+                    <EditTeamDialog user={user} profile={profile} />
+                </CardHeader>
+                <CardContent>
+                    {profile.team && profile.team.members && profile.team.members.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-lg">{profile.team.name || `${profile.team.type} Team`}</h3>
+                                <Badge variant="secondary">{profile.team.type}</Badge>
+                            </div>
+                            <ul className="space-y-3">
+                                {profile.team.members.map((member, index) => (
+                                    <li key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                                        <div className="font-medium">{member.inGameName}</div>
+                                        <div className="text-sm text-muted-foreground">UID: {member.inGameUid}</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <Users className="mx-auto h-8 w-8 mb-2" />
+                            <p>You haven't registered a team yet.</p>
+                            <p className="text-xs">Click 'Create Team' to add your teammates.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
         </div>
     );
 }

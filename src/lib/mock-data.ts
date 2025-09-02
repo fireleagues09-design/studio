@@ -186,4 +186,16 @@ export type User = {
         winning: number;
         bonus: number;
     };
-}
+    team?: Team | null;
+};
+
+export type TeamMember = {
+    inGameName: string;
+    inGameUid: string;
+};
+
+export type Team = {
+    name?: string;
+    type: 'Duo' | 'Squad';
+    members: TeamMember[];
+};
