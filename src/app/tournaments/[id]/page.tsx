@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -32,7 +33,112 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { isUserRegisteredForTournament, registerSoloPlayer } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+
+type SoloRegistrationDialogProps = {
+    tournament: Tournament;
+    onSuccess: () => void;
+}
+
+function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialogProps) {
+    const [inGameName, setInGameName] = useState('');
+    const [inGameUid, setInGameUid] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!inGameName || !inGameUid) {
+            toast({ title: 'Error', description: 'Please fill in all fields.', variant: 'destructive' });
+            return;
+        }
+        setLoading(true);
+
+        try {
+            const result = await registerSoloPlayer(tournament.id, inGameName, inGameUid);
+            if (result.success) {
+                toast({
+                    title: 'Registration Successful!',
+                    description: `You have successfully registered for "${tournament.name}".`
+                });
+                onSuccess();
+                setOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+             console.error("Error during solo registration:", error);
+             toast({
+                title: "Registration Error",
+                description: error.message || "An error occurred. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+
+    const buttonState = getButtonState({
+        isRegistered: false, 
+        isFilled: tournament.slotsFilled >= tournament.slots, 
+        isUpcoming: tournament.status === 'Upcoming',
+        teamType: tournament.teamType,
+        registrationLoading: loading,
+    });
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="lg" className="w-full font-bold" disabled={buttonState.disabled}>
+                    {buttonState.text}
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Register for {tournament.name}</DialogTitle>
+                    <DialogDescription>
+                        Please provide your in-game details to complete the registration.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="in-game-name">In-Game Name</Label>
+                        <Input 
+                            id="in-game-name" 
+                            value={inGameName} 
+                            onChange={e => setInGameName(e.target.value)} 
+                            placeholder="YourCoolUsername" 
+                            required 
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="in-game-uid">In-Game UID</Label>
+                        <Input 
+                            id="in-game-uid" 
+                            value={inGameUid} 
+                            onChange={e => setInGameUid(e.target.value)} 
+                            placeholder="1234567890" 
+                            required 
+                        />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Submitting...' : 'Submit Registration'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 
 type RoomCredentialsProps = {
@@ -110,6 +216,23 @@ type TournamentDetailViewProps = {
     tournamentId: string;
 }
 
+function getButtonState({isRegistered, isFilled, isUpcoming, teamType, registrationLoading}: {isRegistered: boolean, isFilled: boolean, isUpcoming: boolean, teamType: string, registrationLoading: boolean}) {
+    if (registrationLoading) {
+        return { text: 'Processing...', disabled: true, variant: 'default' as const };
+    }
+    if (isRegistered) {
+        return { text: 'Registered', disabled: true, variant: 'secondary' as const };
+    }
+    if (!isUpcoming) {
+         if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true, variant: 'default' as const };
+         if (status === 'Finished') return { text: 'Tournament Finished', disabled: true, variant: 'default' as const };
+    }
+    if (isFilled) {
+        return { text: 'Registrations Closed', disabled: true, variant: 'default' as const };
+    }
+    return { text: `Register ${teamType}`, disabled: false, variant: 'default' as const };
+};
+
 function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
@@ -129,6 +252,19 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         return () => unsubscribeAuth();
     }, []);
     
+    useEffect(() => {
+        const checkCredentials = async () => {
+            if (user && isRegistered && tournament?.roomId) {
+                const idToken = await user.getIdToken();
+                const result = await isUserRegisteredForTournament(tournamentId);
+                setShowCredentials(result);
+            } else {
+                setShowCredentials(false);
+            }
+        };
+        checkCredentials();
+    }, [isRegistered, tournament, user, tournamentId]);
+
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -156,7 +292,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     }, [tournamentId, user]);
 
 
-    const handleRegistration = async () => {
+    const handleGenericRegistration = async () => {
         if (!user) {
             toast({
                 title: "Not Logged In",
@@ -166,38 +302,11 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             router.push('/login');
             return;
         }
-        
-        if (isRegistered) {
-             toast({
-                title: "Already Registered",
-                description: "You are already registered for this tournament.",
-            });
-            return;
-        }
-
-        if (tournament?.status !== 'Upcoming') {
-            toast({
-                title: "Registration Closed",
-                description: "This tournament is not open for registration.",
-                variant: "destructive"
-            });
-            return;
-        }
 
         setRegistrationLoading(true);
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
 
         try {
-            // Join tournament
-            if (tournament && tournament.slotsFilled >= tournament.slots) {
-                toast({
-                    title: "Registration Failed",
-                    description: "This tournament is already full.",
-                    variant: "destructive"
-                });
-                setRegistrationLoading(false);
-                return;
-            }
             await updateDoc(tournamentDocRef, {
                 registeredPlayers: arrayUnion(user.uid),
                 slotsFilled: increment(1)
@@ -263,24 +372,15 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     
     const canSeeCredentials = isRegistered && (status === 'Ongoing' || status === 'Upcoming') && roomId;
 
-    const getButtonState = () => {
-        if (registrationLoading) {
-            return { text: 'Processing...', disabled: true, variant: 'default' as const };
-        }
-        if (isRegistered) {
-            return { text: 'Registered', disabled: true, variant: 'secondary' as const };
-        }
-        if (!isUpcoming) {
-             if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true, variant: 'default' as const };
-             if (status === 'Finished') return { text: 'Tournament Finished', disabled: true, variant: 'default' as const };
-        }
-        if (isFilled) {
-            return { text: 'Registrations Closed', disabled: true, variant: 'default' as const };
-        }
-        return { text: `Register ${teamType}`, disabled: false, variant: 'default' as const };
-    };
+    const buttonState = getButtonState({
+        isRegistered,
+        isFilled,
+        isUpcoming,
+        teamType,
+        registrationLoading
+    });
 
-    const buttonState = getButtonState();
+    const isSoloTournament = teamType === 'Solo';
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -398,15 +498,19 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </div>
             </CardContent>
             <div className="p-6 pt-0">
-                <Button 
-                    size="lg" 
-                    className="w-full font-bold" 
-                    disabled={buttonState.disabled}
-                    onClick={handleRegistration}
-                    variant={buttonState.variant}
-                >
-                    {buttonState.text}
-                </Button>
+                { isSoloTournament && user && !isRegistered && isUpcoming ? (
+                    <SoloRegistrationDialog tournament={tournament} onSuccess={() => setIsRegistered(true)} />
+                ) : (
+                     <Button 
+                        size="lg" 
+                        className="w-full font-bold" 
+                        disabled={buttonState.disabled}
+                        onClick={handleGenericRegistration}
+                        variant={buttonState.variant}
+                    >
+                        {buttonState.text}
+                    </Button>
+                )}
             </div>
           </Card>
           

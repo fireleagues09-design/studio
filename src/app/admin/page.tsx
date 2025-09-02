@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon, Search } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
 import { searchUsers } from './actions';
 import { useDebounce } from 'use-debounce';
@@ -651,6 +652,11 @@ export default function AdminPage() {
                                                 </TableCell>
                                                 <TableCell className="text-right">₹{tournament.prize}</TableCell>
                                                 <TableCell className="text-center flex items-center justify-center gap-1">
+                                                    <Button variant="ghost" size="icon" asChild>
+                                                        <Link href={`/admin/registrations/${tournament.id}`}>
+                                                             <UsersRound className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
                                                     <EditTournamentDialog tournament={tournament} />
                                                     <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
                                                 </TableCell>
@@ -726,6 +732,9 @@ export default function AdminPage() {
         </div>
     );
 }
+    
+
+    
     
 
     
