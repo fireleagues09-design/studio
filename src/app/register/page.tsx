@@ -41,32 +41,29 @@ export default function RegisterPage() {
   const router = useRouter();
 
   // Team state
-  const [teamName, setTeamName] = useState("");
-  const [teamType, setTeamType] = useState<'Duo' | 'Squad' | ''>('');
-  const [teammates, setTeammates] = useState<TeamMember[]>([]);
+  const [duoTeamName, setDuoTeamName] = useState("");
+  const [squadTeamName, setSquadTeamName] = useState("");
+  const [duoMembers, setDuoMembers] = useState<TeamMember[]>(Array(1).fill({ inGameName: '', inGameUid: '' }));
+  const [squadMembers, setSquadMembers] = useState<TeamMember[]>(Array(3).fill({ inGameName: '', inGameUid: '' }));
 
-  const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string) => {
-    const newTeammates = [...teammates];
-    newTeammates[index] = { ...newTeammates[index], [field]: value };
-    setTeammates(newTeammates);
-  };
-
-  const handleTeamTypeChange = (type: 'Duo' | 'Squad' | '') => {
-    setTeamType(type);
-    if (type === 'Duo') {
-        setTeammates(Array(1).fill({ inGameName: '', inGameUid: '' }));
-    } else if (type === 'Squad') {
-        setTeammates(Array(3).fill({ inGameName: '', inGameUid: '' }));
+  const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string, type: 'duo' | 'squad') => {
+    if (type === 'duo') {
+        const newMembers = [...duoMembers];
+        newMembers[index] = { ...newMembers[index], [field]: value };
+        setDuoMembers(newMembers);
     } else {
-        setTeammates([]);
+        const newMembers = [...squadMembers];
+        newMembers[index] = { ...newMembers[index], [field]: value };
+        setSquadMembers(newMembers);
     }
   };
   
   const handleNullButtonClick = () => {
     const nullValue = '\\\\\\\\\\\\';
-    setTeamName(nullValue);
-    setTeamType('Squad'); // Set a default type, e.g., Squad
-    setTeammates(Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }));
+    setDuoTeamName(nullValue);
+    setSquadTeamName(nullValue);
+    setDuoMembers(Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }));
+    setSquadMembers(Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }));
   }
 
   const setupRecaptcha = () => {
@@ -87,24 +84,26 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!teamType) {
-      toast({
-        title: "Team Required",
-        description: "Please select a team type (Duo or Squad) and fill in your teammate details.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const areTeammatesValid = teammates.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
-    if (!areTeammatesValid) {
+    const areDuoTeammatesValid = duoMembers.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
+    if (!areDuoTeammatesValid) {
          toast({
-            title: "Incomplete Team",
-            description: `Please fill out all In-Game Names and UIDs for your ${teamType} members.`,
+            title: "Incomplete Duo Team",
+            description: `Please fill out all In-Game Names and UIDs for your Duo members.`,
             variant: "destructive",
         });
         return;
     }
+    
+    const areSquadTeammatesValid = squadMembers.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
+    if (!areSquadTeammatesValid) {
+         toast({
+            title: "Incomplete Squad Team",
+            description: `Please fill out all In-Game Names and UIDs for your Squad members.`,
+            variant: "destructive",
+        });
+        return;
+    }
+
 
     setLoading(true);
     try {
@@ -154,10 +153,15 @@ export default function RegisterPage() {
             return;
         }
 
-        const teamData = {
-            name: teamName,
-            type: teamType || 'Duo',
-            members: teammates
+        const duoTeamData = {
+            name: duoTeamName,
+            type: 'Duo',
+            members: duoMembers
+        };
+        const squadTeamData = {
+            name: squadTeamName,
+            type: 'Squad',
+            members: squadMembers
         };
 
         await setDoc(userDocRef, {
@@ -170,7 +174,8 @@ export default function RegisterPage() {
             winning: 0,
             bonus: 0,
           },
-          team: teamData,
+          duoTeam: duoTeamData,
+          squadTeam: squadTeamData,
           registeredOn: serverTimestamp(),
         });
         
@@ -192,8 +197,6 @@ export default function RegisterPage() {
         setLoading(false);
       }
   };
-  
-  const teammateFieldsCount = teamType === 'Duo' ? 1 : teamType === 'Squad' ? 3 : 0;
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
@@ -223,47 +226,70 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-4 pt-4 border-t">
-                 <h3 className="text-lg font-semibold">Register Your Team</h3>
+                 <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
                  <div className="grid gap-2">
-                    <Label htmlFor="team-name">Team Name</Label>
-                    <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" disabled={otpSent} required/>
+                    <Label htmlFor="duo-team-name">Duo Team Name</Label>
+                    <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" disabled={otpSent} required/>
                 </div>
-                 <div className="grid gap-2">
-                    <Label htmlFor="team-type">Team Type</Label>
-                     <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad' | '') => handleTeamTypeChange(value)} disabled={otpSent} required>
-                       <SelectTrigger id="team-type"><SelectValue placeholder="Select team type..." /></SelectTrigger>
-                       <SelectContent>
-                           <SelectItem value="Duo">Duo</SelectItem>
-                           <SelectItem value="Squad">Squad</SelectItem>
-                       </SelectContent>
-                    </Select>
-                </div>
-                {Array.from({ length: teammateFieldsCount }).map((_, index) => (
-                   <div key={index} className="p-3 border rounded-md space-y-2 bg-secondary/30">
+                 
+                {Array.from({ length: 1 }).map((_, index) => (
+                   <div key={`duo-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
                        <Label>Teammate {index + 1}</Label>
                        <Input 
                             placeholder="In-Game Name" 
-                            value={teammates[index]?.inGameName || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} 
+                            value={duoMembers[index]?.inGameName || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'duo')} 
                             required
                             disabled={otpSent}
                         />
                        <Input 
                             placeholder="In-Game UID" 
-                            value={teammates[index]?.inGameUid || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} 
+                            value={duoMembers[index]?.inGameUid || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'duo')} 
                             required
                             disabled={otpSent}
                         />
                    </div>
                 ))}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+                 <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
+                 <div className="grid gap-2">
+                    <Label htmlFor="squad-team-name">Squad Team Name</Label>
+                    <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" disabled={otpSent} required/>
+                </div>
+                
+                {Array.from({ length: 3 }).map((_, index) => (
+                   <div key={`squad-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
+                       <Label>Teammate {index + 1}</Label>
+                       <Input 
+                            placeholder="In-Game Name" 
+                            value={squadMembers[index]?.inGameName || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'squad')} 
+                            required
+                            disabled={otpSent}
+                        />
+                       <Input 
+                            placeholder="In-Game UID" 
+                            value={squadMembers[index]?.inGameUid || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'squad')} 
+                            required
+                            disabled={otpSent}
+                        />
+                   </div>
+                ))}
+            </div>
+            
+            <div className="pt-4 border-t">
                  <p className="text-xs text-center text-muted-foreground pt-2">
                     if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
                  </p>
-                 <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent}>
+                 <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent} className="w-full mt-2">
                     Null
                  </Button>
             </div>
+
 
           {otpSent && (
             <div className="grid gap-2">

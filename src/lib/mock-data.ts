@@ -186,7 +186,8 @@ export type User = {
         winning: number;
         bonus: number;
     };
-    team?: Team | null;
+    duoTeam?: Team;
+    squadTeam?: Team;
 };
 
 export type TeamMember = {
