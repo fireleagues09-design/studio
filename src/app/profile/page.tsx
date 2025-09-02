@@ -270,12 +270,9 @@ export default function ProfilePage() {
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>My Team</CardTitle>
-                        <CardDescription>Your registered Duo or Squad teammates.</CardDescription>
-                    </div>
-                    <EditTeamDialog user={user} profile={profile} />
+                <CardHeader>
+                    <CardTitle>My Team</CardTitle>
+                    <CardDescription>Your registered Duo or Squad teammates.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {hasTeamMembers ? (
@@ -297,12 +294,17 @@ export default function ProfilePage() {
                         <div className="text-center py-8 text-muted-foreground">
                             <Users className="mx-auto h-8 w-8 mb-2" />
                             <p>You haven't registered a team yet.</p>
-                            <p className="text-xs">Click 'Create Team' to add your teammates.</p>
+                            <p className="text-xs">Please contact support to create or join a team.</p>
                         </div>
                     )}
                 </CardContent>
+                 <CardFooter className="bg-secondary/50 p-4 rounded-b-lg">
+                    <p className="text-xs text-muted-foreground text-center w-full">To change team members please contact players support</p>
+                </CardFooter>
             </Card>
 
         </div>
     );
 }
+
+    
