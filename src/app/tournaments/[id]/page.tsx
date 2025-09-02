@@ -129,9 +129,13 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const progress = (slotsFilled / slots) * 100;
     const isFilled = slotsFilled >= slots;
 
-    // A placeholder for checking if the user is registered. 
-    // This should be replaced with actual registration logic from your database.
-    const isUserRegistered = !!user;
+    // This will be replaced with actual registration logic later.
+    // For now, it just checks if the user is logged in.
+    const isUserRegistered = !!user; 
+    
+    // Only show credentials if they exist and the user is logged in.
+    const showRoomCredentials = isUserRegistered && roomId && roomPassword;
+
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -244,7 +248,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             </div>
           </Card>
           
-           {isUserRegistered && (
+           {showRoomCredentials && (
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
