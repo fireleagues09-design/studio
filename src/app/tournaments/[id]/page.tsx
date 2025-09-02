@@ -156,7 +156,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-8">
-          <Card className="sticky top-24">
+          <Card>
             <CardHeader>
               <CardTitle>Registration Details</CardTitle>
             </CardHeader>
@@ -237,6 +237,3 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
-
-
-
