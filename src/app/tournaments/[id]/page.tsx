@@ -138,7 +138,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className="overflow-hidden">
             <div className="relative h-64 md:h-96 w-full">
@@ -152,48 +152,45 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-0 left-0 p-6">
                 <div className="flex gap-2 mb-2">
-                    <Badge>{category}</Badge>
-                    <Badge variant="outline">{teamType}</Badge>
+                  <Badge>{category}</Badge>
+                  <Badge variant="outline">{teamType}</Badge>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white">
                   {category}
                 </h1>
-                 <p className="text-sm text-primary font-mono mt-1">ID: {id}</p>
+                <p className="text-sm text-primary font-mono mt-1">ID: {id}</p>
               </div>
             </div>
           </Card>
 
-            <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    Prize Distribution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Place</TableHead>
-                        <TableHead className="text-right">Prize</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {prizeDistribution?.map((p, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">
-                            {p.place}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-primary">
-                            ₹{p.prize}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-            </Card>
-
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Prize Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Place</TableHead>
+                    <TableHead className="text-right">Prize</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {prizeDistribution?.map((p, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{p.place}</TableCell>
+                      <TableCell className="text-right font-semibold text-primary">
+                        ₹{p.prize}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-8">
@@ -205,30 +202,44 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Trophy className="h-5 w-5 text-primary" />
-                <span className="text-muted-foreground">Total Prize:</span>
-                <strong className="ml-auto text-lg">₹{prize}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  <span className="text-muted-foreground">Total Prize:</span>
+                </div>
+                <strong className="text-lg">₹{prize}</strong>
               </div>
-               <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-primary" />
-                <span className="text-muted-foreground">Team Type:</span>
-                <strong className="ml-auto">{teamType}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="text-muted-foreground">Team Type:</span>
+                </div>
+                <strong>{teamType}</strong>
               </div>
-              <div className="flex items-center gap-3">
-                {category === "Clash Squad 4v4" ? <Swords className="h-5 w-5 text-primary" /> : <Map className="h-5 w-5 text-primary" />}
-                <span className="text-muted-foreground">Format:</span>
-                <strong className="ml-auto">{category}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  {category === "Clash Squad 4v4" ? (
+                    <Swords className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Map className="h-5 w-5 text-primary" />
+                  )}
+                  <span className="text-muted-foreground">Format:</span>
+                </div>
+                <strong>{category}</strong>
               </div>
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-primary" />
-                <span className="text-muted-foreground">Date:</span>
-                <strong className="ml-auto">{date}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <span className="text-muted-foreground">Date:</span>
+                </div>
+                <strong>{date}</strong>
               </div>
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <span className="text-muted-foreground">Time:</span>
-                <strong className="ml-auto">{time}</strong>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-primary" />
+                  <span className="text-muted-foreground">Time:</span>
+                </div>
+                <strong>{time}</strong>
               </div>
 
               <div className="pt-4">
@@ -247,51 +258,76 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </Button>
             </div>
           </Card>
-          
-           {showRoomCredentials && (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Lock className="h-5 w-5 text-primary" />
-                        Room Credentials
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div>
-                        <Label htmlFor="roomId">Room ID</Label>
-                        <div className="flex items-center gap-2">
-                            <Input id="roomId" value={roomId || 'Not available'} readOnly className="font-mono" />
-                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(roomId || '', 'Room ID')} disabled={!roomId}>Copy</Button>
-                        </div>
-                    </div>
-                    <div>
-                        <Label htmlFor="roomPassword">Password</Label>
-                         <div className="flex items-center gap-2">
-                            <Input id="roomPassword" value={roomPassword || 'Not available'} readOnly className="font-mono"/>
-                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(roomPassword || '', 'Room Password')} disabled={!roomPassword}>Copy</Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-           )}
 
+          {showRoomCredentials && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-primary" />
+                  Room Credentials
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="roomId">Room ID</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="roomId"
+                      value={roomId || "Not available"}
+                      readOnly
+                      className="font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(roomId || "", "Room ID")}
+                      disabled={!roomId}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="roomPassword">Password</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="roomPassword"
+                      value={roomPassword || "Not available"}
+                      readOnly
+                      className="font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        copyToClipboard(roomPassword || "", "Room Password")
+                      }
+                      disabled={!roomPassword}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-primary" />
-                    Please Read All Rules Before Playing
-                </CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Please Read All Rules Before Playing
+              </CardTitle>
             </CardHeader>
             <CardContent>
-                <ul className="space-y-3">
+              <ul className="space-y-3">
                 {rules?.map((rule, index) => (
-                    <li key={index} className="flex items-start gap-3">
+                  <li key={index} className="flex items-start gap-3">
                     <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <span>{rule}</span>
-                    </li>
+                  </li>
                 ))}
-                </ul>
+              </ul>
             </CardContent>
           </Card>
         </div>
