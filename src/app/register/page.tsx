@@ -62,6 +62,12 @@ export default function RegisterPage() {
     }
   };
   
+  const handleNullButtonClick = () => {
+    const nullValue = '\\\\\\\\\\\\';
+    setTeamName(nullValue);
+    setTeamType('Squad'); // Set a default type, e.g., Squad
+    setTeammates(Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }));
+  }
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
@@ -151,7 +157,7 @@ export default function RegisterPage() {
         const teamData = {
             name: teamName,
             type: teamType || 'Duo',
-            members: teamType ? teammates : Array(1).fill({ inGameName: '', inGameUid: '' })
+            members: teammates
         };
 
         await setDoc(userDocRef, {
@@ -219,12 +225,12 @@ export default function RegisterPage() {
             <div className="space-y-4 pt-4 border-t">
                  <h3 className="text-lg font-semibold">Register Your Team</h3>
                  <div className="grid gap-2">
-                    <Label htmlFor="team-name">Team Name (Optional)</Label>
-                    <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" disabled={otpSent} />
+                    <Label htmlFor="team-name">Team Name</Label>
+                    <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" disabled={otpSent} required/>
                 </div>
                  <div className="grid gap-2">
                     <Label htmlFor="team-type">Team Type</Label>
-                     <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad' | '') => handleTeamTypeChange(value)} disabled={otpSent}>
+                     <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad' | '') => handleTeamTypeChange(value)} disabled={otpSent} required>
                        <SelectTrigger id="team-type"><SelectValue placeholder="Select team type..." /></SelectTrigger>
                        <SelectContent>
                            <SelectItem value="Duo">Duo</SelectItem>
@@ -239,18 +245,24 @@ export default function RegisterPage() {
                             placeholder="In-Game Name" 
                             value={teammates[index]?.inGameName || ''} 
                             onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} 
-                            required={!!teamType}
+                            required
                             disabled={otpSent}
                         />
                        <Input 
                             placeholder="In-Game UID" 
                             value={teammates[index]?.inGameUid || ''} 
                             onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} 
-                            required={!!teamType}
+                            required
                             disabled={otpSent}
                         />
                    </div>
                 ))}
+                 <p className="text-xs text-center text-muted-foreground pt-2">
+                    Currently, if you don't have team members, then click on the null button down below.
+                 </p>
+                 <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent}>
+                    Null
+                 </Button>
             </div>
 
           {otpSent && (
