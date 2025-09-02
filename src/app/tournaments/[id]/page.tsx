@@ -112,7 +112,7 @@ function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialo
                             id="in-game-name" 
                             value={inGameName} 
                             onChange={e => setInGameName(e.target.value)} 
-                            placeholder="YourCoolUsername" 
+                            placeholder="In-game name" 
                             required 
                         />
                     </div>
@@ -122,7 +122,7 @@ function SoloRegistrationDialog({ tournament, onSuccess }: SoloRegistrationDialo
                             id="in-game-uid" 
                             value={inGameUid} 
                             onChange={e => setInGameUid(e.target.value)} 
-                            placeholder="1234567890" 
+                            placeholder="In-game UID" 
                             required 
                         />
                     </div>
@@ -552,3 +552,5 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
+
+    
