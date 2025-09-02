@@ -83,6 +83,11 @@ export default function RegisterPage() {
       toast({ title: "Error", description: "Please fill in all required personal fields.", variant: "destructive" });
       return;
     }
+    
+    if (!duoTeamName || !squadTeamName) {
+        toast({ title: "Error", description: "Please provide team names for both Duo and Squad.", variant: "destructive"});
+        return;
+    }
 
     const areDuoTeammatesValid = duoMembers.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
     if (!areDuoTeammatesValid) {
@@ -319,3 +324,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    

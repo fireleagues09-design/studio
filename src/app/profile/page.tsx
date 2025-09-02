@@ -102,8 +102,8 @@ export default function ProfilePage() {
         )
     }
 
-    const hasDuoTeam = profile.duoTeam && profile.duoTeam.members.some(m => m.inGameName && m.inGameUid);
-    const hasSquadTeam = profile.squadTeam && profile.squadTeam.members.some(m => m.inGameName && m.inGameUid);
+    const hasDuoTeam = profile.duoTeam && profile.duoTeam.members.some(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\');
+    const hasSquadTeam = profile.squadTeam && profile.squadTeam.members.some(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\');
     
     const renderTeamDetails = (team: Team | undefined, teamType: 'Duo' | 'Squad') => {
         const hasTeam = teamType === 'Duo' ? hasDuoTeam : hasSquadTeam;
@@ -120,10 +120,10 @@ export default function ProfilePage() {
         return (
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">{team?.name || `${teamType} Team`}</h3>
+                    <h3 className="font-semibold text-lg">{team?.name !== '\\\\\\\\\\\\' ? team?.name : `${teamType} Team`}</h3>
                 </div>
                 <ul className="space-y-3">
-                    {team?.members.filter(m => m.inGameName && m.inGameUid).map((member, index) => (
+                    {team?.members.filter(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\').map((member, index) => (
                         <li key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                             <div className="font-medium">{member.inGameName}</div>
                             <div className="text-sm text-muted-foreground">UID: {member.inGameUid}</div>
@@ -194,3 +194,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    
