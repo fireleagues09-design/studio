@@ -2,6 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+<<<<<<< HEAD
     
     // Helper function to check if the current user is an admin.
     function isAdmin() {
@@ -70,15 +71,32 @@ service cloud.firestore {
     // Helper function to check if a user is an admin
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+=======
+
+    function isAuth() {
+        return request.auth != null;
+>>>>>>> 40eab11 (give rules to me for registered players of tournament FirebaseError: Mis)
     }
 
-    // Admins have full access
-    match /{document=**} {
-      allow read, write: if request.auth != null && isAdmin();
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
     }
     
-    // Logged-in users can read general data
+    function isAdmin() {
+        return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isRegisteredForTournament(tournamentId) {
+        return isAuth() && request.auth.uid in get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.registeredPlayers;
+    }
+
+    match /users/{userId} {
+      allow create: if isAuth();
+      allow read, update: if isUser(userId) || isAdmin();
+    }
+
     match /tournaments/{tournamentId} {
+<<<<<<< HEAD
       // Anyone can read and list tournaments.
       allow read, list: if true;
 
@@ -105,6 +123,30 @@ service cloud.firestore {
 
       // Only admins can list, update (approve/reject), or delete transactions.
       allow list, write: if isAdmin();
+=======
+      allow read: if isAuth() && (isAdmin() || isRegisteredForTournament(tournamentId));
+      allow list, create, update, delete: if isAdmin();
+      
+      // Allow anyone authenticated to read basic details, but not credentials
+      // This is a broader read, if the more specific one fails or isn't met.
+      allow get: if isAuth();
+    }
+
+    match /tournaments/{tournamentId}/registrations/{userId} {
+      allow create: if isUser(userId);
+      allow read: if isUser(userId) || isAdmin();
+      allow list: if isAdmin();
+    }
+    
+    match /transactions/{transactionId} {
+        allow create: if isAuth();
+        allow read, list: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /sliders/{sliderId} {
+        allow read: if true;
+        allow write: if isAdmin();
+>>>>>>> 40eab11 (give rules to me for registered players of tournament FirebaseError: Mis)
     }
   }
 }
