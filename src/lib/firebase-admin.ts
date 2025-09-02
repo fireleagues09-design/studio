@@ -1,9 +1,5 @@
 
 import admin from 'firebase-admin';
-import { config } from 'dotenv';
-
-// Load environment variables from .env file
-config();
 
 // This is a more robust way to initialize the Firebase Admin SDK.
 // It ensures that we don't try to re-initialize the app if it's already been done.
