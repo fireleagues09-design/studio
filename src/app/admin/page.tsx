@@ -23,7 +23,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import SliderAdmin from '@/components/SliderAdmin';
 
 
 function CreateTournamentDialog() {
@@ -85,7 +84,7 @@ function CreateTournamentDialog() {
                 finalPrizeDistribution.push({ place: 'Per Kill', prize: prizePerKill });
             }
 
-            const tournamentId = Math.random().toString(36).substring(2, 10);
+            const tournamentId = Math.floor(10000000 + Math.random() * 90000000).toString();
             const tournamentDocRef = doc(db, 'tournaments', tournamentId);
 
             await setDoc(tournamentDocRef, {
