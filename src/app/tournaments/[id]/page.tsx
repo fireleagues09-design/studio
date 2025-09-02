@@ -195,6 +195,14 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             router.push('/login');
             return;
         }
+        
+        if (isRegistered) {
+             toast({
+                title: "Already Registered",
+                description: "You are already registered for this tournament.",
+            });
+            return;
+        }
 
         if (tournament?.status !== 'Upcoming') {
             toast({
@@ -209,37 +217,25 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
 
         try {
-            if (isRegistered) {
-                // Leave tournament
-                await updateDoc(tournamentDocRef, {
-                    registeredPlayers: arrayRemove(user.uid),
-                    slotsFilled: increment(-1)
-                });
+            // Join tournament
+            if (tournament && tournament.slotsFilled >= tournament.slots) {
                 toast({
-                    title: "You have left the tournament",
-                    description: `You are no longer registered for "${tournament?.name}".`
+                    title: "Registration Failed",
+                    description: "This tournament is already full.",
+                    variant: "destructive"
                 });
-            } else {
-                // Join tournament
-                if (tournament && tournament.slotsFilled >= tournament.slots) {
-                    toast({
-                        title: "Registration Failed",
-                        description: "This tournament is already full.",
-                        variant: "destructive"
-                    });
-                    setRegistrationLoading(false);
-                    return;
-                }
-                await updateDoc(tournamentDocRef, {
-                    registeredPlayers: arrayUnion(user.uid),
-                    slotsFilled: increment(1)
-                });
-                toast({
-                    title: "Registration Successful!",
-                    description: `You have successfully registered for "${tournament?.name}".`
-                });
+                setRegistrationLoading(false);
+                return;
             }
-            setIsRegistered(!isRegistered);
+            await updateDoc(tournamentDocRef, {
+                registeredPlayers: arrayUnion(user.uid),
+                slotsFilled: increment(1)
+            });
+            toast({
+                title: "Registration Successful!",
+                description: `You have successfully registered for "${tournament?.name}".`
+            });
+            setIsRegistered(true);
         } catch (error) {
             console.error("Error updating registration:", error);
             toast({
@@ -299,11 +295,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             return { text: 'Processing...', disabled: true, variant: 'default' as const };
         }
         if (isRegistered) {
-            if (isUpcoming) {
-                return { text: 'Leave Tournament', disabled: false, variant: 'destructive' as const };
-            } else {
-                return { text: 'Registered', disabled: true, variant: 'default' as const };
-            }
+            return { text: 'Registered', disabled: true, variant: 'secondary' as const };
         }
         if (!isUpcoming) {
              if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true, variant: 'default' as const };
