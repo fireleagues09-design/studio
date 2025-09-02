@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, Image as ImageIcon, Search } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { searchUsers } from './actions';
+import { useDebounce } from 'use-debounce';
 
 
 const FULL_MAP_RULES = [
@@ -450,7 +452,12 @@ export default function AdminPage() {
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [debouncedSearchTerm] = useDebounce(userSearchTerm, 300);
+    const [userSearchLoading, setUserSearchLoading] = useState(false);
+    
     const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -472,15 +479,9 @@ export default function AdminPage() {
     }, [router]);
 
     useEffect(() => {
-        if (!isAdmin) return;
+        if (!isAdmin || !user) return;
 
         setDataLoading(true);
-
-        const usersQuery = query(collection(db, "users"), orderBy("registeredOn", "desc"));
-        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-            const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-            setUsers(usersData);
-        }, (error) => console.error("Error fetching users:", error));
 
         const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
         const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
@@ -492,18 +493,42 @@ export default function AdminPage() {
         const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
             const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentType));
             setTournaments(tournamentsData);
-            setDataLoading(false);
+            setDataLoading(false); // Only set to false after the main data loads
         }, (error) => {
             console.error("Error fetching tournaments:", error)
             setDataLoading(false);
         });
 
+        // Cleanup listeners
         return () => {
-            unsubscribeUsers();
             unsubscribeTransactions();
             unsubscribeTournaments();
         };
-    }, [isAdmin]);
+    }, [isAdmin, user]);
+
+
+     const handleSearchUsers = useCallback(async (searchTerm: string) => {
+        if (!user) return;
+        setUserSearchLoading(true);
+        try {
+            const idToken = await user.getIdToken();
+            const result = await searchUsers(idToken, searchTerm);
+            if (result.success) {
+                setUsers(result.users || []);
+            } else {
+                toast({ title: "Search Error", description: result.message, variant: "destructive" });
+            }
+        } catch (error) {
+            console.error("Failed to search users:", error);
+            toast({ title: "Search Error", description: "An unexpected error occurred.", variant: "destructive" });
+        } finally {
+            setUserSearchLoading(false);
+        }
+    }, [user, toast]);
+
+    useEffect(() => {
+        handleSearchUsers(debouncedSearchTerm);
+    }, [debouncedSearchTerm, handleSearchUsers]);
     
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
@@ -641,12 +666,21 @@ export default function AdminPage() {
 
             <section>
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Users</CardTitle>
-                        <CardDescription>The last 10 users who registered.</CardDescription>
+                     <CardHeader>
+                        <CardTitle>User Management</CardTitle>
+                        <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
+                         <div className="relative mt-4">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search users..."
+                                className="pl-9"
+                                value={userSearchTerm}
+                                onChange={(e) => setUserSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </CardHeader>
                     <CardContent>
-                         {dataLoading ? (
+                         {userSearchLoading ? (
                              <div className="space-y-4">
                                 <Skeleton className="h-12 w-full" />
                                 <Skeleton className="h-12 w-full" />
@@ -664,16 +698,24 @@ export default function AdminPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {users.slice(0, 10).map(user => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{user.inGameName}</TableCell>
-                                                <TableCell>{user.phone}</TableCell>
-                                                <TableCell>{formatDate(user.registeredOn)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {user.isAdmin && <Badge>Admin</Badge>}
+                                        {users.length > 0 ? (
+                                            users.map(user => (
+                                                <TableRow key={user.id}>
+                                                    <TableCell className="font-medium">{user.inGameName}</TableCell>
+                                                    <TableCell>{user.phone}</TableCell>
+                                                    <TableCell>{formatDate(user.registeredOn)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        {user.isAdmin && <Badge>Admin</Badge>}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                             <TableRow>
+                                                <TableCell colSpan={4} className="h-24 text-center">
+                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "No recent users."}
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -687,4 +729,5 @@ export default function AdminPage() {
     
 
     
+
 

@@ -3,6 +3,7 @@
 
 import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import type { User } from '@/lib/mock-data';
 
 async function verifyAdmin(idToken: string): Promise<boolean> {
     try {
@@ -24,6 +25,52 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
     } catch (error) {
         console.error('Error verifying admin token:', error);
         return false;
+    }
+}
+
+export async function searchUsers(
+    idToken: string,
+    searchTerm: string
+): Promise<{ success: boolean; users?: any[]; message?: string }> {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: 'Permission denied. User is not an admin.' };
+    }
+
+    if (!searchTerm) {
+        // Return recent users if search term is empty
+        try {
+            const snapshot = await db.collection('users').orderBy('registeredOn', 'desc').limit(10).get();
+            const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            return { success: true, users };
+        } catch (error: any) {
+            console.error("Error fetching recent users:", error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    try {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+        
+        // Firestore doesn't support case-insensitive queries directly or OR queries on different fields.
+        // We fetch all users and filter on the server. This is not optimal for very large user bases.
+        // For production apps with >10k users, consider a dedicated search service like Algolia or Typesense.
+        const usersSnapshot = await db.collection('users').get();
+        
+        const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const filteredUsers = allUsers.filter(user => {
+            const nameMatch = user.inGameName?.toLowerCase().includes(lowerCaseSearchTerm);
+            const uidMatch = user.inGameUid?.toLowerCase().includes(lowerCaseSearchTerm);
+            const phoneMatch = user.phone?.toLowerCase().includes(lowerCaseSearchTerm);
+            return nameMatch || uidMatch || phoneMatch;
+        });
+
+        return { success: true, users: filteredUsers.slice(0, 50) }; // Limit results to avoid sending huge payloads
+
+    } catch (error: any) {
+        console.error('Error searching users:', error);
+        return { success: false, message: error.message || 'An unknown server error occurred.' };
     }
 }
 
@@ -94,3 +141,4 @@ export async function deleteSlider(
         return { success: false, message: error.message || "Failed to delete slider on server."};
     }
 }
+
