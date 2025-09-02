@@ -21,7 +21,7 @@ import {
   Trophy,
   Users,
   ShieldCheck,
-  User as UserIcon,
+  ClipboardList,
 } from "lucide-react";
 import {
   Table,
@@ -119,7 +119,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                     <Badge variant="outline">{teamType}</Badge>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white">
-                  {name}
+                  {category}
                 </h1>
               </div>
             </div>
@@ -127,7 +127,10 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
             <Card>
                 <CardHeader>
-                  <CardTitle>Prize Distribution</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-primary" />
+                    Prize Distribution
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -158,7 +161,10 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         <div className="lg:col-span-1 flex flex-col gap-8">
           <Card>
             <CardHeader>
-              <CardTitle>Registration Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                Registration Details
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
@@ -167,7 +173,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 <strong className="ml-auto text-lg">₹{prize}</strong>
               </div>
                <div className="flex items-center gap-3">
-                <UserIcon className="h-5 w-5 text-primary" />
+                <Users className="h-5 w-5 text-primary" />
                 <span className="text-muted-foreground">Team Type:</span>
                 <strong className="ml-auto">{teamType}</strong>
               </div>
@@ -206,7 +212,10 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
           <Card>
             <CardHeader>
-                <CardTitle>Please Read All Rules Before Playing</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    Please Read All Rules Before Playing
+                </CardTitle>
             </CardHeader>
             <CardContent>
                 <ul className="space-y-3">
