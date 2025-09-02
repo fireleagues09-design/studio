@@ -34,7 +34,7 @@ const FULL_MAP_RULES = [
     'Team-up not allowed.',
     'Multiple Accounts Are not Allowed and if you create multiple Accounts then it\'ll lead to suspension and all balance will be taken by us permanently.',
     'Refund Only For those players who\'s eliminated/killed by hackers',
-    'PC & Emulators Players Are Not Allowed to join and play in room match ( only can access website on pc and can only register yourself for tournaments in PC/Emulators/mobile but no allowed to play tournaments )'
+    'PC & Emulators Players Are Not Allowed to join and play in room match ( only can access website on pc and can only register yourself for tournaments in PC/Emulators/mobile but not allowed to play tournaments )'
 ];
 
 function CreateTournamentDialog() {
