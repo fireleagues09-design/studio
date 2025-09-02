@@ -80,7 +80,7 @@ export default function ProfilePage() {
     const handleLogout = async () => {
         await auth.signOut();
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
-        router.push('/');
+        window.location.href = '/';
     };
 
     if (loading) {
