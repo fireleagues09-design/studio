@@ -9,7 +9,7 @@ import TournamentCard from "@/components/TournamentCard";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, orderBy, where } from 'firebase/firestore';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeSlider } from "@/components/HomeSlider";
@@ -26,7 +26,13 @@ export default function Home() {
       setLoadingAuth(false);
     });
 
-    const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"), limit(4));
+    const tournamentsQuery = query(
+        collection(db, "tournaments"), 
+        where("status", "==", "Upcoming"),
+        orderBy("createdAt", "desc"), 
+        limit(4)
+    );
+
     const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
         const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         setUpcomingTournaments(tournamentsData);
