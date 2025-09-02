@@ -32,7 +32,6 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { isUserRegisteredForTournament } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
@@ -118,8 +117,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [isRegistered, setIsRegistered] = useState(false);
     const [registrationLoading, setRegistrationLoading] = useState(false);
-    const [showCredentials, setShowCredentials] = useState(false);
-
+    
     const { toast } = useToast();
     const router = useRouter();
     
@@ -127,39 +125,10 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             setLoadingAuth(false);
-            if (currentUser) {
-                // Check if user is registered for the tournament
-                const tournamentDocRef = doc(db, 'tournaments', tournamentId);
-                const tournamentDoc = await getDoc(tournamentDocRef);
-                if (tournamentDoc.exists()) {
-                    const tournamentData = tournamentDoc.data() as Tournament;
-                    const registeredPlayers = tournamentData.registeredPlayers || [];
-                    setIsRegistered(registeredPlayers.includes(currentUser.uid));
-                }
-            } else {
-                setIsRegistered(false);
-            }
         });
         return () => unsubscribeAuth();
-    }, [tournamentId]);
+    }, []);
     
-    useEffect(() => {
-        if (isRegistered && tournament?.roomId) {
-            const fetchRegistrationStatus = async () => {
-                if (!user) {
-                    setShowCredentials(false);
-                    return;
-                }
-                const idToken = await user.getIdToken();
-                const result = await isUserRegisteredForTournament(tournamentId);
-                setShowCredentials(result);
-            }
-            fetchRegistrationStatus();
-        } else {
-            setShowCredentials(false);
-        }
-    }, [isRegistered, tournament, user, tournamentId]);
-
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -170,6 +139,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 if (user) {
                     const registeredPlayers = data.registeredPlayers || [];
                     setIsRegistered(registeredPlayers.includes(user.uid));
+                } else {
+                    setIsRegistered(false);
                 }
             } else {
                 console.error("Tournament not found!");
@@ -289,6 +260,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const progress = (slotsFilled / slots) * 100;
     const isFilled = slotsFilled >= slots;
     const isUpcoming = status === 'Upcoming';
+    
+    const canSeeCredentials = isRegistered && (status === 'Ongoing' || status === 'Upcoming') && roomId;
 
     const getButtonState = () => {
         if (registrationLoading) {
@@ -436,8 +409,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 </Button>
             </div>
           </Card>
-
-          {showCredentials && <RoomCredentials roomId={roomId!} roomPassword={roomPassword} />}
+          
+          {canSeeCredentials && <RoomCredentials roomId={roomId!} roomPassword={roomPassword} />}
 
           <Card>
             <CardHeader>
