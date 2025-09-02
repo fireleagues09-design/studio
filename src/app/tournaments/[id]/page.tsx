@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -34,6 +33,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { isUserRegisteredForTournament } from '@/app/actions';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 type RoomCredentialsProps = {
     roomId: string;
@@ -455,3 +456,5 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
+
+    
