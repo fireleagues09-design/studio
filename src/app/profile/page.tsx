@@ -17,7 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import type { Team, TeamMember } from '@/lib/mock-data';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { updateTeam } from './actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
@@ -101,12 +100,9 @@ export default function ProfilePage() {
             </div>
         )
     }
-
-    const hasDuoTeam = profile.duoTeam && profile.duoTeam.members.some(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\');
-    const hasSquadTeam = profile.squadTeam && profile.squadTeam.members.some(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\');
     
     const renderTeamDetails = (team: Team | undefined, teamType: 'Duo' | 'Squad') => {
-        const hasTeam = teamType === 'Duo' ? hasDuoTeam : hasSquadTeam;
+        const hasTeam = team && team.members && team.members.length > 0;
 
         if (!hasTeam) {
             return (
@@ -120,10 +116,10 @@ export default function ProfilePage() {
         return (
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">{team?.name !== '\\\\\\\\\\\\' ? team?.name : `${teamType} Team`}</h3>
+                    <h3 className="font-semibold text-lg">{team?.name !== `\\\\\\\\\\\\` ? team?.name : `${teamType} Team`}</h3>
                 </div>
                 <ul className="space-y-3">
-                    {team?.members.filter(m => m.inGameName && m.inGameUid && m.inGameName !== '\\\\\\\\\\\\').map((member, index) => (
+                    {team?.members.map((member, index) => (
                         <li key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                             <div className="font-medium">{member.inGameName}</div>
                             <div className="text-sm text-muted-foreground">UID: {member.inGameUid}</div>
@@ -194,5 +190,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-    
