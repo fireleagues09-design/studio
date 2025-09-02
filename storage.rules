@@ -1,22 +1,24 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
     
+    // Helper function to check if a user is an admin by looking at their custom claims.
+    // We'll use Firestore read for this as it's more flexible.
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    match /sliders/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null && isAdmin();
-    }
-
-    // Allow read access on all other paths
+    // Allow public read access for all files.
+    // This is generally safe for public assets like slider images.
     match /{allPaths=**} {
       allow read: if true;
-      allow write: if false; // Deny writes by default to other paths
+    }
+
+    // Restrict write access to the 'sliders' folder to admins only.
+    match /sliders/{fileName} {
+      allow write: if request.auth != null && isAdmin();
     }
   }
 }

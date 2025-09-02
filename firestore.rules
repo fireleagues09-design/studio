@@ -73,6 +73,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
 =======
 
+<<<<<<< HEAD
     function isAuth() {
         return request.auth != null;
 >>>>>>> 40eab11 (give rules to me for registered players of tournament FirebaseError: Mis)
@@ -88,14 +89,24 @@ service cloud.firestore {
 
     function isRegisteredForTournament(tournamentId) {
         return isAuth() && request.auth.uid in get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.registeredPlayers;
+=======
+    // Helper function to check if a user is an admin.
+    function isAdmin(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.isAdmin == true;
+>>>>>>> 9d43381 (give me the rules to uploading in firestore)
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow create: if isAuth();
-      allow read, update: if isUser(userId) || isAdmin();
+      // Admins can read/write any user document.
+      // A user can read/write their own document.
+      allow read, write: if request.auth != null && (isAdmin(request.auth.uid) || request.auth.uid == userId);
     }
 
+    // Rules for the 'tournaments' collection
     match /tournaments/{tournamentId} {
+<<<<<<< HEAD
 <<<<<<< HEAD
       // Anyone can read and list tournaments.
       allow read, list: if true;
@@ -126,27 +137,44 @@ service cloud.firestore {
 =======
       allow read: if isAuth() && (isAdmin() || isRegisteredForTournament(tournamentId));
       allow list, create, update, delete: if isAdmin();
+=======
+      // Anyone can read tournament data.
+      allow read: if true;
+>>>>>>> 9d43381 (give me the rules to uploading in firestore)
       
-      // Allow anyone authenticated to read basic details, but not credentials
-      // This is a broader read, if the more specific one fails or isn't met.
-      allow get: if isAuth();
-    }
+      // Only admins can create, update, or delete tournaments.
+      allow create, update, delete: if request.auth != null && isAdmin(request.auth.uid);
 
-    match /tournaments/{tournamentId}/registrations/{userId} {
-      allow create: if isUser(userId);
-      allow read: if isUser(userId) || isAdmin();
-      allow list: if isAdmin();
+      // Rules for the 'registrations' subcollection
+      match /registrations/{userId} {
+        // Admins can read any registration.
+        // A user can read their own registration.
+        allow read: if request.auth != null && (isAdmin(request.auth.uid) || request.auth.uid == userId);
+        // Only authenticated users can register (create).
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // No one can update or delete a registration from the client.
+        allow update, delete: if false;
+      }
     }
     
-    match /transactions/{transactionId} {
-        allow create: if isAuth();
-        allow read, list: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+    // Rules for the 'sliders' collection
+    match /sliders/{sliderId} {
+        // Anyone can read slider images
+        allow read: if true;
+        // Only admins can upload, update, or delete sliders
+        allow write: if request.auth != null && isAdmin(request.auth.uid);
     }
 
+<<<<<<< HEAD
     match /sliders/{sliderId} {
         allow read: if true;
         allow write: if isAdmin();
 >>>>>>> 40eab11 (give rules to me for registered players of tournament FirebaseError: Mis)
+=======
+    // Rules for any other collection (default deny)
+    match /{document=**} {
+      allow read, write: if false;
+>>>>>>> 9d43381 (give me the rules to uploading in firestore)
     }
   }
 }
