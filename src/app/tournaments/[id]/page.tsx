@@ -304,7 +304,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         if (isFilled) {
             return { text: 'Registrations Closed', disabled: true, variant: 'default' as const };
         }
-        return { text: 'Register Your Team', disabled: false, variant: 'default' as const };
+        return { text: `Register ${teamType}`, disabled: false, variant: 'default' as const };
     };
 
     const buttonState = getButtonState();
@@ -328,7 +328,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                   <Badge variant="outline">{teamType}</Badge>
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-white">
-                  {category}
+                  {name}
                 </h1>
                 <p className="text-sm text-primary font-mono mt-1">ID: {id}</p>
               </div>
