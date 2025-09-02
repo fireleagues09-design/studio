@@ -28,9 +28,23 @@ type TeamData = {
 export async function createTeam(teamData: TeamData, idToken: string): Promise<{ success: boolean; message: string }> {
     try {
         const uid = await verifyToken(idToken);
+
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) {
+            throw new Error('User profile not found.');
+        }
+        const userData = userDoc.data();
+        const creatorAsMember: Teammate = {
+            inGameName: userData?.inGameName,
+            inGameUid: userData?.inGameUid,
+        };
         
+        const finalMembers = [creatorAsMember, ...teamData.members];
+
         await db.collection('users').doc(uid).collection('teams').add({
-            ...teamData,
+            teamName: teamData.teamName,
+            category: teamData.category,
+            members: finalMembers,
             ownerId: uid,
             createdAt: FieldValue.serverTimestamp(),
         });
