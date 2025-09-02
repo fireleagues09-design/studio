@@ -67,6 +67,17 @@ service cloud.firestore {
     }
 
     // Rules for the 'tournaments' collection
+    // Helper function to check if a user is an admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Admins have full access
+    match /{document=**} {
+      allow read, write: if request.auth != null && isAdmin();
+    }
+    
+    // Logged-in users can read general data
     match /tournaments/{tournamentId} {
       // Anyone can read and list tournaments.
       allow read, list: if true;
