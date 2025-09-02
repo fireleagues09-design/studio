@@ -83,6 +83,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     }
     
     const {
+        id,
         name,
         category,
         teamType,
@@ -121,6 +122,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 <h1 className="text-3xl md:text-4xl font-bold text-white">
                   {category}
                 </h1>
+                 <p className="text-sm text-primary font-mono mt-1">ID: {id}</p>
               </div>
             </div>
           </Card>
