@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -103,7 +102,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-8">
           <Card className="overflow-hidden">
             <div className="relative h-64 md:h-96 w-full">
               <Image
@@ -126,30 +125,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             </div>
           </Card>
 
-          <Tabs defaultValue="rules" className="mt-8">
-            <TabsList>
-              <TabsTrigger value="rules">Rules</TabsTrigger>
-              <TabsTrigger value="prizes">Prize Pool</TabsTrigger>
-            </TabsList>
-            <TabsContent value="rules" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Please Read All Rules Before Playing</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {rules?.map((rule, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <span>{rule}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="prizes" className="mt-4">
-              <Card>
+            <Card>
                 <CardHeader>
                   <CardTitle>Prize Distribution</CardTitle>
                 </CardHeader>
@@ -175,12 +151,11 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                     </TableBody>
                   </Table>
                 </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            </Card>
+
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 flex flex-col gap-8">
           <Card className="sticky top-24">
             <CardHeader>
               <CardTitle>Registration Details</CardTitle>
@@ -228,6 +203,22 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </Button>
             </div>
           </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle>Please Read All Rules Before Playing</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-3">
+                {rules?.map((rule, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                    <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <span>{rule}</span>
+                    </li>
+                ))}
+                </ul>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -246,5 +237,6 @@ export default function TournamentPage({ params }: TournamentPageProps) {
     </div>
   );
 }
+
 
 
