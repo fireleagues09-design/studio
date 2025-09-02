@@ -29,6 +29,7 @@ declare global {
 
 export default function RegisterPage() {
   const [inGameName, setInGameName] = useState("");
+  const [inGameUid, setInGameUid] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,7 @@ export default function RegisterPage() {
   };
 
   const handleSendOtp = async () => {
-    if (!inGameName || !phone) {
+    if (!inGameName || !phone || !inGameUid) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
@@ -103,6 +104,7 @@ export default function RegisterPage() {
 
         await setDoc(userDocRef, {
           inGameName: inGameName,
+          inGameUid: inGameUid,
           phone: `+91${phone}`,
           email: `${phone}@fireleagues.com`,
           wallet: {
@@ -146,6 +148,10 @@ export default function RegisterPage() {
             <div className="grid gap-2">
               <Label htmlFor="in-game-name">In-Game Name</Label>
               <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
+            </div>
+             <div className="grid gap-2">
+                <Label htmlFor="in-game-uid">In-Game UID</Label>
+                <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>

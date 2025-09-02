@@ -9,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { User, KeySquare, Pencil } from 'lucide-react';
+import { User, KeySquare, Pencil, Fingerprint } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 
 type UserProfile = {
     inGameName: string;
+    inGameUid: string;
     phone: string;
     email: string;
 };
@@ -94,6 +95,7 @@ export default function ProfilePage() {
                     <CardContent className="space-y-4">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
                     </CardContent>
                     <CardFooter className="flex justify-between">
                          <Skeleton className="h-10 w-24" />
@@ -129,6 +131,13 @@ export default function ProfilePage() {
                             ) : (
                                 <Button onClick={handleUpdateName} disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</Button>
                             )}
+                        </div>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>In-Game UID</Label>
+                        <div className="flex items-center gap-2 text-muted-foreground border p-2 rounded-md bg-secondary/50">
+                           <Fingerprint className="h-4 w-4" />
+                           <p>{profile.inGameUid || 'Not set'}</p>
                         </div>
                     </div>
                     <div className="space-y-2">
