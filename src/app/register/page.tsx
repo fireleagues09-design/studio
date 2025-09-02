@@ -131,11 +131,11 @@ export default function RegisterPage() {
             return;
         }
 
-        const teamData = teamType ? {
+        const teamData = {
             name: teamName,
-            type: teamType,
-            members: teammates.filter(m => m.inGameName && m.inGameUid)
-        } : null;
+            type: teamType || 'Duo', // Default to Duo if nothing is selected
+            members: teamType ? teammates : Array(1).fill({ inGameName: '', inGameUid: '' }) // Default empty member for Duo
+        };
 
         await setDoc(userDocRef, {
           inGameName: inGameName,

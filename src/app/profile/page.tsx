@@ -74,7 +74,7 @@ function EditTeamDialog({ user, profile }: { user: FirebaseUser, profile: UserPr
             const teamData: Team = {
                 name: teamName,
                 type: teamType,
-                members: teammates.filter(m => m.inGameName && m.inGameUid) // Only save non-empty members
+                members: teammates // Save all members, even if empty, to preserve structure
             };
             const result = await updateTeam(idToken, teamData);
             if (result.success) {
@@ -99,18 +99,19 @@ function EditTeamDialog({ user, profile }: { user: FirebaseUser, profile: UserPr
     };
     
     const teammateFields = Array.from({ length: teamType === 'Duo' ? 1 : 3 });
+    const hasTeam = profile.team && profile.team.members.some(m => m.inGameName && m.inGameUid);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button size="sm">
                     <Pencil className="mr-2 h-4 w-4" />
-                    {profile.team ? 'Edit Team' : 'Create Team'}
+                    {hasTeam ? 'Edit Team' : 'Create Team'}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>{profile.team ? 'Edit Team' : 'Create Your Team'}</DialogTitle>
+                    <DialogTitle>{hasTeam ? 'Edit Team' : 'Create Your Team'}</DialogTitle>
                     <DialogDescription>
                         Manage your team members for Duo and Squad tournaments.
                     </DialogDescription>
@@ -234,6 +235,8 @@ export default function ProfilePage() {
         )
     }
 
+    const hasTeamMembers = profile.team && profile.team.members.some(m => m.inGameName && m.inGameUid);
+
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
             <Card>
@@ -275,14 +278,14 @@ export default function ProfilePage() {
                     <EditTeamDialog user={user} profile={profile} />
                 </CardHeader>
                 <CardContent>
-                    {profile.team && profile.team.members && profile.team.members.length > 0 ? (
+                    {hasTeamMembers ? (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-lg">{profile.team.name || `${profile.team.type} Team`}</h3>
-                                <Badge variant="secondary">{profile.team.type}</Badge>
+                                <h3 className="font-semibold text-lg">{profile.team?.name || `${profile.team?.type} Team`}</h3>
+                                <Badge variant="secondary">{profile.team?.type}</Badge>
                             </div>
                             <ul className="space-y-3">
-                                {profile.team.members.map((member, index) => (
+                                {profile.team?.members.filter(m => m.inGameName && m.inGameUid).map((member, index) => (
                                     <li key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                                         <div className="font-medium">{member.inGameName}</div>
                                         <div className="text-sm text-muted-foreground">UID: {member.inGameUid}</div>
