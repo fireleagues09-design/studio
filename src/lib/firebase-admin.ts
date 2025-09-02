@@ -21,7 +21,8 @@ if (!admin.apps.length) {
        const serviceAccount: ServiceAccount = {
             projectId: projectId,
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            // The private key must be correctly formatted.
+            privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
        };
        credential = admin.credential.cert(serviceAccount);
        console.log('Firebase Admin SDK initialized with Service Account.');
