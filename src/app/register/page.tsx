@@ -19,8 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronsUpDown, PlusCircle } from "lucide-react";
 import type { TeamMember } from "@/lib/mock-data";
 
 
@@ -43,7 +41,6 @@ export default function RegisterPage() {
   const router = useRouter();
 
   // Team state
-  const [isTeamSectionOpen, setIsTeamSectionOpen] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [teamType, setTeamType] = useState<'Duo' | 'Squad' | ''>('');
   const [teammates, setTeammates] = useState<TeamMember[]>([]);
@@ -84,16 +81,23 @@ export default function RegisterPage() {
       return;
     }
 
-    if (teamType) {
-        const areTeammatesValid = teammates.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
-        if (!areTeammatesValid) {
-             toast({
-                title: "Incomplete Team",
-                description: `Please fill out all In-Game Names and UIDs for your ${teamType} members, or deselect the team type.`,
-                variant: "destructive",
-            });
-            return;
-        }
+    if (!teamType) {
+      toast({
+        title: "Team Required",
+        description: "Please select a team type (Duo or Squad) and fill in your teammate details.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const areTeammatesValid = teammates.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
+    if (!areTeammatesValid) {
+         toast({
+            title: "Incomplete Team",
+            description: `Please fill out all In-Game Names and UIDs for your ${teamType} members.`,
+            variant: "destructive",
+        });
+        return;
     }
 
     setLoading(true);
@@ -146,8 +150,8 @@ export default function RegisterPage() {
 
         const teamData = {
             name: teamName,
-            type: teamType || 'Duo', // Default to Duo if nothing is selected
-            members: teamType ? teammates : Array(1).fill({ inGameName: '', inGameUid: '' }) // Default empty member for Duo
+            type: teamType || 'Duo',
+            members: teamType ? teammates : Array(1).fill({ inGameName: '', inGameUid: '' })
         };
 
         await setDoc(userDocRef, {
@@ -212,49 +216,42 @@ export default function RegisterPage() {
                 </div>
             </div>
 
-            <Collapsible open={isTeamSectionOpen} onOpenChange={setIsTeamSectionOpen}>
-                <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full" disabled={otpSent}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Optional: Register Your Team
-                        <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-4">
-                     <div className="grid gap-2">
-                        <Label htmlFor="team-name">Team Name (Optional)</Label>
-                        <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" />
-                    </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="team-type">Team Type</Label>
-                         <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad' | '') => handleTeamTypeChange(value)}>
-                           <SelectTrigger id="team-type"><SelectValue placeholder="Select team type..." /></SelectTrigger>
-                           <SelectContent>
-                               <SelectItem value="Duo">Duo</SelectItem>
-                               <SelectItem value="Squad">Squad</SelectItem>
-                           </SelectContent>
-                        </Select>
-                    </div>
-                    {Array.from({ length: teammateFieldsCount }).map((_, index) => (
-                       <div key={index} className="p-3 border rounded-md space-y-2 bg-secondary/30">
-                           <Label>Teammate {index + 1}</Label>
-                           <Input 
-                                placeholder="In-Game Name" 
-                                value={teammates[index]?.inGameName || ''} 
-                                onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} 
-                                required={!!teamType}
-                            />
-                           <Input 
-                                placeholder="In-Game UID" 
-                                value={teammates[index]?.inGameUid || ''} 
-                                onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} 
-                                required={!!teamType}
-                            />
-                       </div>
-                    ))}
-                </CollapsibleContent>
-            </Collapsible>
-
+            <div className="space-y-4 pt-4 border-t">
+                 <h3 className="text-lg font-semibold">Register Your Team</h3>
+                 <div className="grid gap-2">
+                    <Label htmlFor="team-name">Team Name (Optional)</Label>
+                    <Input id="team-name" value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="e.g. The Champions" disabled={otpSent} />
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="team-type">Team Type</Label>
+                     <Select value={teamType} onValueChange={(value: 'Duo' | 'Squad' | '') => handleTeamTypeChange(value)} disabled={otpSent}>
+                       <SelectTrigger id="team-type"><SelectValue placeholder="Select team type..." /></SelectTrigger>
+                       <SelectContent>
+                           <SelectItem value="Duo">Duo</SelectItem>
+                           <SelectItem value="Squad">Squad</SelectItem>
+                       </SelectContent>
+                    </Select>
+                </div>
+                {Array.from({ length: teammateFieldsCount }).map((_, index) => (
+                   <div key={index} className="p-3 border rounded-md space-y-2 bg-secondary/30">
+                       <Label>Teammate {index + 1}</Label>
+                       <Input 
+                            placeholder="In-Game Name" 
+                            value={teammates[index]?.inGameName || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value)} 
+                            required={!!teamType}
+                            disabled={otpSent}
+                        />
+                       <Input 
+                            placeholder="In-Game UID" 
+                            value={teammates[index]?.inGameUid || ''} 
+                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value)} 
+                            required={!!teamType}
+                            disabled={otpSent}
+                        />
+                   </div>
+                ))}
+            </div>
 
           {otpSent && (
             <div className="grid gap-2">
