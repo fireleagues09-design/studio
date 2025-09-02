@@ -25,9 +25,6 @@ export default function ProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
-    const [inGameName, setInGameName] = useState('');
-    const [editLoading, setEditLoading] = useState(false);
 
     const router = useRouter();
     const { toast } = useToast();
@@ -41,7 +38,6 @@ export default function ProfilePage() {
                     if (doc.exists()) {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
-                        setInGameName(profileData.inGameName);
                     } else {
                         console.error("User profile not found in Firestore.");
                         router.push('/login');
@@ -56,27 +52,6 @@ export default function ProfilePage() {
 
         return () => unsubscribe();
     }, [router]);
-
-    const handleUpdateName = async () => {
-        if (!user || !inGameName) {
-            toast({ title: 'Error', description: 'In-game name cannot be empty.', variant: 'destructive' });
-            return;
-        }
-        setEditLoading(true);
-        try {
-            const userDocRef = doc(db, 'users', user.uid);
-            await updateDoc(userDocRef, {
-                inGameName: inGameName
-            });
-            toast({ title: 'Success', description: 'Your in-game name has been updated.' });
-            setIsEditing(false);
-        } catch (error) {
-            console.error('Error updating name:', error);
-            toast({ title: 'Error', description: 'Failed to update your name. Please try again.', variant: 'destructive' });
-        } finally {
-            setEditLoading(false);
-        }
-    };
     
     const handleLogout = async () => {
         await auth.signOut();
@@ -125,13 +100,9 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                         <Label htmlFor="in-game-name">In-Game Name</Label>
                          <div className="flex items-center gap-2">
-                            <Input id="in-game-name" value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={!isEditing || editLoading} />
-                            {!isEditing ? (
-                                <Button variant="outline" size="icon" onClick={() => setIsEditing(true)}><Pencil className="h-4 w-4"/></Button>
-                            ) : (
-                                <Button onClick={handleUpdateName} disabled={editLoading}>{editLoading ? 'Saving...' : 'Save'}</Button>
-                            )}
+                            <Input id="in-game-name" value={profile.inGameName} disabled />
                         </div>
+                        <p className="text-xs text-muted-foreground pt-1">To change your in-game name, please contact player support.</p>
                     </div>
                      <div className="space-y-2">
                         <Label>In-Game UID</Label>
