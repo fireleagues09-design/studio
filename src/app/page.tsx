@@ -93,13 +93,19 @@ export default function Home() {
                     </div>
                 ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {upcomingTournaments.map((tournament) => (
-                <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
-                ))}
-            </div>
-          )}
+            ) : upcomingTournaments.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {upcomingTournaments.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-16 col-span-full bg-secondary rounded-lg">
+                    <h2 className="text-2xl font-semibold">No Tournaments Found</h2>
+                    <p className="text-muted-foreground mt-2">There are currently no upcoming tournaments. Please check back later!</p>
+                </div>
+            )
+          }
 
         </section>
 
