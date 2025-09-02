@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isUserRegisteredForTournament, registerSoloPlayer } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 type SoloRegistrationDialogProps = {
@@ -50,11 +51,13 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+    const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) {
              toast({ title: 'Error', description: 'You must be logged in to register.', variant: 'destructive' });
+             router.push('/login');
              return;
         }
         if (!inGameName || !inGameUid) {
@@ -88,20 +91,11 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
         }
     }
 
-
-    const buttonState = getButtonState({
-        isRegistered: false, 
-        isFilled: tournament.slotsFilled >= tournament.slots, 
-        isUpcoming: tournament.status === 'Upcoming',
-        teamType: tournament.teamType,
-        registrationLoading: loading,
-    });
-
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="lg" className="w-full font-bold" disabled={buttonState.disabled}>
-                    {buttonState.text}
+                <Button size="lg" className="w-full font-bold">
+                    Register Solo
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -222,21 +216,22 @@ type TournamentDetailViewProps = {
     tournamentId: string;
 }
 
-function getButtonState({isRegistered, isFilled, isUpcoming, teamType, registrationLoading}: {isRegistered: boolean, isFilled: boolean, isUpcoming: boolean, teamType: string, registrationLoading: boolean}) {
-    if (registrationLoading) {
-        return { text: 'Processing...', disabled: true, variant: 'default' as const };
-    }
+function getButtonState({isRegistered, isFilled, status, teamType}: {isRegistered: boolean, isFilled: boolean, status: string, teamType: string}) {
     if (isRegistered) {
-        return { text: 'Registered', disabled: true, variant: 'secondary' as const };
+        return { text: 'Registered', disabled: true };
     }
-    if (!isUpcoming) {
-         if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true, variant: 'default' as const };
-         if (status === 'Finished') return { text: 'Tournament Finished', disabled: true, variant: 'default' as const };
+    if (status !== 'Upcoming') {
+         if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true };
+         if (status === 'Finished') return { text: 'Tournament Finished', disabled: true };
     }
     if (isFilled) {
-        return { text: 'Registrations Closed', disabled: true, variant: 'default' as const };
+        return { text: 'Registrations Full', disabled: true };
     }
-    return { text: `Register ${teamType}`, disabled: false, variant: 'default' as const };
+    // For non-solo tournaments, team registration isn't implemented yet.
+    if (teamType !== 'Solo') {
+        return { text: `Register ${teamType}`, disabled: true, tooltip: 'Team registration coming soon!'};
+    }
+    return { text: `Register ${teamType}`, disabled: false };
 };
 
 function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
@@ -245,7 +240,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [isRegistered, setIsRegistered] = useState(false);
-    const [registrationLoading, setRegistrationLoading] = useState(false);
     
     const { toast } = useToast();
     const router = useRouter();
@@ -261,7 +255,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     useEffect(() => {
         const checkCredentials = async () => {
             if (user && isRegistered && tournament?.roomId) {
-                const idToken = await user.getIdToken();
                 const result = await isUserRegisteredForTournament(tournamentId);
                 setShowCredentials(result);
             } else {
@@ -279,8 +272,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 const data = { id: doc.id, ...doc.data() } as Tournament;
                 setTournament(data);
                 if (user) {
-                    const registeredPlayers = data.registeredPlayers || [];
-                    setIsRegistered(registeredPlayers.includes(user.uid));
+                     isUserRegisteredForTournament(tournamentId).then(setIsRegistered);
                 } else {
                     setIsRegistered(false);
                 }
@@ -296,43 +288,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
         return () => unsubscribe();
     }, [tournamentId, user]);
-
-
-    const handleGenericRegistration = async () => {
-        if (!user) {
-            toast({
-                title: "Not Logged In",
-                description: "You must be logged in to register for a tournament.",
-                variant: "destructive"
-            });
-            router.push('/login');
-            return;
-        }
-
-        setRegistrationLoading(true);
-        const tournamentDocRef = doc(db, 'tournaments', tournamentId);
-
-        try {
-            await updateDoc(tournamentDocRef, {
-                registeredPlayers: arrayUnion(user.uid),
-                slotsFilled: increment(1)
-            });
-            toast({
-                title: "Registration Successful!",
-                description: `You have successfully registered for "${tournament?.name}".`
-            });
-            setIsRegistered(true);
-        } catch (error) {
-            console.error("Error updating registration:", error);
-            toast({
-                title: "Registration Error",
-                description: "An error occurred. Please try again.",
-                variant: "destructive"
-            });
-        } finally {
-            setRegistrationLoading(false);
-        }
-    };
 
 
     if (loading || loadingAuth) {
@@ -373,20 +328,67 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     } = tournament;
 
     const progress = (slotsFilled / slots) * 100;
-    const isFilled = slotsFilled >= slots;
-    const isUpcoming = status === 'Upcoming';
+
+    const handleRegistrationSuccess = async () => {
+        setIsRegistered(true);
+        // Manually update slotsFilled to give instant feedback
+        if (tournament) {
+            setTournament(prev => prev ? ({ ...prev, slotsFilled: prev.slotsFilled + 1 }) : null);
+        }
+    };
+
+    const renderRegistrationButton = () => {
+        if (!user) {
+            return (
+                <Button size="lg" className="w-full font-bold" onClick={() => router.push('/login')}>
+                    Login to Register
+                </Button>
+            );
+        }
     
     const canSeeCredentials = isRegistered && (status === 'Ongoing' || status === 'Upcoming') && roomId;
 
-    const buttonState = getButtonState({
-        isRegistered,
-        isFilled,
-        isUpcoming,
-        teamType,
-        registrationLoading
-    });
+        const buttonState = getButtonState({
+            isRegistered,
+            isFilled: slotsFilled >= slots,
+            status,
+            teamType,
+        });
 
-    const isSoloTournament = teamType === 'Solo';
+        if (buttonState.disabled) {
+            if (buttonState.tooltip) {
+                 return (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="w-full">
+                                    <Button size="lg" className="w-full font-bold" disabled>
+                                        {buttonState.text}
+                                    </Button>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{buttonState.tooltip}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                );
+            }
+             return (
+                <Button size="lg" className="w-full font-bold" variant="secondary" disabled>
+                    {buttonState.text}
+                </Button>
+            );
+        }
+
+        if (teamType === 'Solo') {
+            return <SoloRegistrationDialog tournament={tournament} user={user} onSuccess={handleRegistrationSuccess} />;
+        }
+        
+        // Fallback for just-in-case, should be covered by getButtonState
+        return null;
+    };
+
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -504,19 +506,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </div>
             </CardContent>
             <div className="p-6 pt-0">
-                { isSoloTournament && user && !isRegistered && isUpcoming ? (
-                    <SoloRegistrationDialog tournament={tournament} user={user} onSuccess={() => setIsRegistered(true)} />
-                ) : (
-                     <Button 
-                        size="lg" 
-                        className="w-full font-bold" 
-                        disabled={buttonState.disabled}
-                        onClick={handleGenericRegistration}
-                        variant={buttonState.variant}
-                    >
-                        {buttonState.text}
-                    </Button>
-                )}
+                {renderRegistrationButton()}
             </div>
           </Card>
           
