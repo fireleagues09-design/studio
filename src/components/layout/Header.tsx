@@ -64,7 +64,7 @@ export function Header() {
 
   const navLinks = [
     { href: "/", label: "Home" },
-    { href: !loading && user ? "/tournaments" : "/register", label: "Tournaments" },
+    { href: user ? "/tournaments" : "/register", label: "Tournaments" },
   ];
 
   return (
