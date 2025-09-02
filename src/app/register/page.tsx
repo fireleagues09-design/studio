@@ -258,7 +258,7 @@ export default function RegisterPage() {
                    </div>
                 ))}
                  <p className="text-xs text-center text-muted-foreground pt-2">
-                    if you don't have team members, then click on the null button down below. you can add team members later in your user profile
+                    if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
                  </p>
                  <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent}>
                     Null
