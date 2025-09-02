@@ -22,6 +22,7 @@ import {
   Users,
   ShieldCheck,
   ClipboardList,
+  Lock,
 } from "lucide-react";
 import {
   Table,
@@ -33,9 +34,13 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 
 type TournamentDetailViewProps = {
@@ -45,6 +50,17 @@ type TournamentDetailViewProps = {
 function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<FirebaseUser | null>(null);
+    const [loadingAuth, setLoadingAuth] = useState(true);
+    const { toast } = useToast();
+
+     useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setLoadingAuth(false);
+        });
+        return () => unsubscribeAuth();
+    }, []);
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -64,15 +80,25 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         return () => unsubscribe();
     }, [tournamentId]);
 
-    if (loading) {
+    const copyToClipboard = (text: string, fieldName: string) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        toast({
+            title: 'Copied to Clipboard',
+            description: `${fieldName} has been copied.`
+        });
+    }
+
+    if (loading || loadingAuth) {
       return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
                 <Skeleton className="h-96 w-full" />
                 <Skeleton className="h-64 w-full" />
             </div>
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-8">
                 <Skeleton className="h-[500px] w-full" />
+                <Skeleton className="h-[300px] w-full" />
             </div>
         </div>
       )
@@ -96,10 +122,16 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         time,
         rules,
         prizeDistribution,
+        roomId,
+        roomPassword,
     } = tournament;
 
     const progress = (slotsFilled / slots) * 100;
     const isFilled = slotsFilled >= slots;
+
+    // A placeholder for checking if the user is registered. 
+    // This should be replaced with actual registration logic from your database.
+    const isUserRegistered = !!user;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -211,6 +243,34 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </Button>
             </div>
           </Card>
+          
+           {isUserRegistered && (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-primary" />
+                        Room Credentials
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="roomId">Room ID</Label>
+                        <div className="flex items-center gap-2">
+                            <Input id="roomId" value={roomId || 'Not available'} readOnly className="font-mono" />
+                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(roomId || '', 'Room ID')} disabled={!roomId}>Copy</Button>
+                        </div>
+                    </div>
+                    <div>
+                        <Label htmlFor="roomPassword">Password</Label>
+                         <div className="flex items-center gap-2">
+                            <Input id="roomPassword" value={roomPassword || 'Not available'} readOnly className="font-mono"/>
+                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(roomPassword || '', 'Room Password')} disabled={!roomPassword}>Copy</Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+           )}
+
 
           <Card>
             <CardHeader>

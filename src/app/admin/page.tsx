@@ -117,6 +117,8 @@ function CreateTournamentDialog() {
                 dataAiHint,
                 rules: rules,
                 prizeDistribution: finalPrizeDistribution,
+                roomId: '',
+                roomPassword: '',
                 createdAt: serverTimestamp()
             });
             toast({
@@ -269,6 +271,8 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
     const [status, setStatus] = useState<TournamentType['status']>(tournament.status || 'Upcoming');
+    const [roomId, setRoomId] = useState(tournament.roomId || '');
+    const [roomPassword, setRoomPassword] = useState(tournament.roomPassword || '');
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
@@ -286,6 +290,8 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 prize,
                 slots: Number(slots),
                 status,
+                roomId,
+                roomPassword,
             });
             toast({
                 title: 'Success',
@@ -362,6 +368,21 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                            </Select>
                         </div>
                     </div>
+
+                    <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                        <Label>Room Credentials</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="roomId">Room ID</Label>
+                                <Input id="roomId" value={roomId} onChange={e => setRoomId(e.target.value)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="roomPassword">Room Password</Label>
+                                <Input id="roomPassword" value={roomPassword} onChange={e => setRoomPassword(e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+
 
                     <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
                         <DialogClose asChild>

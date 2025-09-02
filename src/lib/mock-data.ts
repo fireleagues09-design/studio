@@ -15,6 +15,8 @@ export type Tournament = {
   rules: string[];
   prizeDistribution: { place: string; prize: string }[];
   status: 'Upcoming' | 'Ongoing' | 'Finished';
+  roomId?: string;
+  roomPassword?: string;
 };
 
 export const MOCK_BANNERS = [
