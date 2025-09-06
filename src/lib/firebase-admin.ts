@@ -23,10 +23,7 @@ if (!admin.apps.length) {
       storageBucket: storageBucket,
     });
 
-    console.log('Firebase Admin SDK initialized successfully.');
-
   } catch (error: any) {
-    // Log a more detailed error message to help with debugging.
     let errorMessage = 'Firebase Admin SDK initialization error: ';
     if (error instanceof SyntaxError) {
       errorMessage += 'Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Make sure it is a valid JSON string.';
@@ -34,7 +31,6 @@ if (!admin.apps.length) {
       errorMessage += error.message;
     }
     console.error(errorMessage);
-    // Re-throw the error to indicate a critical failure in initialization.
     throw new Error(errorMessage);
   }
 }
