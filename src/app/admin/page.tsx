@@ -1,9 +1,8 @@
 
-
 'use client';
 
-import { useState, useEffect, useCallback, useCallback } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit, getDocs } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -409,7 +408,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     )
 }
 
-function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId: string, tournamentName: string }) {
+function DeleteTournamentDialog({tournamentId, tournamentName }: { tournamentId: string, tournamentName: string }) {
     const { toast } = useToast();
 
     const handleDelete = async () => {
@@ -452,19 +451,6 @@ function DeleteTournamentDialog({ tournamentId, tournamentName }: { tournamentId
     );
 }
 
-function useDebounce(value: string, delay: number) {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [value, delay]);
-    return debouncedValue;
-}
-
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -474,16 +460,11 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [debouncedSearchTerm] = useDebounce(userSearchTerm, 300);
+    const [debouncedSearchTerm] = useDebounce(userSearchTerm, 500);
     const [userSearchLoading, setUserSearchLoading] = useState(false);
     
     const router = useRouter();
     const { toast } = useToast();
-
-    const [searchTerm, setSearchTerm] = useState('');
-    const debouncedSearchTerm = useDebounce(searchTerm, 500);
-    const [isSearching, setIsSearching] = useState(false);
-
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -509,52 +490,6 @@ export default function AdminPage() {
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
         return format(date, 'PPp');
     };
-
-    const fetchUsers = useCallback(async (search: string) => {
-        if (!isAdmin) return;
-        setIsSearching(true);
-        try {
-            let usersQuery;
-            if (search) {
-                // This is a simplified search. Firestore doesn't support case-insensitive or partial text search natively on multiple fields.
-                // For a real app, a dedicated search service like Algolia or Elasticsearch is recommended.
-                // We will fetch based on inGameName for this example.
-                usersQuery = query(
-                    collection(db, "users"), 
-                    where("inGameName", ">=", search),
-                    where("inGameName", "<=", search + '\uf8ff'),
-                    orderBy("inGameName"), 
-                    limit(10)
-                );
-            } else {
-                usersQuery = query(
-                    collection(db, "users"), 
-                    orderBy("registeredOn", "desc"), 
-                    limit(10)
-                );
-            }
-            const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
-                const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData));
-                setUsers(usersData);
-                setIsSearching(false);
-            }, (error) => {
-                console.error("Error fetching users:", error);
-                setIsSearching(false);
-            });
-             return () => unsubscribe();
-
-        } catch (error) {
-             console.error("Error in fetchUsers function:", error);
-             setIsSearching(false);
-        }
-    }, [isAdmin]);
-
-    useEffect(() => {
-        if (isAdmin) {
-            fetchUsers(debouncedSearchTerm);
-        }
-    }, [isAdmin, debouncedSearchTerm, fetchUsers]);
-
 
     useEffect(() => {
         if (!isAdmin || !user) return;
@@ -750,18 +685,6 @@ export default function AdminPage() {
 
              <section>
                 <Card>
-                    <CardHeader>
-                        <CardTitle>User Management</CardTitle>
-                        <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
-                         <div className="relative pt-2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search users..."
-                                className="pl-9"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
                      <CardHeader>
                         <CardTitle>User Management</CardTitle>
                         <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
@@ -808,7 +731,7 @@ export default function AdminPage() {
                                         ) : (
                                              <TableRow>
                                                 <TableCell colSpan={4} className="h-24 text-center">
-                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "No recent users."}
+                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for users to see results."}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -823,6 +746,3 @@ export default function AdminPage() {
     );
 }
     
-
-    
-
