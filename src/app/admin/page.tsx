@@ -28,7 +28,6 @@ import { updateTransaction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
-import StorageAdmin from '@/components/StorageAdmin';
 
 type UserData = {
     id: string;
@@ -944,7 +943,6 @@ export default function AdminPage() {
                 </TabsContent>
                  <TabsContent value="settings" className="mt-6 space-y-8">
                     <SliderAdmin />
-                    <StorageAdmin />
                 </TabsContent>
             </Tabs>
         </div>
