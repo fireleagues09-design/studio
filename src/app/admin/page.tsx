@@ -791,8 +791,8 @@ export default function AdminPage() {
                                                 <TableCell className="text-right">₹{tournament.prize}</TableCell>
                                                 <TableCell className="text-center flex items-center justify-center gap-1">
                                                     <Button variant="ghost" size="icon" asChild>
-                                                        <Link href={`/admin/registrations/${tournament.id}`}>
-                                                             <UsersRound className="h-4 w-4" />
+                                                        <Link href={`/admin/registrations/${tournament.id}`} className="h-4 w-4">
+                                                             <UsersRound />
                                                         </Link>
                                                     </Button>
                                                     <EditTournamentDialog tournament={tournament} />
@@ -856,7 +856,7 @@ export default function AdminPage() {
                                         ) : (
                                              <TableRow>
                                                 <TableCell colSpan={4} className="h-24 text-center">
-                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for users to see results."}
+                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results."}
                                                 </TableCell>
                                             </TableRow>
                                         )}
