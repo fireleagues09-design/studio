@@ -2,48 +2,43 @@
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
-// This is a more robust way to initialize the Firebase Admin SDK.
-// It ensures that we don't try to re-initialize the app if it's already been done.
 if (!admin.apps.length) {
   try {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for server-side authentication.');
+    }
 
+    const serviceAccount = JSON.parse(serviceAccountKey) as ServiceAccount;
+    const projectId = serviceAccount.project_id;
     if (!projectId) {
-      throw new Error('FIREBASE_PROJECT_ID environment variable not set.');
+        throw new Error('The provided service account key is missing the "project_id" field.');
     }
-
+    
     const storageBucket = `${projectId}.appspot.com`;
-    
-    let credential;
-    
-    // Recommended: Use a service account key for consistent authentication.
-    if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-       const serviceAccount: ServiceAccount = {
-            projectId: projectId,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            // The private key must be correctly formatted.
-            privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-       };
-       credential = admin.credential.cert(serviceAccount);
-       console.log('Firebase Admin SDK initialized with Service Account.');
-    } else {
-        // Fallback for environments with Application Default Credentials
-        console.warn("Initializing Firebase Admin with Application Default Credentials. This may not be reliable. For production, use a service account key.");
-        credential = admin.credential.applicationDefault();
-    }
 
     admin.initializeApp({
-      credential,
+      credential: admin.credential.cert(serviceAccount),
       projectId: projectId,
       storageBucket: storageBucket,
     });
-    
+
+    console.log('Firebase Admin SDK initialized successfully.');
+
   } catch (error: any) {
-    console.error('Firebase Admin SDK initialization error:', error.message);
+    // Log a more detailed error message to help with debugging.
+    let errorMessage = 'Firebase Admin SDK initialization error: ';
+    if (error instanceof SyntaxError) {
+      errorMessage += 'Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Make sure it is a valid JSON string.';
+    } else {
+      errorMessage += error.message;
+    }
+    console.error(errorMessage);
+    // Re-throw the error to indicate a critical failure in initialization.
+    throw new Error(errorMessage);
   }
 }
 
-// These will now be safely initialized.
 export const auth = admin.auth();
 export const db = admin.firestore();
 export const storage = admin.storage();
