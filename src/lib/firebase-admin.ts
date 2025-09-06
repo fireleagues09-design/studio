@@ -2,14 +2,27 @@
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
+// Ensure the service account key is provided
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  throw new Error(
+    "🔥 FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing. " +
+    "Please set it with your Firebase service account JSON string."
+  );
+}
+
+let serviceAccount: ServiceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+} catch (err: any) {
+  throw new Error(
+    "🔥 FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. " +
+    "Please check your environment variable. Error: " + err.message
+  );
+}
+
+
 if (!admin.apps.length) {
   try {
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccountKey) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for server-side authentication.');
-    }
-
-    const serviceAccount = JSON.parse(serviceAccountKey) as ServiceAccount;
     const projectId = serviceAccount.project_id;
     if (!projectId) {
         throw new Error('The provided service account key is missing the "project_id" field.');
@@ -22,17 +35,10 @@ if (!admin.apps.length) {
       projectId: projectId,
       storageBucket: storageBucket,
     });
-
-  } catch (error: any) {
-    let errorMessage = 'Firebase Admin SDK initialization error: ';
-    if (error instanceof SyntaxError) {
-      errorMessage += 'Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Make sure it is a valid JSON string.';
-    } else {
-      errorMessage += error.message;
-    }
-    console.error(errorMessage);
-    // We throw the error to prevent the app from running with a misconfigured Firebase connection.
-    throw new Error(errorMessage);
+    console.log("✅ Firebase Admin initialized successfully");
+  } catch (err: any) {
+      console.error("🔥 Failed to initialize Firebase Admin:", err);
+      throw err;
   }
 }
 
