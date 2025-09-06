@@ -31,6 +31,7 @@ if (!admin.apps.length) {
       errorMessage += error.message;
     }
     console.error(errorMessage);
+    // We throw the error to prevent the app from running with a misconfigured Firebase connection.
     throw new Error(errorMessage);
   }
 }
