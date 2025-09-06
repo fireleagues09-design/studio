@@ -937,4 +937,4 @@ export default function AdminPage() {
             </section>
         </div>
     );
-    
+}
