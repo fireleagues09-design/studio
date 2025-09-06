@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { searchUsers } from './actions';
 import { useDebounce } from 'use-debounce';
 import { updateTransaction } from './actions';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type UserData = {
     id: string;
@@ -40,7 +42,8 @@ type Transaction = {
     userName?: string;
     type: 'deposit' | 'entry_fee' | 'withdrawal' | 'prize';
     amount: number;
-    transactionId: string;
+    transactionId?: string; // from deposit
+    details?: any; // from withdrawal
     date: any;
     status: 'Completed' | 'Pending' | 'Failed';
 };
@@ -467,7 +470,7 @@ export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [users, setUsers] = useState<UserData[]>([]);
-    const [pendingDeposits, setPendingDeposits] = useState<Transaction[]>([]);
+    const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
@@ -532,22 +535,24 @@ export default function AdminPage() {
              setTotalUsers(countSnapshot.data().count);
         });
 
-        // Fetch pending deposits
-        const depositsQuery = query(collection(db, "transactions"), where("status", "==", "Pending"), where("type", "==", "deposit"), orderBy("date", "desc"));
-        const unsubscribeDeposits = onSnapshot(depositsQuery, async (snapshot) => {
-            const depositsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+        const transactionsQuery = query(
+            collection(db, "transactions"), 
+            where("status", "==", "Pending"), 
+            orderBy("date", "desc")
+        );
+        const unsubscribeTransactions = onSnapshot(transactionsQuery, async (snapshot) => {
+            const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
             
-            // Fetch user names for each deposit
-            const depositsWithUserNames = await Promise.all(
-                depositsData.map(async (deposit) => {
-                    const userDocRef = doc(db, 'users', deposit.userId);
+            const transactionsWithUserNames = await Promise.all(
+                transactionsData.map(async (transaction) => {
+                    const userDocRef = doc(db, 'users', transaction.userId);
                     const userDoc = await getDoc(userDocRef);
                     const userName = userDoc.exists() ? userDoc.data().inGameName : 'Unknown User';
-                    return { ...deposit, userName };
+                    return { ...transaction, userName };
                 })
             );
 
-            setPendingDeposits(depositsWithUserNames);
+            setPendingTransactions(transactionsWithUserNames);
         });
 
 
@@ -555,7 +560,7 @@ export default function AdminPage() {
         return () => {
             unsubscribeTournaments();
             unsubscribeUsers();
-            unsubscribeDeposits();
+            unsubscribeTransactions();
         };
     }, [isAdmin, user]);
 
@@ -584,17 +589,17 @@ export default function AdminPage() {
     }, [debouncedSearchTerm, handleSearchUsers]);
     
     const handleTransactionUpdate = async (
-        transactionId: string, 
-        newStatus: 'Completed' | 'Failed', 
-        userId: string, 
-        amount: number
+        transaction: Transaction,
+        newStatus: 'Completed' | 'Failed'
     ) => {
         if (!user) return;
         
-        setActionLoading(prev => ({...prev, [transactionId]: true}));
+        const { id, userId, amount, type } = transaction;
+
+        setActionLoading(prev => ({...prev, [id]: true}));
         try {
             const idToken = await user.getIdToken();
-            const result = await updateTransaction(transactionId, newStatus, userId, amount, idToken);
+            const result = await updateTransaction(id, newStatus, userId, amount, type, idToken);
             if (result.success) {
                 toast({
                     title: 'Success',
@@ -611,10 +616,12 @@ export default function AdminPage() {
                 variant: 'destructive'
             });
         } finally {
-            setActionLoading(prev => ({...prev, [transactionId]: false}));
+            setActionLoading(prev => ({...prev, [id]: false}));
         }
     }
 
+    const pendingDeposits = pendingTransactions.filter(t => t.type === 'deposit');
+    const pendingWithdrawals = pendingTransactions.filter(t => t.type === 'withdrawal');
 
     if (loading) {
         return (
@@ -664,12 +671,12 @@ export default function AdminPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pending Deposits</CardTitle>
+                            <CardTitle className="text-sm font-medium">Pending Transactions</CardTitle>
                             <Activity className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                           <div className="text-2xl font-bold">{pendingDeposits.length}</div>
-                           <p className="text-xs text-muted-foreground">Requests awaiting your action</p>
+                           <div className="text-2xl font-bold">{pendingTransactions.length}</div>
+                           <p className="text-xs text-muted-foreground">Deposits and withdrawals awaiting action</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -678,68 +685,129 @@ export default function AdminPage() {
             <section>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Pending Deposit Requests</CardTitle>
-                        <CardDescription>Review and process all pending user deposit requests.</CardDescription>
+                        <CardTitle>Pending Transactions</CardTitle>
+                        <CardDescription>Review and process all pending user transactions.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {dataLoading ? (
-                             <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                            </div>
-                        ) : (
-                             <div className="border rounded-md">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Transaction ID</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {pendingDeposits.length > 0 ? (
-                                            pendingDeposits.map(deposit => (
-                                            <TableRow key={deposit.id}>
-                                                <TableCell className="font-medium">{deposit.userName}</TableCell>
-                                                <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
-                                                <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
-                                                <TableCell>{formatDate(deposit.date)}</TableCell>
-                                                <TableCell className="text-right space-x-2">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="text-green-500 hover:text-green-600"
-                                                        onClick={() => handleTransactionUpdate(deposit.id, 'Completed', deposit.userId, deposit.amount)}
-                                                        disabled={actionLoading[deposit.id]}
-                                                    >
-                                                        <CheckCircle className="h-5 w-5" />
-                                                    </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="text-red-500 hover:text-red-600"
-                                                        onClick={() => handleTransactionUpdate(deposit.id, 'Failed', deposit.userId, deposit.amount)}
-                                                        disabled={actionLoading[deposit.id]}
-                                                    >
-                                                        <XCircle className="h-5 w-5" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center">
-                                                    No pending deposit requests.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
+                        <Tabs defaultValue="deposits">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="deposits">
+                                    <ArrowDownLeft className="mr-2 h-4 w-4 text-green-500" />
+                                    Deposits ({pendingDeposits.length})
+                                </TabsTrigger>
+                                <TabsTrigger value="withdrawals">
+                                    <ArrowUpRight className="mr-2 h-4 w-4 text-red-500" />
+                                    Withdrawals ({pendingWithdrawals.length})
+                                </TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="deposits" className="mt-4">
+                                {dataLoading ? (
+                                    <Skeleton className="h-24 w-full" />
+                                ) : (
+                                    <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Transaction ID</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {pendingDeposits.length > 0 ? (
+                                                    pendingDeposits.map(deposit => (
+                                                    <TableRow key={deposit.id}>
+                                                        <TableCell className="font-medium">{deposit.userName}</TableCell>
+                                                        <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
+                                                        <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
+                                                        <TableCell>{formatDate(deposit.date)}</TableCell>
+                                                        <TableCell className="text-right space-x-2">
+                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(deposit, 'Completed')} disabled={actionLoading[deposit.id]}>
+                                                                <CheckCircle className="h-5 w-5" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(deposit, 'Failed')} disabled={actionLoading[deposit.id]}>
+                                                                <XCircle className="h-5 w-5" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="h-24 text-center">No pending deposit requests.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </TabsContent>
+                            <TabsContent value="withdrawals" className="mt-4">
+                               {dataLoading ? (
+                                     <Skeleton className="h-24 w-full" />
+                                ) : (
+                                     <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Details</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {pendingWithdrawals.length > 0 ? (
+                                                    pendingWithdrawals.map(withdrawal => (
+                                                    <TableRow key={withdrawal.id}>
+                                                        <TableCell className="font-medium">{withdrawal.userName}</TableCell>
+                                                        <TableCell>₹{withdrawal.amount.toFixed(2)}</TableCell>
+                                                        <TableCell>
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild><Button variant="link" size="sm">View</Button></TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <div className="text-sm p-2 space-y-2">
+                                                                            <h4 className="font-bold">{withdrawal.details.method === 'upi' ? 'UPI Details' : 'Bank Details'}</h4>
+                                                                            <p><strong>Name:</strong> {withdrawal.details.name}</p>
+                                                                            {withdrawal.details.method === 'upi' ? (
+                                                                                <p><strong>UPI ID:</strong> {withdrawal.details.upiId}</p>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <p><strong>Bank:</strong> {withdrawal.details.bankName}</p>
+                                                                                    <p><strong>Account:</strong> {withdrawal.details.accountNumber}</p>
+                                                                                    <p><strong>IFSC:</strong> {withdrawal.details.ifscCode}</p>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        </TableCell>
+                                                        <TableCell>{formatDate(withdrawal.date)}</TableCell>
+                                                        <TableCell className="text-right space-x-2">
+                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')} disabled={actionLoading[withdrawal.id]}>
+                                                                <CheckCircle className="h-5 w-5" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')} disabled={actionLoading[withdrawal.id]}>
+                                                                <XCircle className="h-5 w-5" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="h-24 text-center">No pending withdrawal requests.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
             </section>
@@ -791,8 +859,8 @@ export default function AdminPage() {
                                                 <TableCell className="text-right">₹{tournament.prize}</TableCell>
                                                 <TableCell className="text-center flex items-center justify-center gap-1">
                                                     <Button variant="ghost" size="icon" asChild>
-                                                        <Link href={`/admin/registrations/${tournament.id}`} className="h-4 w-4">
-                                                             <UsersRound />
+                                                        <Link href={`/admin/registrations/${tournament.id}`}>
+                                                             <UsersRound className="h-4 w-4" />
                                                         </Link>
                                                     </Button>
                                                     <EditTournamentDialog tournament={tournament} />
@@ -869,4 +937,4 @@ export default function AdminPage() {
             </section>
         </div>
     );
-}
+    

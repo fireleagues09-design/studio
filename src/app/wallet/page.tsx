@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { requestWithdrawal } from './actions';
 
 
 type UserProfile = {
@@ -178,6 +180,164 @@ function AddFundsDialog() {
     )
 }
 
+function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, winnings: number }) {
+    const [amount, setAmount] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+
+    // UPI state
+    const [upiName, setUpiName] = useState('');
+    const [upiId, setUpiId] = useState('');
+
+    // Bank state
+    const [bankName, setBankName] = useState('');
+    const [accountHolderName, setAccountHolderName] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+    const [ifscCode, setIfscCode] = useState('');
+
+    const handleSubmit = async (method: 'upi' | 'bank') => {
+        if (!user) {
+            toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
+            return;
+        }
+        if (!amount || Number(amount) <= 0) {
+            toast({ title: 'Error', description: 'Please enter a valid amount.', variant: 'destructive' });
+            return;
+        }
+        if (Number(amount) > winnings) {
+             toast({ title: 'Error', description: 'Withdrawal amount cannot exceed your winnings balance.', variant: 'destructive' });
+            return;
+        }
+
+        let details = {};
+        if (method === 'upi') {
+            if (!upiName || !upiId) {
+                toast({ title: 'Error', description: 'Please fill in your name and UPI ID.', variant: 'destructive' });
+                return;
+            }
+            details = { name: upiName, upiId };
+        } else { // bank
+            if (!accountHolderName || !bankName || !accountNumber || !ifscCode) {
+                 toast({ title: 'Error', description: 'Please fill in all bank details.', variant: 'destructive' });
+                return;
+            }
+            details = { name: accountHolderName, bankName, accountNumber, ifscCode };
+        }
+
+        setLoading(true);
+        try {
+            const idToken = await user.getIdToken();
+            const result = await requestWithdrawal(Number(amount), method, details, idToken);
+
+            if (result.success) {
+                toast({
+                    title: 'Request Submitted',
+                    description: 'Your withdrawal request has been received and will be processed soon.'
+                });
+                setOpen(false);
+                // Reset fields
+                setAmount('');
+                setUpiName('');
+                setUpiId('');
+                setBankName('');
+                setAccountHolderName('');
+                setAccountNumber('');
+                setIfscCode('');
+            } else {
+                throw new Error(result.message);
+            }
+
+        } catch (error: any) {
+            toast({
+                title: 'Request Failed',
+                description: error.message || 'An unknown error occurred.',
+                variant: 'destructive'
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">
+                    <MinusCircle className="mr-2 h-4 w-4" />
+                    Withdraw
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Withdraw Winnings</DialogTitle>
+                    <DialogDescription>
+                        Request a withdrawal to your bank account or UPI. Amount will be deducted from your winnings.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="withdraw-amount">Amount to Withdraw (INR)</Label>
+                        <Input
+                            id="withdraw-amount"
+                            type="number"
+                            placeholder={`Max: ₹${winnings.toFixed(2)}`}
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            required
+                        />
+                    </div>
+                </div>
+
+                <Tabs defaultValue="upi">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upi">UPI</TabsTrigger>
+                        <TabsTrigger value="bank">Bank Transfer</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="upi">
+                        <div className="space-y-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="upi-name">Your Name</Label>
+                                <Input id="upi-name" placeholder="Full name" value={upiName} onChange={e => setUpiName(e.target.value)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="upi-id">UPI ID</Label>
+                                <Input id="upi-id" placeholder="yourname@bank" value={upiId} onChange={e => setUpiId(e.target.value)} />
+                            </div>
+                            <Button onClick={() => handleSubmit('upi')} disabled={loading} className="w-full">
+                                {loading ? 'Submitting...' : 'Request via UPI'}
+                            </Button>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="bank">
+                         <div className="space-y-4 py-4">
+                             <div className="grid gap-2">
+                                <Label htmlFor="bank-name-holder">Account Holder Name</Label>
+                                <Input id="bank-name-holder" placeholder="Full name as per bank" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)} />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="bank-name">Bank Name</Label>
+                                <Input id="bank-name" placeholder="e.g. State Bank of India" value={bankName} onChange={e => setBankName(e.target.value)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="account-number">Account Number</Label>
+                                <Input id="account-number" placeholder="Enter account number" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="ifsc-code">IFSC Code</Label>
+                                <Input id="ifsc-code" placeholder="Enter IFSC code" value={ifscCode} onChange={e => setIfscCode(e.target.value)} />
+                            </div>
+                             <Button onClick={() => handleSubmit('bank')} disabled={loading} className="w-full">
+                                {loading ? 'Submitting...' : 'Request via Bank Transfer'}
+                            </Button>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 export default function WalletPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -313,10 +473,7 @@ export default function WalletPage() {
                                 </div>
                                 <div className="flex gap-2">
                                     <AddFundsDialog />
-                                     <Button variant="outline">
-                                        <MinusCircle className="mr-2 h-4 w-4" />
-                                        Withdraw
-                                    </Button>
+                                     <WithdrawFundsDialog user={user} winnings={wallet.winning} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-muted-foreground/20">

@@ -149,6 +149,7 @@ export async function updateTransaction(
     newStatus: 'Completed' | 'Failed',
     userId: string,
     amount: number,
+    type: 'deposit' | 'withdrawal',
     idToken: string
 ): Promise<{ success: boolean, message: string }> {
 
@@ -161,19 +162,21 @@ export async function updateTransaction(
     const userRef = db.collection('users').doc(userId);
 
     try {
-        if (newStatus === 'Completed') {
-            // Use a transaction to ensure atomicity
-            await db.runTransaction(async (t) => {
-                const userDoc = await t.get(userRef);
-                if (!userDoc.exists) {
-                    throw new Error("User for this transaction not found.");
-                }
-                t.update(transactionRef, { status: newStatus });
+        await db.runTransaction(async (t) => {
+            const userDoc = await t.get(userRef);
+            if (!userDoc.exists) {
+                throw new Error("User for this transaction not found.");
+            }
+
+            t.update(transactionRef, { status: newStatus });
+
+            if (type === 'deposit' && newStatus === 'Completed') {
                 t.update(userRef, { 'wallet.deposit': FieldValue.increment(amount) });
-            });
-        } else { // For 'Failed' or any other status, just update the transaction
-            await transactionRef.update({ status: newStatus });
-        }
+            } else if (type === 'withdrawal' && newStatus === 'Failed') {
+                // Refund the user's winnings wallet if withdrawal fails
+                t.update(userRef, { 'wallet.winning': FieldValue.increment(amount) });
+            }
+        });
 
         return { success: true, message: `Transaction ${transactionId} updated to ${newStatus}.` };
 
