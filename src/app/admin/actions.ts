@@ -184,3 +184,57 @@ export async function updateTransaction(
         return { success: false, message: error.message || "An unknown error occurred."};
     }
 }
+
+export type StorageFile = {
+    name: string;
+    size: number;
+    updated: string;
+};
+
+export async function manageStorage(
+    idToken: string,
+    action: 'list' | 'delete',
+    path?: string,
+): Promise<{ success: boolean; files?: StorageFile[], message?: string }> {
+
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: 'Permission denied. User is not an admin.' };
+    }
+
+    try {
+        const bucket = storage.bucket();
+
+        if (action === 'list') {
+            const [files] = await bucket.getFiles();
+            const fileDetails = files.map(file => ({
+                name: file.name,
+                size: Number(file.metadata.size) || 0,
+                updated: file.metadata.updated,
+            }));
+            return { success: true, files: fileDetails };
+        }
+
+        if (action === 'delete') {
+            if (!path) {
+                return { success: false, message: 'File path is required for deletion.' };
+            }
+            await bucket.file(path).delete();
+
+            // Also check if it's a slider and delete from Firestore
+            const sliderQuery = await db.collection('sliders').where('storagePath', '==', path).limit(1).get();
+            if (!sliderQuery.empty) {
+                const sliderDoc = sliderQuery.docs[0];
+                await sliderDoc.ref.delete();
+            }
+
+            return { success: true, message: `File '${path}' deleted successfully.` };
+        }
+
+        return { success: false, message: 'Invalid action.' };
+
+    } catch (error: any) {
+        console.error(`Error during storage management (action: ${action}):`, error);
+        return { success: false, message: error.message || 'An unknown server error occurred.' };
+    }
+}

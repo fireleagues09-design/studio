@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -27,6 +27,8 @@ import { useDebounce } from 'use-debounce';
 import { updateTransaction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import SliderAdmin from '@/components/SliderAdmin';
+import StorageAdmin from '@/components/StorageAdmin';
 
 type UserData = {
     id: string;
@@ -682,259 +684,269 @@ export default function AdminPage() {
                 </div>
             </section>
 
-            <section>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pending Transactions</CardTitle>
-                        <CardDescription>Review and process all pending user transactions.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs defaultValue="deposits">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="deposits">
-                                    <ArrowDownLeft className="mr-2 h-4 w-4 text-green-500" />
-                                    Deposits ({pendingDeposits.length})
-                                </TabsTrigger>
-                                <TabsTrigger value="withdrawals">
-                                    <ArrowUpRight className="mr-2 h-4 w-4 text-red-500" />
-                                    Withdrawals ({pendingWithdrawals.length})
-                                </TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="deposits" className="mt-4">
+             <Tabs defaultValue="transactions" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                    <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+                    <TabsTrigger value="users">Users</TabsTrigger>
+                    <TabsTrigger value="settings">Settings</TabsTrigger>
+                </TabsList>
+                <TabsContent value="transactions" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Pending Transactions</CardTitle>
+                            <CardDescription>Review and process all pending user transactions.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs defaultValue="deposits">
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="deposits">
+                                        <ArrowDownLeft className="mr-2 h-4 w-4 text-green-500" />
+                                        Deposits ({pendingDeposits.length})
+                                    </TabsTrigger>
+                                    <TabsTrigger value="withdrawals">
+                                        <ArrowUpRight className="mr-2 h-4 w-4 text-red-500" />
+                                        Withdrawals ({pendingWithdrawals.length})
+                                    </TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="deposits" className="mt-4">
+                                    {dataLoading ? (
+                                        <Skeleton className="h-24 w-full" />
+                                    ) : (
+                                        <div className="border rounded-md">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>User</TableHead>
+                                                        <TableHead>Amount</TableHead>
+                                                        <TableHead>Transaction ID</TableHead>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {pendingDeposits.length > 0 ? (
+                                                        pendingDeposits.map(deposit => (
+                                                        <TableRow key={deposit.id}>
+                                                            <TableCell className="font-medium">{deposit.userName}</TableCell>
+                                                            <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
+                                                            <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
+                                                            <TableCell>{formatDate(deposit.date)}</TableCell>
+                                                            <TableCell className="text-right space-x-2">
+                                                                <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(deposit, 'Completed')} disabled={actionLoading[deposit.id]}>
+                                                                    <CheckCircle className="h-5 w-5" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(deposit, 'Failed')} disabled={actionLoading[deposit.id]}>
+                                                                    <XCircle className="h-5 w-5" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        ))
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="h-24 text-center">No pending deposit requests.</TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </TabsContent>
+                                <TabsContent value="withdrawals" className="mt-4">
                                 {dataLoading ? (
-                                    <Skeleton className="h-24 w-full" />
-                                ) : (
-                                    <div className="border rounded-md">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>User</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Transaction ID</TableHead>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {pendingDeposits.length > 0 ? (
-                                                    pendingDeposits.map(deposit => (
-                                                    <TableRow key={deposit.id}>
-                                                        <TableCell className="font-medium">{deposit.userName}</TableCell>
-                                                        <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
-                                                        <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
-                                                        <TableCell>{formatDate(deposit.date)}</TableCell>
-                                                        <TableCell className="text-right space-x-2">
-                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(deposit, 'Completed')} disabled={actionLoading[deposit.id]}>
-                                                                <CheckCircle className="h-5 w-5" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(deposit, 'Failed')} disabled={actionLoading[deposit.id]}>
-                                                                <XCircle className="h-5 w-5" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    ))
-                                                ) : (
+                                        <Skeleton className="h-24 w-full" />
+                                    ) : (
+                                        <div className="border rounded-md">
+                                            <Table>
+                                                <TableHeader>
                                                     <TableRow>
-                                                        <TableCell colSpan={5} className="h-24 text-center">No pending deposit requests.</TableCell>
+                                                        <TableHead>User</TableHead>
+                                                        <TableHead>Amount</TableHead>
+                                                        <TableHead>Details</TableHead>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
                                                     </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </TabsContent>
-                            <TabsContent value="withdrawals" className="mt-4">
-                               {dataLoading ? (
-                                     <Skeleton className="h-24 w-full" />
-                                ) : (
-                                     <div className="border rounded-md">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>User</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Details</TableHead>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {pendingWithdrawals.length > 0 ? (
-                                                    pendingWithdrawals.map(withdrawal => (
-                                                    <TableRow key={withdrawal.id}>
-                                                        <TableCell className="font-medium">{withdrawal.userName}</TableCell>
-                                                        <TableCell>₹{withdrawal.amount.toFixed(2)}</TableCell>
-                                                        <TableCell>
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger asChild><Button variant="link" size="sm">View</Button></TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <div className="text-sm p-2 space-y-2">
-                                                                            <h4 className="font-bold">{withdrawal.details.method === 'upi' ? 'UPI Details' : 'Bank Details'}</h4>
-                                                                            <p><strong>Name:</strong> {withdrawal.details.name}</p>
-                                                                            {withdrawal.details.method === 'upi' ? (
-                                                                                <p><strong>UPI ID:</strong> {withdrawal.details.upiId}</p>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <p><strong>Bank:</strong> {withdrawal.details.bankName}</p>
-                                                                                    <p><strong>Account:</strong> {withdrawal.details.accountNumber}</p>
-                                                                                    <p><strong>IFSC:</strong> {withdrawal.details.ifscCode}</p>
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
-                                                        </TableCell>
-                                                        <TableCell>{formatDate(withdrawal.date)}</TableCell>
-                                                        <TableCell className="text-right space-x-2">
-                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')} disabled={actionLoading[withdrawal.id]}>
-                                                                <CheckCircle className="h-5 w-5" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')} disabled={actionLoading[withdrawal.id]}>
-                                                                <XCircle className="h-5 w-5" />
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    ))
-                                                ) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={5} className="h-24 text-center">No pending withdrawal requests.</TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                            </TabsContent>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-            </section>
-
-            <section>
-                <Card>
-                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <CardTitle>Tournament Management</CardTitle>
-                            <CardDescription>View, create, edit, and delete all scheduled tournaments.</CardDescription>
-                        </div>
-                        <CreateTournamentDialog />
-                    </CardHeader>
-                    <CardContent>
-                        {dataLoading ? (
-                             <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {pendingWithdrawals.length > 0 ? (
+                                                        pendingWithdrawals.map(withdrawal => (
+                                                        <TableRow key={withdrawal.id}>
+                                                            <TableCell className="font-medium">{withdrawal.userName}</TableCell>
+                                                            <TableCell>₹{withdrawal.amount.toFixed(2)}</TableCell>
+                                                            <TableCell>
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild><Button variant="link" size="sm">View</Button></TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <div className="text-sm p-2 space-y-2">
+                                                                                <h4 className="font-bold">{withdrawal.details.method === 'upi' ? 'UPI Details' : 'Bank Details'}</h4>
+                                                                                <p><strong>Name:</strong> {withdrawal.details.name}</p>
+                                                                                {withdrawal.details.method === 'upi' ? (
+                                                                                    <p><strong>UPI ID:</strong> {withdrawal.details.upiId}</p>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <p><strong>Bank:</strong> {withdrawal.details.bankName}</p>
+                                                                                        <p><strong>Account:</strong> {withdrawal.details.accountNumber}</p>
+                                                                                        <p><strong>IFSC:</strong> {withdrawal.details.ifscCode}</p>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            </TableCell>
+                                                            <TableCell>{formatDate(withdrawal.date)}</TableCell>
+                                                            <TableCell className="text-right space-x-2">
+                                                                <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')} disabled={actionLoading[withdrawal.id]}>
+                                                                    <CheckCircle className="h-5 w-5" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')} disabled={actionLoading[withdrawal.id]}>
+                                                                    <XCircle className="h-5 w-5" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        ))
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="h-24 text-center">No pending withdrawal requests.</TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                                </TabsContent>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="tournaments" className="mt-6">
+                    <Card>
+                        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div>
+                                <CardTitle>Tournament Management</CardTitle>
+                                <CardDescription>View, create, edit, and delete all scheduled tournaments.</CardDescription>
                             </div>
-                        ) : (
-                            <div className="border rounded-md">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Slots</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Prize</TableHead>
-                                            <TableHead className="text-center">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {tournaments.map(tournament => (
-                                            <TableRow key={tournament.id}>
-                                                <TableCell className="font-medium">{tournament.name}</TableCell>
-                                                <TableCell>{tournament.date} @ {tournament.time}</TableCell>
-                                                <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
-                                                <TableCell>
-                                                     <Badge variant={
-                                                         tournament.status === 'Finished' ? 'destructive' :
-                                                         tournament.status === 'Ongoing' ? 'default' :
-                                                         'secondary'
-                                                     }>
-                                                        {tournament.status}
-                                                     </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">₹{tournament.prize}</TableCell>
-                                                <TableCell className="text-center flex items-center justify-center gap-1">
-                                                    <Button variant="ghost" size="icon" asChild>
-                                                        <Link href={`/admin/registrations/${tournament.id}`}>
-                                                             <UsersRound className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                    <EditTournamentDialog tournament={tournament} />
-                                                    <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
-                                                </TableCell>
+                            <CreateTournamentDialog />
+                        </CardHeader>
+                        <CardContent>
+                            {dataLoading ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                </div>
+                            ) : (
+                                <div className="border rounded-md">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Slots</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Prize</TableHead>
+                                                <TableHead className="text-center">Actions</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </section>
-
-             <section>
-                <Card>
-                     <CardHeader>
-                        <CardTitle>User Management</CardTitle>
-                        <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
-                         <div className="relative mt-4">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search users..."
-                                className="pl-9"
-                                value={userSearchTerm}
-                                onChange={(e) => setUserSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                         {userSearchLoading ? (
-                             <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                            </div>
-                        ) : (
-                            <div className="border rounded-md">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>In-Game Name</TableHead>
-                                            <TableHead>Phone</TableHead>
-                                            <TableHead>Registered</TableHead>
-                                            <TableHead className="text-right">Admin</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {users.length > 0 ? (
-                                            users.map(user => (
-                                                <TableRow key={user.id}>
-                                                    <TableCell className="font-medium">{user.inGameName}</TableCell>
-                                                    <TableCell>{user.phone}</TableCell>
-                                                    <TableCell>{formatDate(user.registeredOn)}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {user.isAdmin && <Badge>Admin</Badge>}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {tournaments.map(tournament => (
+                                                <TableRow key={tournament.id}>
+                                                    <TableCell className="font-medium">{tournament.name}</TableCell>
+                                                    <TableCell>{tournament.date} @ {tournament.time}</TableCell>
+                                                    <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={
+                                                            tournament.status === 'Finished' ? 'destructive' :
+                                                            tournament.status === 'Ongoing' ? 'default' :
+                                                            'secondary'
+                                                        }>
+                                                            {tournament.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">₹{tournament.prize}</TableCell>
+                                                    <TableCell className="text-center flex items-center justify-center gap-1">
+                                                        <Button variant="ghost" size="icon" asChild>
+                                                            <Link href={`/admin/registrations/${tournament.id}`}>
+                                                                <UsersRound className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        <EditTournamentDialog tournament={tournament} />
+                                                        <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
                                                     </TableCell>
                                                 </TableRow>
-                                            ))
-                                        ) : (
-                                             <TableRow>
-                                                <TableCell colSpan={4} className="h-24 text-center">
-                                                    {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results."}
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="users" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>User Management</CardTitle>
+                            <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
+                            <div className="relative mt-4">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search users..."
+                                    className="pl-9"
+                                    value={userSearchTerm}
+                                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                                />
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </section>
+                        </CardHeader>
+                        <CardContent>
+                            {userSearchLoading ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                </div>
+                            ) : (
+                                <div className="border rounded-md">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>In-Game Name</TableHead>
+                                                <TableHead>Phone</TableHead>
+                                                <TableHead>Registered</TableHead>
+                                                <TableHead className="text-right">Admin</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {users.length > 0 ? (
+                                                users.map(user => (
+                                                    <TableRow key={user.id}>
+                                                        <TableCell className="font-medium">{user.inGameName}</TableCell>
+                                                        <TableCell>{user.phone}</TableCell>
+                                                        <TableCell>{formatDate(user.registeredOn)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            {user.isAdmin && <Badge>Admin</Badge>}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="h-24 text-center">
+                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results."}
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="settings" className="mt-6 space-y-8">
+                    <SliderAdmin />
+                    <StorageAdmin />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
