@@ -3,13 +3,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit, getDocs } from 'firebase/firestore';
-import { auth, db, storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { auth, db } from '@/lib/firebase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -25,6 +24,7 @@ import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
 import { searchUsers } from './actions';
 import { useDebounce } from 'use-debounce';
+import { updateTransaction } from './actions';
 
 type UserData = {
     id: string;
@@ -33,6 +33,18 @@ type UserData = {
     registeredOn: any;
     isAdmin?: boolean;
 };
+
+type Transaction = {
+    id: string;
+    userId: string;
+    userName?: string;
+    type: 'deposit' | 'entry_fee' | 'withdrawal' | 'prize';
+    amount: number;
+    transactionId: string;
+    date: any;
+    status: 'Completed' | 'Pending' | 'Failed';
+};
+
 
 const FULL_MAP_RULES = [
     'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
@@ -455,16 +467,17 @@ export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [users, setUsers] = useState<UserData[]>([]);
-    const [transactions, setTransactions] = useState<any[]>([]);
+    const [pendingDeposits, setPendingDeposits] = useState<Transaction[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
+    const router = useRouter();
+    const { toast } = useToast();
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [debouncedSearchTerm] = useDebounce(userSearchTerm, 500);
     const [userSearchLoading, setUserSearchLoading] = useState(false);
     
-    const router = useRouter();
-    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -495,12 +508,6 @@ export default function AdminPage() {
         if (!isAdmin || !user) return;
 
         setDataLoading(true);
-
-        const transactionsQuery = query(collection(db, "transactions"), orderBy("date", "desc"));
-        const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-            const transactionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-            setTransactions(transactionsData);
-        }, (error) => console.error("Error fetching transactions:", error));
         
         const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
         const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
@@ -512,17 +519,29 @@ export default function AdminPage() {
             setDataLoading(false);
         });
 
-        const usersCountQuery = query(collection(db, "users"));
-        const unsubscribeUsersCount = onSnapshot(usersCountQuery, (snapshot) => {
-            setTotalUsers(snapshot.size);
+        // Fetch pending deposits
+        const depositsQuery = query(collection(db, "transactions"), where("status", "==", "Pending"), where("type", "==", "deposit"), orderBy("date", "desc"));
+        const unsubscribeDeposits = onSnapshot(depositsQuery, async (snapshot) => {
+            const depositsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+            
+            // Fetch user names for each deposit
+            const depositsWithUserNames = await Promise.all(
+                depositsData.map(async (deposit) => {
+                    const userDocRef = doc(db, 'users', deposit.userId);
+                    const userDoc = await getDoc(userDocRef);
+                    const userName = userDoc.exists() ? userDoc.data().inGameName : 'Unknown User';
+                    return { ...deposit, userName };
+                })
+            );
+
+            setPendingDeposits(depositsWithUserNames);
         });
 
 
         // Cleanup listeners
         return () => {
-            unsubscribeTransactions();
             unsubscribeTournaments();
-            unsubscribeUsersCount();
+            unsubscribeDeposits();
         };
     }, [isAdmin, user]);
 
@@ -550,9 +569,38 @@ export default function AdminPage() {
         handleSearchUsers(debouncedSearchTerm);
     }, [debouncedSearchTerm, handleSearchUsers]);
     
-    const [totalUsers, setTotalUsers] = useState(0);
-    const totalDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
-    const pendingDeposits = transactions.filter(t => t.type === 'deposit' && t.status === 'Pending').length;
+    const handleTransactionUpdate = async (
+        transactionId: string, 
+        newStatus: 'Completed' | 'Failed', 
+        userId: string, 
+        amount: number
+    ) => {
+        if (!user) return;
+        
+        setActionLoading(prev => ({...prev, [transactionId]: true}));
+        try {
+            const idToken = await user.getIdToken();
+            const result = await updateTransaction(transactionId, newStatus, userId, amount, idToken);
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: `Transaction has been ${newStatus === 'Completed' ? 'approved' : 'rejected'}.`
+                });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            console.error('Failed to update transaction:', error);
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to update transaction.',
+                variant: 'destructive'
+            });
+        } finally {
+            setActionLoading(prev => ({...prev, [transactionId]: false}));
+        }
+    }
+
 
     if (loading) {
         return (
@@ -577,47 +625,75 @@ export default function AdminPage() {
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
             <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
-            
-            {dataLoading ? (
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Skeleton className="h-28" />
-                    <Skeleton className="h-28" />
-                    <Skeleton className="h-28" />
-                </div>
-            ) : (
-                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{totalUsers}</div>
-                            <p className="text-xs text-muted-foreground">All registered users</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">₹{totalDeposits.toFixed(2)}</div>
-                            <p className="text-xs text-muted-foreground">Completed deposits</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
-                            <Activity className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{pendingDeposits}</div>
-                            <p className="text-xs text-muted-foreground">Pending deposit requests</p>
-                        </CardContent>
-                    </Card>
-                </section>
-            )}
+
+            <section>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Pending Deposit Requests</CardTitle>
+                        <CardDescription>Review and process all pending user deposit requests.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {dataLoading ? (
+                             <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : (
+                             <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>User</TableHead>
+                                            <TableHead>Amount</TableHead>
+                                            <TableHead>Transaction ID</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {pendingDeposits.length > 0 ? (
+                                            pendingDeposits.map(deposit => (
+                                            <TableRow key={deposit.id}>
+                                                <TableCell className="font-medium">{deposit.userName}</TableCell>
+                                                <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
+                                                <TableCell>{formatDate(deposit.date)}</TableCell>
+                                                <TableCell className="text-right space-x-2">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="text-green-500 hover:text-green-600"
+                                                        onClick={() => handleTransactionUpdate(deposit.id, 'Completed', deposit.userId, deposit.amount)}
+                                                        disabled={actionLoading[deposit.id]}
+                                                    >
+                                                        <CheckCircle className="h-5 w-5" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="text-red-500 hover:text-red-600"
+                                                        onClick={() => handleTransactionUpdate(deposit.id, 'Failed', deposit.userId, deposit.amount)}
+                                                        disabled={actionLoading[deposit.id]}
+                                                    >
+                                                        <XCircle className="h-5 w-5" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-24 text-center">
+                                                    No pending deposit requests.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </section>
 
             <section>
                 <Card>
@@ -745,4 +821,3 @@ export default function AdminPage() {
         </div>
     );
 }
-    

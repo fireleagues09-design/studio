@@ -4,6 +4,7 @@
 import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { User } from '@/lib/mock-data';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 async function verifyAdmin(idToken: string): Promise<boolean> {
     try {
@@ -139,6 +140,46 @@ export async function deleteSlider(
     } catch (error: any) {
         console.error("Error deleting slider on server:", error);
         return { success: false, message: error.message || "Failed to delete slider on server."};
+    }
+}
+
+
+export async function updateTransaction(
+    transactionId: string, 
+    newStatus: 'Completed' | 'Failed',
+    userId: string,
+    amount: number,
+    idToken: string
+): Promise<{ success: boolean, message: string }> {
+
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: 'Permission denied. User is not an admin.' };
+    }
+
+    const transactionRef = db.collection('transactions').doc(transactionId);
+    const userRef = db.collection('users').doc(userId);
+
+    try {
+        if (newStatus === 'Completed') {
+            // Use a transaction to ensure atomicity
+            await db.runTransaction(async (t) => {
+                const userDoc = await t.get(userRef);
+                if (!userDoc.exists) {
+                    throw new Error("User for this transaction not found.");
+                }
+                t.update(transactionRef, { status: newStatus });
+                t.update(userRef, { 'wallet.deposit': FieldValue.increment(amount) });
+            });
+        } else { // For 'Failed' or any other status, just update the transaction
+            await transactionRef.update({ status: newStatus });
+        }
+
+        return { success: true, message: `Transaction ${transactionId} updated to ${newStatus}.` };
+
+    } catch (error: any) {
+        console.error(`Error updating transaction ${transactionId}:`, error);
+        return { success: false, message: error.message || "An unknown error occurred."};
     }
 }
 
