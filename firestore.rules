@@ -1,32 +1,99 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    function isAdmin(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId)) &&
-             get(/databases/$(database)/documents/users/$(userId)).data.isAdmin == true;
+    
+    // Helper function to check if the current user is an admin.
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      // A user can get their own profile, or an admin can get any profile.
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
 
-      // Allow users to read and write to their own teams subcollection
+      // Only admins can list all users.
+      allow list: if isAdmin();
+
+      // A user can update their own inGameName.
+      // This rule is specific and prevents other fields from being changed by the user.
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && request.resource.data.keys().hasOnly(['inGameName']);
+
+      // A logged-in user can create their own profile document.
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Rules for the 'teams' subcollection within a user document.
       match /teams/{teamId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // A user can read their own teams. Admins can read any.
+        allow read: if request.auth != null;
+
+        // A user can create or delete their own team documents.
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+
+        // A user can update their team members or category.
+        allow update: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.resource.data.diff(resource.data).changedKeys()
+                            .hasOnly(['members', 'category']);
+        
+        // Admins have full access to manage any user's teams.
+        allow read, write, list: if isAdmin();
       }
     }
-    
+
+    // Rules for the 'sliders' collection
+    match /sliders/{sliderId} {
+      // Anyone can view sliders.
+      allow read: if true;
+      // Only admins can create, update, or delete sliders.
+      allow write: if isAdmin();
+    }
+
+    // Rules for the 'banners' collection
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Rules for the 'settings' collection
+    match /settings/{settingId} {
+      // Only admins can manage settings.
+      allow read, write: if isAdmin();
+    }
+
+    // Rules for the 'tournaments' collection
     match /tournaments/{tournamentId} {
+      // Anyone can read and list tournaments.
       allow read, list: if true;
-      allow create, delete: if request.auth != null && isAdmin(request.auth.uid);
-      
-      // Allow authenticated users to update only specific fields for registration
-      allow update: if request.auth != null &&
-        request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['slotsFilled', 'registeredPlayers']);
+
+      // Only admins can create, update, or delete tournaments.
+      allow write: if isAdmin();
+
+      // Rules for the 'registrations' subcollection within a tournament.
+      match /registrations/{userId} {
+        // A user can create their own registration.
+        allow create: if request.auth != null && request.auth.uid == userId;
+
+        // Only admins can read, list, or delete registrations.
+        allow read, list, delete: if isAdmin();
+      }
+    }
+
+    // Rules for the 'transactions' collection (covers deposits, withdrawals, etc.)
+    match /transactions/{transactionId} {
+      // A user can create their own transaction (e.g., a deposit or withdrawal request).
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // A user can read their own transactions, or an admin can read any.
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can list, update (approve/reject), or delete transactions.
+      allow list, write: if isAdmin();
     }
   }
 }
