@@ -8,7 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy } from 'lucide-react';
+import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requestWithdrawal } from './actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 type UserProfile = {
@@ -201,11 +202,17 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
             toast({ title: 'Error', description: 'You must be logged in.', variant: 'destructive' });
             return;
         }
-        if (!amount || Number(amount) <= 0) {
-            toast({ title: 'Error', description: 'Please enter a valid amount.', variant: 'destructive' });
+
+        const withdrawalAmount = Number(amount);
+        if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+            toast({ title: 'Error', description: 'Please enter a valid withdrawal amount.', variant: 'destructive' });
             return;
         }
-        if (Number(amount) > winnings) {
+        if (withdrawalAmount < 30 || withdrawalAmount > 30000) {
+            toast({ title: 'Error', description: 'Withdrawal amount must be between ₹30 and ₹30,000.', variant: 'destructive' });
+            return;
+        }
+        if (withdrawalAmount > winnings) {
              toast({ title: 'Error', description: 'Withdrawal amount cannot exceed your winnings balance.', variant: 'destructive' });
             return;
         }
@@ -275,7 +282,15 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                         Request a withdrawal to your bank account or UPI. Amount will be deducted from your winnings.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                
+                 <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                        Withdrawals are limited to a minimum of ₹30 and a maximum of ₹30,000 per transaction, with up to 7 requests per day.
+                    </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-4 pt-2">
                     <div className="grid gap-2">
                         <Label htmlFor="withdraw-amount">Amount to Withdraw (INR)</Label>
                         <Input
@@ -603,5 +618,3 @@ export default function WalletPage() {
         </div>
     );
 }
-
-    
