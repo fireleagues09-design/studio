@@ -24,27 +24,31 @@ type HomeSliderProps = {
     isAuthenticated: boolean;
 };
 
-const AUTHENTICATED_SLIDERS: Slider[] = [
-    { id: 'auth1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBermuda_App_Splash.webp?alt=media&token=0bdaa681-9730-4c12-be7c-053d235e9c09' },
-    { id: 'auth2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2Fdownload.jpg?alt=media&token=30f25368-ec19-4671-9e2d-5cb147b6d5bc' }
-];
-
-const GUEST_SLIDERS: Slider[] = [
-    { id: 'guest1', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FA%20R%20A%20G%20AT%20O.jpeg?alt=media&token=176f0a74-a381-4f91-ae32-1172c0190ece' },
-    { id: 'guest2', url: 'https://firebasestorage.googleapis.com/v0/b/fireleagues-drrjw.firebasestorage.app/o/Sliders%2FBlack%20and%20White%20PC%20Wallpaper%204K.jpeg?alt=media&token=aa55fbd2-5647-435b-8574-8d5aabc866de' }
-];
-
-
 export function HomeSlider({ isAuthenticated }: HomeSliderProps) {
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    // Use different sliders based on authentication status
-    setSliders(isAuthenticated ? AUTHENTICATED_SLIDERS : GUEST_SLIDERS);
-    setLoading(false);
-  }, [isAuthenticated]);
+    const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const sliderData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Slider[];
+        setSliders(sliderData);
+        setLoading(false);
+      },
+      error => {
+        console.error('Error fetching sliders: ', error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
 
   if (loading) {
