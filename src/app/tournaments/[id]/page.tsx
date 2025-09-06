@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -25,7 +23,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, getDoc, increment } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,8 +81,8 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
              console.error("Error during solo registration:", error);
              toast({
                 title: "Registration Error",
-                description: error.message || "An error occurred. Please try again.",
-                variant: "destructive"
+                description: error.message || 'An unknown error occurred during registration.',
+                variant: 'destructive'
             });
         } finally {
             setLoading(false);
@@ -240,6 +238,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [isRegistered, setIsRegistered] = useState(false);
+    const [showCredentials, setShowCredentials] = useState(false);
     
     const { toast } = useToast();
     const router = useRouter();
@@ -346,8 +345,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             );
         }
     
-    const canSeeCredentials = isRegistered && (status === 'Ongoing' || status === 'Upcoming') && roomId;
-
         const buttonState = getButtonState({
             isRegistered,
             isFilled: slotsFilled >= slots,
@@ -510,7 +507,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             </div>
           </Card>
           
-          {canSeeCredentials && <RoomCredentials roomId={roomId!} roomPassword={roomPassword} />}
+          {showCredentials && <RoomCredentials roomId={roomId!} roomPassword={roomPassword} />}
 
           <Card>
             <CardHeader>
