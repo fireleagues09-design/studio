@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit, getDocs } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit, getDocs,getCountFromServer } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -472,6 +472,10 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
+
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [totalTournaments, setTotalTournaments] = useState(0);
+
     const router = useRouter();
     const { toast } = useToast();
     const [userSearchTerm, setUserSearchTerm] = useState('');
@@ -509,14 +513,23 @@ export default function AdminPage() {
 
         setDataLoading(true);
         
-        const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
-        const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
+        const tournamentsRef = collection(db, "tournaments");
+        const tournamentsQuery = query(tournamentsRef, orderBy("createdAt", "desc"));
+        const unsubscribeTournaments = onSnapshot(tournamentsQuery, async (snapshot) => {
             const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentType));
             setTournaments(tournamentsData);
-            setDataLoading(false); // Only set to false after the main data loads
+            const countSnapshot = await getCountFromServer(tournamentsRef);
+            setTotalTournaments(countSnapshot.data().count);
+            setDataLoading(false);
         }, (error) => {
             console.error("Error fetching tournaments:", error)
             setDataLoading(false);
+        });
+
+        const usersRef = collection(db, "users");
+        const unsubscribeUsers = onSnapshot(usersRef, async () => {
+             const countSnapshot = await getCountFromServer(usersRef);
+             setTotalUsers(countSnapshot.data().count);
         });
 
         // Fetch pending deposits
@@ -541,6 +554,7 @@ export default function AdminPage() {
         // Cleanup listeners
         return () => {
             unsubscribeTournaments();
+            unsubscribeUsers();
             unsubscribeDeposits();
         };
     }, [isAdmin, user]);
@@ -625,6 +639,41 @@ export default function AdminPage() {
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
             <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+
+             <section>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{totalUsers}</div>
+                            <p className="text-xs text-muted-foreground">Registered users on the platform</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
+                            <TrophyIcon className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                             <div className="text-2xl font-bold">{totalTournaments}</div>
+                            <p className="text-xs text-muted-foreground">Tournaments created so far</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Pending Deposits</CardTitle>
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                           <div className="text-2xl font-bold">{pendingDeposits.length}</div>
+                           <p className="text-xs text-muted-foreground">Requests awaiting your action</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </section>
 
             <section>
                 <Card>
