@@ -11,12 +11,12 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
         const uid = decodedToken.uid;
         const userDoc = await db.collection('users').doc(uid).get();
 
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
             console.error(`Admin verification failed: User document not found for UID: ${uid}`);
             return false;
         }
         
-        const isAdmin = userDoc.data()?.isAdmin === true;
+        const isAdmin = !!userDoc.data()?.isAdmin;
         if (!isAdmin) {
             console.error(`Admin verification failed: User ${uid} does not have 'isAdmin' flag set to true.`);
         }
