@@ -6,16 +6,19 @@ import { z } from 'zod';
 import { db } from '@/lib/firebase-admin';
 import { OngoingTournamentsSchema } from '@/ai/schemas/tournaments';
 
-export const getOngoingTournaments = ai.defineTool(
+export const getTournamentsByStatus = ai.defineTool(
   {
-    name: 'getOngoingTournaments',
-    description: 'Get a list of all tournaments that are currently ongoing.',
+    name: 'getTournamentsByStatus',
+    description: 'Get a list of all tournaments with a given status (e.g., Upcoming, Ongoing, Finished).',
+    inputSchema: z.object({
+        status: z.enum(['Upcoming', 'Ongoing', 'Finished']).describe("The status of the tournaments to fetch.")
+    }),
     outputSchema: OngoingTournamentsSchema,
   },
-  async () => {
+  async ({ status }) => {
     try {
       const tournamentsRef = db.collection('tournaments');
-      const snapshot = await tournamentsRef.where('status', '==', 'Ongoing').get();
+      const snapshot = await tournamentsRef.where('status', '==', status).get();
       
       if (snapshot.empty) {
         return {
@@ -33,7 +36,7 @@ export const getOngoingTournaments = ai.defineTool(
       
       return { tournaments };
     } catch (error) {
-      console.error('Error fetching ongoing tournaments:', error);
+      console.error(`Error fetching ${status} tournaments:`, error);
       // Let the LLM know something went wrong
       return { tournaments: [], error: 'Failed to fetch tournament data.' };
     }
