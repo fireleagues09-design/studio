@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Loader2 } from 'lucide-react';
+import { BrainCircuit, Send, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from './ui/card';
 import { Input } from './ui/input';
@@ -86,7 +86,7 @@ export function Reze() {
         <Card className="w-full max-w-2xl mx-auto shadow-2xl shadow-primary/10">
             <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                    <Bot className="h-8 w-8 text-primary" />
+                    <BrainCircuit className="h-8 w-8 text-primary" />
                     <span className='text-2xl'>Talk to Reze</span>
                 </CardTitle>
                 <CardDescription>Your AI assistant for all things FireLeagues.</CardDescription>
@@ -97,7 +97,7 @@ export function Reze() {
                     <div className="space-y-4">
                         {messages.map((msg, index) => (
                             <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                                {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
+                                {msg.role === 'model' && <BrainCircuit className="h-6 w-6 text-primary flex-shrink-0" />}
                                 <div className={cn('max-w-[80%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
                                     {msg.content}
                                 </div>
@@ -105,7 +105,7 @@ export function Reze() {
                         ))}
                         {loading && (
                             <div className="flex items-end gap-2 justify-start">
-                                <Bot className="h-6 w-6 text-primary flex-shrink-0" />
+                                <BrainCircuit className="h-6 w-6 text-primary flex-shrink-0" />
                                 <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     <span className="text-sm text-muted-foreground">Reze is thinking...</span>
