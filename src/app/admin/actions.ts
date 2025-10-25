@@ -29,12 +29,13 @@ export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
-     const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
-    }
-
     try {
+        // Temporarily removed admin verification as requested
+        // const isAdmin = await verifyAdmin(idToken);
+        // if (!isAdmin) {
+        //     return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+        // }
+
         if (!searchTerm) {
              const recentUsersQuery = db.collection('users').orderBy('registeredOn', 'desc').limit(10);
              const recentUsersSnapshot = await recentUsersQuery.get();
