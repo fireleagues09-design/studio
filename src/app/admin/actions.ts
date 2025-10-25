@@ -11,12 +11,14 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
         const uid = decodedToken.uid;
         const userDoc = await db.collection('users').doc(uid).get();
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists) {
             console.error(`Admin verification failed: User document not found for UID: ${uid}`);
             return false;
         }
         
-        const isAdmin = userDoc.data()?.isAdmin === true;
+        const userData = userDoc.data();
+        const isAdmin = userData?.isAdmin === true;
+
         if (!isAdmin) {
             console.error(`Admin verification failed: User ${uid} does not have 'isAdmin' flag set to true.`);
         }
@@ -178,4 +180,3 @@ export async function updateTransaction(
         return { success: false, message: error.message || "An unknown error occurred."};
     }
 }
-
