@@ -32,7 +32,9 @@ import SliderAdmin from '@/components/SliderAdmin';
 type UserData = {
     id: string;
     inGameName: string;
+    inGameUid: string;
     phone: string;
+    email: string;
     registeredOn: any;
     isAdmin?: boolean;
 };
@@ -886,7 +888,7 @@ export default function AdminPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>User Management</CardTitle>
-                            <CardDescription>Search for users by name, UID, or phone number.</CardDescription>
+                            <CardDescription>Search for users by name, UID, phone number, or email.</CardDescription>
                             <div className="relative mt-4">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
@@ -910,8 +912,9 @@ export default function AdminPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>In-Game Name</TableHead>
+                                                <TableHead>Email</TableHead>
                                                 <TableHead>Phone</TableHead>
-                                                <TableHead>Registered</TableHead>
+                                                <TableHead>In-Game UID</TableHead>
                                                 <TableHead className="text-right">Admin</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -920,8 +923,9 @@ export default function AdminPage() {
                                                 users.map(user => (
                                                     <TableRow key={user.id}>
                                                         <TableCell className="font-medium">{user.inGameName}</TableCell>
+                                                        <TableCell>{user.email}</TableCell>
                                                         <TableCell>{user.phone}</TableCell>
-                                                        <TableCell>{formatDate(user.registeredOn)}</TableCell>
+                                                        <TableCell>{user.inGameUid}</TableCell>
                                                         <TableCell className="text-right">
                                                             {user.isAdmin && <Badge>Admin</Badge>}
                                                         </TableCell>
@@ -929,8 +933,8 @@ export default function AdminPage() {
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="h-24 text-center">
-                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results."}
+                                                    <TableCell colSpan={5} className="h-24 text-center">
+                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results, or see recent users below."}
                                                     </TableCell>
                                                 </TableRow>
                                             )}

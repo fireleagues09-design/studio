@@ -5,31 +5,55 @@ import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type { User } from '@/lib/mock-data';
 
+async function verifyAdmin(idToken: string): Promise<boolean> {
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        
+        if (!userDoc.exists) {
+            return false;
+        }
+        
+        const userData = userDoc.data();
+        return userData?.isAdmin === true;
+
+    } catch (error) {
+        console.error("Error verifying admin token:", error);
+        return false;
+    }
+}
+
+
 export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
-    try {
-        // Always filter for admin users first.
-        const adminUsersQuery = db.collection('users').where('isAdmin', '==', true);
-        const adminUsersSnapshot = await adminUsersQuery.get();
-        const adminUsers = adminUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+     const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
 
+    try {
         if (!searchTerm) {
-            // Return recent admin users if search term is empty
-            const recentAdminUsers = adminUsers
-                .sort((a, b) => (b.registeredOn?.seconds || 0) - (a.registeredOn?.seconds || 0))
-                .slice(0, 10);
-            return { success: true, users: recentAdminUsers };
+             const recentUsersQuery = db.collection('users').orderBy('registeredOn', 'desc').limit(10);
+             const recentUsersSnapshot = await recentUsersQuery.get();
+             const recentUsers = recentUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             return { success: true, users: recentUsers };
         }
         
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
 
-        const filteredUsers = adminUsers.filter(user => {
+        // This is not efficient for large datasets, but works for smaller ones.
+        // For production, consider a dedicated search service like Algolia or Elasticsearch.
+        const usersSnapshot = await db.collection('users').limit(1000).get();
+        const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const filteredUsers = allUsers.filter(user => {
             const nameMatch = user.inGameName?.toLowerCase().includes(lowerCaseSearchTerm);
             const uidMatch = user.inGameUid?.toLowerCase().includes(lowerCaseSearchTerm);
             const phoneMatch = user.phone?.toLowerCase().includes(lowerCaseSearchTerm);
-            return nameMatch || uidMatch || phoneMatch;
+            const emailMatch = user.email?.toLowerCase().includes(lowerCaseSearchTerm);
+            return nameMatch || uidMatch || phoneMatch || emailMatch;
         });
 
         return { success: true, users: filteredUsers.slice(0, 50) }; // Limit results
@@ -47,7 +71,10 @@ export async function uploadSlider(
   fileName: string,
   idToken: string
 ): Promise<{ success: boolean; message: string }> {
-
+   const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
   try {
     const fileBuffer = Buffer.from(base64Data.split(',')[1], 'base64');
     const storagePath = `sliders/${Date.now()}-${fileName}`;
@@ -82,6 +109,10 @@ export async function deleteSlider(
     storagePath: string,
     idToken: string
 ): Promise<{ success: boolean, message: string}> {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
 
     try {
         // Delete from Storage
@@ -107,6 +138,10 @@ export async function updateTransaction(
     type: 'deposit' | 'withdrawal',
     idToken: string
 ): Promise<{ success: boolean, message: string }> {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
 
     const transactionRef = db.collection('transactions').doc(transactionId);
     const userRef = db.collection('users').doc(userId);
