@@ -1,10 +1,6 @@
 
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
-import { config } from 'dotenv';
-
-// Load environment variables from .env file
-config();
 
 let app: admin.app.App;
 let auth: admin.auth.Auth;
