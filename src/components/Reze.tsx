@@ -2,13 +2,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Loader2 } from 'lucide-react';
+import { Bot, Send, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
 import { askReze } from '@/ai/flows/reze-flow';
 import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 type Message = {
     role: 'user' | 'model';
@@ -16,11 +17,35 @@ type Message = {
 };
 
 export function Reze() {
-    const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+     useEffect(() => {
+        // Initial greeting from Reze
+        const getInitialGreeting = async () => {
+            setLoading(true);
+            try {
+                const response = await askReze({
+                    history: [],
+                    question: "Introduce yourself.",
+                });
+                 const modelMessage: Message = { role: 'model', content: response };
+                 setMessages([modelMessage]);
+            } catch (error) {
+                console.error('Reze AI error on init:', error);
+                const errorMessage: Message = { role: 'model', content: "Hi! I'm Reze, your support assistant. I seem to be having a little trouble connecting right now, but I'll do my best to help." };
+                setMessages([errorMessage]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        getInitialGreeting();
+
+    }, []);
+
 
     useEffect(() => {
         if (scrollAreaRef.current) {
@@ -32,17 +57,18 @@ export function Reze() {
     }, [messages]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || loading) return;
 
         const userMessage: Message = { role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
+        const currentInput = input;
         setInput('');
         setLoading(true);
 
         try {
             const response = await askReze({
                 history: messages,
-                question: input,
+                question: currentInput,
             });
             const modelMessage: Message = { role: 'model', content: response };
             setMessages(prev => [...prev, modelMessage]);
@@ -56,61 +82,54 @@ export function Reze() {
     };
 
     return (
-        <>
-            <div className={cn("fixed bottom-6 right-6 z-50 transition-transform duration-300", isOpen ? 'scale-0' : 'scale-100')}>
-                <Button onClick={() => setIsOpen(true)} size="icon" className="w-14 h-14 rounded-full shadow-lg">
-                    <Bot className="h-7 w-7" />
-                </Button>
-            </div>
-
-            <div className={cn("fixed bottom-6 right-6 z-50 transition-transform duration-300", !isOpen ? 'scale-0' : 'scale-100')}>
-                <Card className="w-80 h-[28rem] flex flex-col shadow-2xl">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                            <Bot className="h-6 w-6 text-primary" />
-                            Reze Support
-                        </CardTitle>
-                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-hidden p-0">
-                         <ScrollArea ref={scrollAreaRef} className="h-full p-6">
-                            <div className="space-y-4">
-                                {messages.map((msg, index) => (
-                                    <div key={index} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                                        <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                                            {msg.content}
-                                        </div>
-                                    </div>
-                                ))}
-                                {loading && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-muted rounded-lg px-3 py-2 flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            <span className="text-sm">Reze is thinking...</span>
-                                        </div>
-                                    </div>
-                                )}
+        <Card className="w-full max-w-3xl mx-auto shadow-2xl shadow-primary/10">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                    <Bot className="h-8 w-8 text-primary" />
+                    <span className='text-2xl'>Talk to Reze</span>
+                </CardTitle>
+                <CardDescription>Your AI assistant for all things FireLeagues.</CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="p-0">
+                 <ScrollArea ref={scrollAreaRef} className="h-80 p-6">
+                    <div className="space-y-4">
+                        {messages.map((msg, index) => (
+                            <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                                {msg.role === 'model' && <Bot className="h-6 w-6 text-primary flex-shrink-0" />}
+                                <div className={cn('max-w-[80%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+                                    {msg.content}
+                                </div>
                             </div>
-                        </ScrollArea>
-                    </CardContent>
-                    <CardFooter>
-                        <div className="flex w-full items-center space-x-2">
-                            <Input 
-                                placeholder="Ask Reze..." 
-                                value={input} 
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                                disabled={loading}
-                            />
-                            <Button onClick={handleSend} disabled={loading}>
-                                <Send className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </CardFooter>
-                </Card>
-            </div>
-        </>
+                        ))}
+                        {loading && (
+                            <div className="flex items-end gap-2 justify-start">
+                                <Bot className="h-6 w-6 text-primary flex-shrink-0" />
+                                <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Reze is thinking...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </CardContent>
+            <Separator />
+            <CardFooter className="p-4">
+                <div className="flex w-full items-center space-x-2">
+                    <Input 
+                        placeholder="Ask about tournaments, rules, or your account..." 
+                        value={input} 
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        disabled={loading}
+                    />
+                    <Button onClick={handleSend} disabled={loading || !input.trim()}>
+                        <Send className="h-4 w-4" />
+                        <span className="sr-only">Send</span>
+                    </Button>
+                </div>
+            </CardFooter>
+        </Card>
     );
 }

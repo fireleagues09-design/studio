@@ -16,7 +16,7 @@ export async function askReze(input: RezeInput): Promise<string> {
                 prompt: `
                     You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
                     Your goal is to answer user questions about the platform, tournaments, rules, and provide support.
-                    Be concise, friendly, and always stay on topic.
+                    Be concise, friendly, and always stay on topic. Start the conversation by introducing yourself and asking how you can help.
                     
                     Here is the conversation history:
                     ${prompt.history.map(h => `${h.role}: ${h.content}`).join('\n')}
@@ -26,7 +26,7 @@ export async function askReze(input: RezeInput): Promise<string> {
                 history: prompt.history,
             });
 
-            return llmResponse.text();
+            return llmResponse.text;
         }
     );
 

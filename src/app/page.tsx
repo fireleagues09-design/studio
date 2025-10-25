@@ -52,9 +52,9 @@ export default function Home() {
   const viewAllLink = !loadingAuth && user ? "/tournaments" : "/register";
 
   return (
-    <div className="flex flex-col gap-8 py-8 md:py-12">
+    <div className="flex flex-col gap-8 md:gap-12">
       
-      <section className="container mx-auto px-4">
+      <section className="container mx-auto px-4 pt-8 md:pt-12">
         <HomeSlider isAuthenticated={!!user} />
       </section>
 
@@ -66,13 +66,14 @@ export default function Home() {
                 </Button>
                 <Button asChild>
                     <Link href="/register">Register</Link>
+
                 </Button>
             </div>
         </section>
       )}
 
 
-      <main className="container mx-auto px-4 flex flex-col gap-8">
+      <main className="container mx-auto px-4 flex flex-col gap-8 md:gap-12">
         
         <section>
           <div className="flex justify-between items-center mb-4">
@@ -109,9 +110,12 @@ export default function Home() {
           }
 
         </section>
+        
+        <section className="pb-8 md:pb-12">
+          <Reze />
+        </section>
 
       </main>
-      <Reze />
     </div>
   );
 }
