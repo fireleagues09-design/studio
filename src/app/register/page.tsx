@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -17,9 +17,8 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, UserCredential } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, UserCredential } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
-import { GoogleLogo } from "@/components/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -46,26 +45,8 @@ export default function RegisterPage() {
   const [duoMembers, setDuoMembers] = useState<TeamMember[]>(Array(1).fill({ inGameName: '', inGameUid: '' }));
   const [squadMembers, setSquadMembers] = useState<TeamMember[]>(Array(3).fill({ inGameName: '', inGameUid: '' }));
 
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-        setLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                // User signed up with Google, now we need to save their info
-                await handleGoogleSignUp(result);
-            }
-        } catch (error: any) {
-            console.error("Google sign-up redirect error:", error);
-            toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    };
-    handleRedirectResult();
-  }, [toast, router]);
-
   const handleGoogleSignUp = async (userCredential: UserCredential) => {
+    setLoading(true);
     const user = userCredential.user;
     const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
@@ -73,6 +54,7 @@ export default function RegisterPage() {
     if (userDoc.exists()) {
         toast({ title: "Registration Error", description: "This account is already registered. Please log in.", variant: "destructive" });
         router.push('/login');
+        setLoading(false);
         return;
     }
     
@@ -100,6 +82,8 @@ export default function RegisterPage() {
     } catch(error: any) {
         console.error("Error saving Google user:", error);
         toast({ title: "Registration Error", description: error.message, variant: 'destructive' });
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -263,7 +247,17 @@ export default function RegisterPage() {
 
     const startGoogleSignUp = async () => {
         setLoading(true);
-        await signInWithRedirect(auth, googleProvider);
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            await handleGoogleSignUp(result);
+        } catch (error: any) {
+            console.error("Google sign up error:", error);
+            if (error.code !== 'auth/popup-closed-by-user') {
+                toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
   return (
@@ -289,7 +283,7 @@ export default function RegisterPage() {
                     </div>
 
                     <Button variant="outline" className="w-full" onClick={startGoogleSignUp} disabled={loading}>
-                        <GoogleLogo className="mr-2 h-4 w-4" />
+                        
                         {loading ? 'Processing...' : 'Sign up with Google'}
                     </Button>
                     

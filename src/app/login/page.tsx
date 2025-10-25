@@ -16,10 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, UserCredential } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, UserCredential } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "@/components/ui/separator";
-import { GoogleLogo } from "@/components/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -37,25 +36,6 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-        setLoading(true);
-        try {
-            const result = await getRedirectResult(auth);
-            if (result) {
-                await handleAuthSuccess(result);
-            }
-        } catch (error: any) {
-            console.error("Google login redirect error:", error);
-            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    };
-    handleRedirectResult();
-  }, [toast, router]);
-
 
   const handleAuthSuccess = async (userCredential: UserCredential) => {
     const user = userCredential.user;
@@ -143,7 +123,17 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
       setLoading(true);
-      await signInWithRedirect(auth, googleProvider);
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        await handleAuthSuccess(result);
+      } catch (error: any) {
+        console.error("Google login error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
+        }
+      } finally {
+        setLoading(false);
+      }
   }
 
 
@@ -194,8 +184,8 @@ export default function LoginPage() {
                     </div>
                 </div>
                 <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-                     <GoogleLogo className="mr-2 h-4 w-4" />
-                    {loading ? 'Redirecting...' : 'Login with Google'}
+                    
+                    {loading ? 'Processing...' : 'Login with Google'}
                 </Button>
             </>
           )}
