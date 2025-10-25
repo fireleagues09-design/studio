@@ -7,9 +7,20 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
         const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-        if (!userDoc.exists) return false;
+        
+        if (!userDoc.exists) {
+            console.warn(`Admin verification failed: User document not found for UID ${decodedToken.uid}`);
+            return false;
+        }
+        
         const userData = userDoc.data();
-        return userData?.isAdmin === true;
+        if (userData && userData.isAdmin === true) {
+            return true;
+        }
+
+        console.warn(`Admin verification failed: User ${decodedToken.uid} is not an admin.`);
+        return false;
+
     } catch (error) {
         console.error("Error verifying admin token:", error);
         return false;
