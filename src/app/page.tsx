@@ -13,6 +13,7 @@ import { collection, query, limit, onSnapshot, orderBy, where } from 'firebase/f
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeSlider } from "@/components/HomeSlider";
+import { Reze } from "@/components/Reze";
 
 export default function Home() {
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
@@ -110,6 +111,7 @@ export default function Home() {
         </section>
 
       </main>
+      <Reze />
     </div>
   );
 }
