@@ -3,37 +3,24 @@
 
 import { auth, db } from '@/lib/firebase-admin';
 
-async function verifyAdmin(idToken: string): Promise<boolean> {
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-        
-        if (!userDoc.exists) {
-            return false;
-        }
-        
-        const userData = userDoc.data();
-        if (userData && userData.isAdmin === true) {
-            return true;
-        }
-
-        return false;
-
-    } catch (error) {
-        console.error("Error verifying admin token:", error);
-        return false;
-    }
-}
-
 export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
     try {
-        const isAdmin = await verifyAdmin(idToken);
-        if (!isAdmin) {
-            return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+        // Admin verification removed as per user request.
+        // Any authenticated user can now search.
+        if (!idToken) {
+            return { success: false, message: "Authentication is required to search for users." };
         }
+        
+        // Verifying the token is still a good practice to ensure the user is logged in.
+        try {
+            await auth.verifyIdToken(idToken);
+        } catch (error) {
+             return { success: false, message: "Invalid authentication token." };
+        }
+
 
         if (!searchTerm) {
              const recentUsersQuery = db.collection('users').orderBy('registeredOn', 'desc').limit(10);
