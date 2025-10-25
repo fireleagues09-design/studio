@@ -13,12 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 
 
 // Add a global declaration for the confirmationResult
@@ -35,6 +37,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -202,6 +205,80 @@ export default function RegisterPage() {
       }
   };
 
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+
+    const isTeamInfoIncomplete = !duoTeamName || !squadTeamName || duoMembers.some(m => !m.inGameName || !m.inGameUid) || squadMembers.some(m => !m.inGameName || !m.inGameUid);
+    const nullValue = '\\\\\\\\\\\\';
+
+    if (isTeamInfoIncomplete) {
+        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." })
+    }
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        await signOut(auth);
+        toast({
+          title: 'Already Registered',
+          description: 'This Google account is already registered. Please log in.',
+          variant: 'destructive'
+        });
+        router.push('/login');
+        return;
+      }
+      
+      const userData = {
+        inGameName: user.displayName || inGameName || 'Player',
+        inGameUid: inGameUid, // Still required from user
+        phone: user.phoneNumber || '',
+        email: user.email!,
+        wallet: { deposit: 0, winning: 0, bonus: 0 },
+        duoTeam: {
+            name: isTeamInfoIncomplete ? nullValue : duoTeamName,
+            type: 'Duo',
+            members: isTeamInfoIncomplete ? Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }) : duoMembers
+        },
+        squadTeam: {
+            name: isTeamInfoIncomplete ? nullValue : squadTeamName,
+            type: 'Squad',
+            members: isTeamInfoIncomplete ? Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }) : squadMembers
+        },
+        registeredOn: serverTimestamp(),
+      };
+
+      if (!userData.inGameUid) {
+        toast({ title: "In-Game UID Required", description: "Please enter your In-Game UID before signing up with Google.", variant: "destructive" });
+        await signOut(auth); // Sign out if essential info is missing
+        setGoogleLoading(false);
+        return;
+      }
+
+      await setDoc(userDocRef, userData);
+
+      toast({
+        title: 'Success!',
+        description: 'Your account has been created successfully with Google.',
+      });
+      router.push('/');
+
+    } catch (error: any) {
+      console.error('Error during Google sign-up:', error);
+      toast({
+        title: 'Google Sign-Up Failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
        <div id="recaptcha-container"></div>
@@ -213,112 +290,142 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-                <Label htmlFor="in-game-uid">In-Game UID</Label>
-                <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
-            </div>
+            {!otpSent && (
+                <>
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <Separator />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Sign up with Phone</span>
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="in-game-uid">In-Game UID</Label>
+                        <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
+                    </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="in-game-name">In-Game Name</Label>
-              <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone Number</Label>
-               <div className="flex items-center">
-                    <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
-                    <Input id="phone" type="tel" placeholder="0000000000" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
+                    <div className="grid gap-2">
+                        <Label htmlFor="in-game-name">In-Game Name</Label>
+                        <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <div className="flex items-center">
+                            <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
+                            <Input id="phone" type="tel" placeholder="0000000000" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
+                        <div className="grid gap-2">
+                            <Label htmlFor="duo-team-name">Duo Team Name</Label>
+                            <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" disabled={otpSent} required/>
+                        </div>
+                        
+                        {Array.from({ length: 1 }).map((_, index) => (
+                        <div key={`duo-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
+                            <Label>Teammate {index + 1}</Label>
+                            <Input 
+                                    placeholder="In-Game Name" 
+                                    value={duoMembers[index]?.inGameName || ''} 
+                                    onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'duo')} 
+                                    required
+                                    disabled={otpSent}
+                                />
+                            <Input 
+                                    placeholder="In-Game UID" 
+                                    value={duoMembers[index]?.inGameUid || ''} 
+                                    onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'duo')} 
+                                    required
+                                    disabled={otpSent}
+                                />
+                        </div>
+                        ))}
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                        <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
+                        <div className="grid gap-2">
+                            <Label htmlFor="squad-team-name">Squad Team Name</Label>
+                            <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" disabled={otpSent} required/>
+                        </div>
+                        
+                        {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={`squad-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
+                            <Label>Teammate {index + 1}</Label>
+                            <Input 
+                                    placeholder="In-Game Name" 
+                                    value={squadMembers[index]?.inGameName || ''} 
+                                    onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'squad')} 
+                                    required
+                                    disabled={otpSent}
+                                />
+                            <Input 
+                                    placeholder="In-Game UID" 
+                                    value={squadMembers[index]?.inGameUid || ''} 
+                                    onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'squad')} 
+                                    required
+                                    disabled={otpSent}
+                                />
+                        </div>
+                        ))}
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                        <p className="text-xs text-center text-muted-foreground pt-2">
+                            if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
+                        </p>
+                        <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent || googleLoading} className="w-full mt-2">
+                            Null
+                        </Button>
+                    </div>
+                </>
+            )}
+
+            {otpSent && (
+                <div className="grid gap-2">
+                    <Label htmlFor="otp">One-Time Password (OTP)</Label>
+                    <Input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
+                </div>
+            )}
+
+            <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading || googleLoading}>
+                {loading ? 'Processing...' : (otpSent ? 'Create Account' : 'Send OTP & Register')}
+            </Button>
+
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                <Separator />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
                 </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
-                 <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
-                 <div className="grid gap-2">
-                    <Label htmlFor="duo-team-name">Duo Team Name</Label>
-                    <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" disabled={otpSent} required/>
-                </div>
-                 
-                {Array.from({ length: 1 }).map((_, index) => (
-                   <div key={`duo-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
-                       <Label>Teammate {index + 1}</Label>
-                       <Input 
-                            placeholder="In-Game Name" 
-                            value={duoMembers[index]?.inGameName || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'duo')} 
-                            required
-                            disabled={otpSent}
-                        />
-                       <Input 
-                            placeholder="In-Game UID" 
-                            value={duoMembers[index]?.inGameUid || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'duo')} 
-                            required
-                            disabled={otpSent}
-                        />
-                   </div>
-                ))}
-            </div>
-
-            <div className="space-y-4 pt-4 border-t">
-                 <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
-                 <div className="grid gap-2">
-                    <Label htmlFor="squad-team-name">Squad Team Name</Label>
-                    <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" disabled={otpSent} required/>
-                </div>
-                
-                {Array.from({ length: 3 }).map((_, index) => (
-                   <div key={`squad-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
-                       <Label>Teammate {index + 1}</Label>
-                       <Input 
-                            placeholder="In-Game Name" 
-                            value={squadMembers[index]?.inGameName || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'squad')} 
-                            required
-                            disabled={otpSent}
-                        />
-                       <Input 
-                            placeholder="In-Game UID" 
-                            value={squadMembers[index]?.inGameUid || ''} 
-                            onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'squad')} 
-                            required
-                            disabled={otpSent}
-                        />
-                   </div>
-                ))}
-            </div>
-            
-            <div className="pt-4 border-t">
-                 <p className="text-xs text-center text-muted-foreground pt-2">
-                    if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
-                 </p>
-                 <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent} className="w-full mt-2">
-                    Null
-                 </Button>
-            </div>
-
-
-          {otpSent && (
             <div className="grid gap-2">
-              <Label htmlFor="otp">One-Time Password (OTP)</Label>
-              <Input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
+                <Label htmlFor="in-game-uid-google">In-Game UID (Required for Google Sign-Up)</Label>
+                <Input id="in-game-uid-google" placeholder="Enter UID before using Google" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent || googleLoading}/>
             </div>
-          )}
 
-          <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : (otpSent ? 'Create Account' : 'Send OTP')}
-          </Button>
+            <Button variant="outline" onClick={handleGoogleSignUp} disabled={loading || googleLoading || !inGameUid}>
+                {googleLoading ? 'Signing up...' : <><Chrome className="mr-2 h-4 w-4" /> Sign Up with Google</>}
+            </Button>
 
-           <div className="mt-4 text-center text-sm">
-            By signing up, you agree to our{' '}
-            <Link href="/terms" className="underline">
-                Terms and Conditions
-            </Link>.
-          </div>
-          <div className="mt-2 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="underline">
-              Login
-            </Link>
-          </div>
+
+            <div className="mt-4 text-center text-sm">
+                By signing up, you agree to our{' '}
+                <Link href="/terms" className="underline">
+                    Terms and Conditions
+                </Link>.
+            </div>
+            <div className="mt-2 text-center text-sm">
+                Already have an account?{" "}
+                <Link href="/login" className="underline">
+                    Login
+                </Link>
+            </div>
         </CardContent>
       </Card>
     </div>

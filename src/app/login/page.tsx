@@ -15,10 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup } from "firebase/auth";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 
 
 // Add a global declaration for the confirmationResult
@@ -33,6 +34,7 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -119,6 +121,39 @@ export default function LoginPage() {
       }
   };
 
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        toast({ title: 'Success', description: 'Logged in successfully!' });
+        router.push('/');
+      } else {
+        await signOut(auth);
+        toast({
+          title: 'Not Registered',
+          description: 'This Google account is not registered. Please sign up first.',
+          variant: 'destructive',
+        });
+        router.push('/register');
+      }
+    } catch (error: any) {
+      console.error('Error during Google login:', error);
+      toast({
+        title: 'Google Login Failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
@@ -127,7 +162,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your phone number to receive an OTP."}
+            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your phone number or sign in with Google."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -146,7 +181,7 @@ export default function LoginPage() {
             </div>
           )}
           
-          <Button onClick={otpSent ? handleVerifyOtp : handleSendOtp} className="w-full" disabled={loading}>
+          <Button onClick={otpSent ? handleVerifyOtp : handleSendOtp} className="w-full" disabled={loading || googleLoading}>
             {loading ? 'Processing...' : (otpSent ? 'Verify OTP' : 'Send OTP')}
           </Button>
 
@@ -155,6 +190,19 @@ export default function LoginPage() {
                 Change phone number
             </Button>
           )}
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+           <Button variant="outline" onClick={handleGoogleLogin} disabled={loading || googleLoading}>
+            {googleLoading ? 'Signing in...' : <><Chrome className="mr-2 h-4 w-4" /> Google</>}
+          </Button>
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
