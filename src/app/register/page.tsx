@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,14 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth, googleProvider } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
-import { Separator } from "@/components/ui/separator";
-import { GoogleLogo } from "@/components/icons/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -28,14 +26,6 @@ declare global {
     interface Window {
       recaptchaVerifier?: RecaptchaVerifier;
       confirmationResult?: ConfirmationResult;
-      googleSignUpData?: {
-        inGameName: string;
-        inGameUid: string;
-        duoTeamName: string;
-        squadTeamName: string;
-        duoMembers: TeamMember[];
-        squadMembers: TeamMember[];
-      }
     }
   }
 
@@ -45,7 +35,6 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -55,69 +44,6 @@ export default function RegisterPage() {
   const [squadTeamName, setSquadTeamName] = useState("");
   const [duoMembers, setDuoMembers] = useState<TeamMember[]>(Array(1).fill({ inGameName: '', inGameUid: '' }));
   const [squadMembers, setSquadMembers] = useState<TeamMember[]>(Array(3).fill({ inGameName: '', inGameUid: '' }));
-
-   useEffect(() => {
-    const handleRedirect = async () => {
-      setGoogleLoading(true);
-      try {
-        const result = await getRedirectResult(auth);
-        const cachedData = window.sessionStorage.getItem('googleSignUpData');
-
-        if (result && cachedData) {
-          const user = result.user;
-          const { 
-              inGameName, inGameUid, 
-              duoTeamName, squadTeamName, 
-              duoMembers, squadMembers 
-          } = JSON.parse(cachedData);
-
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            await signOut(auth);
-            toast({
-              title: 'Already Registered',
-              description: 'This Google account is already registered. Please log in.',
-              variant: 'destructive'
-            });
-            router.push('/login');
-            return;
-          }
-
-          const userData = {
-            inGameName: user.displayName || inGameName || 'Player',
-            inGameUid: inGameUid,
-            phone: user.phoneNumber || '',
-            email: user.email!,
-            wallet: { deposit: 0, winning: 0, bonus: 0 },
-            duoTeam: { name: duoTeamName, type: 'Duo', members: duoMembers },
-            squadTeam: { name: squadTeamName, type: 'Squad', members: squadMembers },
-            registeredOn: serverTimestamp(),
-          };
-
-          await setDoc(userDocRef, userData);
-          window.sessionStorage.removeItem('googleSignUpData');
-
-          toast({
-            title: 'Success!',
-            description: 'Your account has been created successfully with Google.',
-          });
-          router.push('/');
-        }
-      } catch (error: any) {
-        console.error('Error during Google redirect handling:', error);
-        toast({
-          title: 'Google Sign-Up Failed',
-          description: error.message || 'An unexpected error occurred.',
-          variant: 'destructive',
-        });
-      } finally {
-        setGoogleLoading(false);
-      }
-    };
-    handleRedirect();
-  }, [router, toast]);
 
 
   const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string, type: 'duo' | 'squad') => {
@@ -277,54 +203,6 @@ export default function RegisterPage() {
       }
   };
 
-  const handleGoogleSignUp = async () => {
-    if (!inGameUid) {
-      toast({ title: "In-Game UID Required", description: "Please enter your In-Game UID before signing up with Google.", variant: "destructive" });
-      return;
-    }
-
-    setGoogleLoading(true);
-    const nullValue = '\\\\\\\\\\\\';
-    
-    // Auto-fill team info if it's incomplete
-    let finalDuoTeamName = duoTeamName;
-    let finalSquadTeamName = squadTeamName;
-    let finalDuoMembers = duoMembers;
-    let finalSquadMembers = squadMembers;
-    const isTeamInfoIncomplete = !duoTeamName || !squadTeamName || duoMembers.some(m => !m.inGameName || !m.inGameUid) || squadMembers.some(m => !m.inGameName || !m.inGameUid);
-    
-    if (isTeamInfoIncomplete) {
-        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." });
-        finalDuoTeamName = duoTeamName || nullValue;
-        finalSquadTeamName = squadTeamName || nullValue;
-        finalDuoMembers = duoMembers.every(m => m.inGameName && m.inGameUid) ? duoMembers : Array(1).fill({ inGameName: nullValue, inGameUid: nullValue });
-        finalSquadMembers = squadMembers.every(m => m.inGameName && m.inGameUid) ? squadMembers : Array(3).fill({ inGameName: nullValue, inGameUid: nullValue });
-    }
-
-    const signUpData = {
-        inGameName, inGameUid, 
-        duoTeamName: finalDuoTeamName, 
-        squadTeamName: finalSquadTeamName, 
-        duoMembers: finalDuoMembers, 
-        squadMembers: finalSquadMembers
-    };
-
-    window.sessionStorage.setItem('googleSignUpData', JSON.stringify(signUpData));
-
-    try {
-      await signInWithRedirect(auth, googleProvider);
-    } catch (error: any) {
-      console.error('Error during Google sign-up redirect:', error);
-      toast({
-        title: 'Google Sign-Up Failed',
-        description: error.message || 'An unexpected error occurred.',
-        variant: 'destructive',
-      });
-      setGoogleLoading(false);
-      window.sessionStorage.removeItem('googleSignUpData');
-    }
-  };
-
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
        <div id="recaptcha-container"></div>
@@ -338,14 +216,6 @@ export default function RegisterPage() {
         <CardContent className="grid gap-4">
             {!otpSent && (
                 <>
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <Separator />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Sign up with Phone</span>
-                        </div>
-                    </div>
                     <div className="grid gap-2">
                         <Label htmlFor="in-game-uid">In-Game UID</Label>
                         <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
@@ -423,7 +293,7 @@ export default function RegisterPage() {
                         <p className="text-xs text-center text-muted-foreground pt-2">
                             if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
                         </p>
-                        <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent || googleLoading} className="w-full mt-2">
+                        <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent} className="w-full mt-2">
                             Null
                         </Button>
                     </div>
@@ -437,26 +307,8 @@ export default function RegisterPage() {
                 </div>
             )}
 
-            <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading || googleLoading}>
+            <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading}>
                 {loading ? 'Processing...' : (otpSent ? 'Create Account' : 'Send OTP & Register')}
-            </Button>
-
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                <Separator />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-                </div>
-            </div>
-
-            <div className="grid gap-2">
-                <Label htmlFor="in-game-uid-google">In-Game UID (Required for Google Sign-Up)</Label>
-                <Input id="in-game-uid-google" placeholder="Enter UID before using Google" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent || googleLoading}/>
-            </div>
-
-            <Button variant="outline" onClick={handleGoogleSignUp} disabled={loading || googleLoading || !inGameUid}>
-                {googleLoading ? 'Signing up...' : <><GoogleLogo className="mr-2 h-4 w-4" /> Sign Up with Google</>}
             </Button>
 
 
