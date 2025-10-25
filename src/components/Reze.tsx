@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils';
 import { askReze } from '@/ai/flows/reze-flow';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Tournament } from '@/lib/mock-data';
 
 type Message = {
     role: 'user' | 'model';
@@ -20,17 +23,28 @@ export function Reze() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const viewportRef = useRef<HTMLDivElement>(null);
 
      useEffect(() => {
+        const tournamentsQuery = query(collection(db, "tournaments"));
+        const unsubscribe = onSnapshot(tournamentsQuery, (snapshot) => {
+            const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
+            setTournaments(tournamentsData);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
         // Initial greeting from Reze
         const getInitialGreeting = async () => {
+            if (tournaments.length === 0) return; // Wait for tournaments to load
             setLoading(true);
             try {
                 const response = await askReze({
                     history: [],
                     question: "Introduce yourself.",
-                });
+                }, tournaments);
                  const modelMessage: Message = { role: 'model', content: response };
                  setMessages([modelMessage]);
             } catch (error) {
@@ -46,7 +60,7 @@ export function Reze() {
           getInitialGreeting();
         }
 
-    }, [messages.length]);
+    }, [messages.length, tournaments]);
 
 
     useEffect(() => {
@@ -71,7 +85,7 @@ export function Reze() {
             const response = await askReze({
                 history: messages,
                 question: currentInput,
-            });
+            }, tournaments);
             const modelMessage: Message = { role: 'model', content: response };
             setMessages(prev => [...prev, modelMessage]);
         } catch (error) {
