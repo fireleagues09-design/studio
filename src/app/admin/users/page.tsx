@@ -226,9 +226,9 @@ export default function AdminUsersPage() {
         createdAt: serverTimestamp(),
       });
       alert("Done.");
-      // refresh selected
+      // refresh selected user to show new state
       if (selectedUser) {
-        setSelectedUser(prev => prev ? ({...prev, data: {...prev.data, suspended: !currentlySuspended}}) : null);
+        selectUser(selectedUser.id);
       }
     } catch (e) {
       console.error(e);
