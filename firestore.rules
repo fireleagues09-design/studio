@@ -1,76 +1,80 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // --- Helper Functions ---
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isUserAuthenticated() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     function isAdmin() {
-      // Check the user's custom claim or a field in their user document
-      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-    
-    function isSuspended() {
-      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.suspended == true;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // User profiles
+    // --- Users Collection ---
+    // Users can read their own data. Admins can read any user's data.
+    // Users can create their own profile upon registration.
+    // Users can update their own profile data. Admins can update any user data.
     match /users/{userId} {
-      // Users can read their own profile, admins can read any
-      allow get: if (isOwner(userId) || isAdmin()) && !isSuspended();
-      // Admins can list users
-      allow list: if isAdmin() && !isSuspended();
-      // New users can create their own profile
-      allow create: if isOwner(userId);
-      // Users can update their own profile, admins can update any
-      allow update: if (isOwner(userId) || isAdmin());
-      // Only admins can delete user documents
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isUserAuthenticated();
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
     
-    // Sliders for the homepage
+    // --- Deleted Users Collection ---
+    // Only admins can access archived user data.
+    match /deletedUsers/{docId} {
+        allow read, write: if isAdmin();
+    }
+    
+    // --- Admin Logs ---
+    // Only admins can read or write to the admin logs.
+    match /adminLogs/{logId} {
+        allow read, write: if isAdmin();
+    }
+
+    // --- Tournaments Collection ---
+    // Anyone can read and list tournaments.
+    // Only admins can create, update, or delete tournaments.
+    match /tournaments/{tournamentId} {
+      allow read, list: if true;
+      allow write: if isAdmin();
+
+      // --- Registrations Subcollection ---
+      // Only admins can view the full list of registrations.
+      // Authenticated users can create their own registration document.
+      match /registrations/{userId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow list: if isAdmin();
+        allow create: if isUserAuthenticated() && isOwner(userId);
+        allow update, delete: if isAdmin();
+      }
+    }
+    
+    // --- Transactions Collection ---
+    // Users can read their own transactions. Admins can read all transactions.
+    // Users can create 'deposit' and 'withdrawal' transactions.
+    // Only admins can update transaction statuses.
+    match /transactions/{transactionId} {
+        allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+        allow list: if isAdmin();
+        allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid && (request.resource.data.type == 'deposit' || request.resource.data.type == 'withdrawal');
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+    }
+
+    // --- Sliders Collection ---
+    // Anyone can read sliders.
+    // Only admins can write to the sliders collection.
     match /sliders/{sliderId} {
         allow read: if true;
         allow write: if isAdmin();
-    }
-
-    // Tournaments
-    match /tournaments/{tournamentId} {
-      // Anyone can read tournaments
-      allow read, list: if true;
-      allow write: if isAdmin(); // Create, update, delete only for admins
-
-      // Registrations subcollection
-      match /registrations/{userId} {
-        // Users can register themselves, admins can manage any registration
-        allow create: if isOwner(userId) && !isSuspended();
-        // Users can see their own registration, admins can see any
-        allow read: if isOwner(userId) || isAdmin();
-        // Admins can delete registrations
-        allow delete: if isAdmin();
-      }
-    }
-
-    // Transactions
-    match /transactions/{transactionId} {
-      // Users can see their own transactions, admins can see all
-      allow list, get: if isOwner(resource.data.userId) || isAdmin();
-      // Users can create their own deposit/withdrawal requests
-      allow create: if isOwner(request.resource.data.userId) && !isSuspended();
-      // Only admins can update transaction status
-      allow update: if isAdmin();
-    }
-    
-    // Admin logs - only admins can access
-    match /adminLogs/{logId} {
-      allow read, list, create: if isAdmin();
     }
   }
 }
