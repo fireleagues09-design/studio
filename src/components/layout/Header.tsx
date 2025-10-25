@@ -31,6 +31,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
 
 
 type WalletData = {
@@ -42,6 +43,7 @@ type WalletData = {
 type UserProfile = {
     wallet: WalletData;
     isAdmin?: boolean;
+    suspended?: boolean;
 }
 
 function AdminConfirmationDialog({ children, isMobile = false }: { children: React.ReactNode, isMobile?: boolean }) {
@@ -94,9 +96,18 @@ export function Header() {
                 if (doc.exists()) {
                     setProfile(doc.data() as UserProfile);
                 } else {
+                    // User is authenticated but no profile, could be a deleted user.
+                    // Sign them out to prevent being stuck.
+                    if (pathname !== '/login' && pathname !== '/register') {
+                         auth.signOut();
+                    }
                     setProfile(null);
                 }
                  setLoading(false);
+            }, (error) => {
+                 console.error("Error fetching user profile:", error);
+                 setLoading(false);
+                 setProfile(null);
             });
             return () => unsubscribeProfile();
         } else {
@@ -106,7 +117,7 @@ export function Header() {
     });
 
     return () => unsubscribeAuth();
-  }, []);
+  }, [pathname]);
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
@@ -121,6 +132,10 @@ export function Header() {
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
     window.location.href = '/';
   };
+
+  if (profile?.suspended) {
+      return <SuspendedUserPopup onLogout={handleLogout} />;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -4,7 +4,6 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  getAuth,
   onAuthStateChanged,
   type User as FirebaseUser,
 } from "firebase/auth";
@@ -114,7 +113,7 @@ export default function AdminUsersPage() {
 
         try {
           // 1) If input looks like a UID (exact) — getDoc
-          if (/^[A-Za-z0-9_-]{6,}$/.test(q)) {
+          if (/^[A-Za-z0-9_-]{20,}$/.test(q)) {
             const docRef = doc(db, "users", q);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -125,15 +124,34 @@ export default function AdminUsersPage() {
           }
 
           // 2) If input is numeric maybe phone
-          if (/^\+?\d{4,}$/.test(q)) {
+          if (/^\d{10}$/.test(q)) { // Search for 10-digit numbers
             const usersRef = collection(db, "users");
-            const q1 = query(usersRef, where("phone", "==", q), limit(20));
-            const unsubPhone = onSnapshot(q1, (snap) => {
+            // Also search with +91 prefix
+            const phoneQuery = query(usersRef, where("phone", "in", [q, `+91${q}`]), limit(20));
+            const unsubPhone = onSnapshot(phoneQuery, (snap) => {
               const items: Array<{ id: string; data: UserDoc }> = [];
               snap.forEach((d) => items.push({ id: d.id, data: d.data() as UserDoc }));
               setResults(items);
               setSearching(false);
-              // unsubscribe after first snapshot to behave like a one-time search
+              if (typeof unsubPhone === "function") unsubPhone();
+            });
+            return;
+          }
+          
+          if (/^\+?\d{4,}$/.test(q)) {
+            const usersRef = collection(db, "users");
+            const phoneQuery = query(
+              usersRef,
+              orderBy("phone"),
+              startAt(q),
+              endAt(q + "\\uf8ff"),
+              limit(20)
+            );
+            const unsubPhone = onSnapshot(phoneQuery, (snap) => {
+              const items: Array<{ id: string; data: UserDoc }> = [];
+              snap.forEach((d) => items.push({ id: d.id, data: d.data() as UserDoc }));
+              setResults(items);
+              setSearching(false);
               if (typeof unsubPhone === "function") unsubPhone();
             });
             return;
@@ -209,7 +227,9 @@ export default function AdminUsersPage() {
       });
       alert("Done.");
       // refresh selected
-      selectUser(id);
+      if (selectedUser) {
+        setSelectedUser(prev => prev ? ({...prev, data: {...prev.data, suspended: !currentlySuspended}}) : null);
+      }
     } catch (e) {
       console.error(e);
       alert("Failed to update suspended state.");
@@ -238,7 +258,9 @@ export default function AdminUsersPage() {
         createdAt: serverTimestamp(),
       });
       alert("Balance updated.");
-      selectUser(id);
+      if (selectedUser) {
+        selectUser(selectedUser.id);
+      }
     } catch (e) {
       console.error(e);
       alert("Failed to update balance.");
@@ -249,7 +271,6 @@ export default function AdminUsersPage() {
     if (!requireAdmin()) return;
     if (!confirm("This will permanently delete the user document (does NOT delete auth). Continue?")) return;
     try {
-      // Optional: archive the user before delete
       const uRef = doc(db, "users", id);
       const snap = await getDoc(uRef);
       if (!snap.exists()) {
@@ -274,7 +295,6 @@ export default function AdminUsersPage() {
       });
       alert("User deleted and archived.");
       setSelectedUser(null);
-      // refresh results
       setResults((r) => r.filter((x) => x.id !== id));
     } catch (e) {
       console.error(e);
@@ -291,7 +311,6 @@ export default function AdminUsersPage() {
       if (results.length) {
         rows = results.map((r) => ({ uid: r.id, ...(r.data || {}) }));
       } else {
-        // If user wants a full export, they should run a search or we'll avoid dumping the whole DB here.
         alert("No search results to export. Please run a search first.");
         setLogsLoading(false);
         return;
@@ -300,11 +319,11 @@ export default function AdminUsersPage() {
       const header = Object.keys(rows[0]);
       const csv = [header.join(",")]
         .concat(rows.map((r) => header.map((h) => `"${String((r as any)[h] ?? "").replace(/"/g, '""')}"`).join(",")))
-        .join("\\n");
+        .join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-a.href = url;
+      a.href = url;
       a.download = `users-export-${Date.now()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
