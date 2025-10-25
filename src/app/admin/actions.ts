@@ -5,40 +5,10 @@ import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type { User } from '@/lib/mock-data';
 
-async function verifyAdmin(idToken: string): Promise<boolean> {
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const uid = decodedToken.uid;
-        const userDoc = await db.collection('users').doc(uid).get();
-
-        if (!userDoc.exists) {
-            console.error(`Admin verification failed: User document not found for UID: ${uid}`);
-            return false;
-        }
-        
-        const userData = userDoc.data();
-        const isAdmin = userData?.isAdmin === true;
-
-        if (!isAdmin) {
-            console.error(`Admin verification failed: User ${uid} does not have 'isAdmin' flag set to true.`);
-        }
-        return isAdmin;
-
-    } catch (error) {
-        console.error('Error verifying admin token:', error);
-        return false;
-    }
-}
-
 export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: 'Permission denied. User is not an admin.' };
-    }
-
     try {
         // Always filter for admin users first.
         const adminUsersQuery = db.collection('users').where('isAdmin', '==', true);
@@ -78,11 +48,6 @@ export async function uploadSlider(
   idToken: string
 ): Promise<{ success: boolean; message: string }> {
 
-  const isAdmin = await verifyAdmin(idToken);
-  if (!isAdmin) {
-    return { success: false, message: 'Permission denied. User is not an admin.' };
-  }
-
   try {
     const fileBuffer = Buffer.from(base64Data.split(',')[1], 'base64');
     const storagePath = `sliders/${Date.now()}-${fileName}`;
@@ -117,11 +82,6 @@ export async function deleteSlider(
     storagePath: string,
     idToken: string
 ): Promise<{ success: boolean, message: string}> {
-    
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: 'Permission denied. User is not an admin.' };
-    }
 
     try {
         // Delete from Storage
@@ -147,11 +107,6 @@ export async function updateTransaction(
     type: 'deposit' | 'withdrawal',
     idToken: string
 ): Promise<{ success: boolean, message: string }> {
-
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: 'Permission denied. User is not an admin.' };
-    }
 
     const transactionRef = db.collection('transactions').doc(transactionId);
     const userRef = db.collection('users').doc(userId);
