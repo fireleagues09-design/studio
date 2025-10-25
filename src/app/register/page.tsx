@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -17,7 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
 import { Separator } from "@/components/ui/separator";
 import { GoogleLogo } from "@/components/icons/GoogleLogo";
@@ -28,6 +28,14 @@ declare global {
     interface Window {
       recaptchaVerifier?: RecaptchaVerifier;
       confirmationResult?: ConfirmationResult;
+      googleSignUpData?: {
+        inGameName: string;
+        inGameUid: string;
+        duoTeamName: string;
+        squadTeamName: string;
+        duoMembers: TeamMember[];
+        squadMembers: TeamMember[];
+      }
     }
   }
 
@@ -47,6 +55,70 @@ export default function RegisterPage() {
   const [squadTeamName, setSquadTeamName] = useState("");
   const [duoMembers, setDuoMembers] = useState<TeamMember[]>(Array(1).fill({ inGameName: '', inGameUid: '' }));
   const [squadMembers, setSquadMembers] = useState<TeamMember[]>(Array(3).fill({ inGameName: '', inGameUid: '' }));
+
+   useEffect(() => {
+    const handleRedirect = async () => {
+      setGoogleLoading(true);
+      try {
+        const result = await getRedirectResult(auth);
+        const cachedData = window.sessionStorage.getItem('googleSignUpData');
+
+        if (result && cachedData) {
+          const user = result.user;
+          const { 
+              inGameName, inGameUid, 
+              duoTeamName, squadTeamName, 
+              duoMembers, squadMembers 
+          } = JSON.parse(cachedData);
+
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            await signOut(auth);
+            toast({
+              title: 'Already Registered',
+              description: 'This Google account is already registered. Please log in.',
+              variant: 'destructive'
+            });
+            router.push('/login');
+            return;
+          }
+
+          const userData = {
+            inGameName: user.displayName || inGameName || 'Player',
+            inGameUid: inGameUid,
+            phone: user.phoneNumber || '',
+            email: user.email!,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            duoTeam: { name: duoTeamName, type: 'Duo', members: duoMembers },
+            squadTeam: { name: squadTeamName, type: 'Squad', members: squadMembers },
+            registeredOn: serverTimestamp(),
+          };
+
+          await setDoc(userDocRef, userData);
+          window.sessionStorage.removeItem('googleSignUpData');
+
+          toast({
+            title: 'Success!',
+            description: 'Your account has been created successfully with Google.',
+          });
+          router.push('/');
+        }
+      } catch (error: any) {
+        console.error('Error during Google redirect handling:', error);
+        toast({
+          title: 'Google Sign-Up Failed',
+          description: error.message || 'An unexpected error occurred.',
+          variant: 'destructive',
+        });
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+    handleRedirect();
+  }, [router, toast]);
+
 
   const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string, type: 'duo' | 'squad') => {
     if (type === 'duo') {
@@ -206,78 +278,50 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignUp = async () => {
-    setGoogleLoading(true);
-
-    const isTeamInfoIncomplete = !duoTeamName || !squadTeamName || duoMembers.some(m => !m.inGameName || !m.inGameUid) || squadMembers.some(m => !m.inGameName || !m.inGameUid);
-    const nullValue = '\\\\\\\\\\\\';
-
-    if (isTeamInfoIncomplete) {
-        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." });
+    if (!inGameUid) {
+      toast({ title: "In-Game UID Required", description: "Please enter your In-Game UID before signing up with Google.", variant: "destructive" });
+      return;
     }
 
+    setGoogleLoading(true);
+    const nullValue = '\\\\\\\\\\\\';
+    
+    // Auto-fill team info if it's incomplete
+    let finalDuoTeamName = duoTeamName;
+    let finalSquadTeamName = squadTeamName;
+    let finalDuoMembers = duoMembers;
+    let finalSquadMembers = squadMembers;
+    const isTeamInfoIncomplete = !duoTeamName || !squadTeamName || duoMembers.some(m => !m.inGameName || !m.inGameUid) || squadMembers.some(m => !m.inGameName || !m.inGameUid);
+    
+    if (isTeamInfoIncomplete) {
+        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." });
+        finalDuoTeamName = duoTeamName || nullValue;
+        finalSquadTeamName = squadTeamName || nullValue;
+        finalDuoMembers = duoMembers.every(m => m.inGameName && m.inGameUid) ? duoMembers : Array(1).fill({ inGameName: nullValue, inGameUid: nullValue });
+        finalSquadMembers = squadMembers.every(m => m.inGameName && m.inGameUid) ? squadMembers : Array(3).fill({ inGameName: nullValue, inGameUid: nullValue });
+    }
+
+    const signUpData = {
+        inGameName, inGameUid, 
+        duoTeamName: finalDuoTeamName, 
+        squadTeamName: finalSquadTeamName, 
+        duoMembers: finalDuoMembers, 
+        squadMembers: finalSquadMembers
+    };
+
+    window.sessionStorage.setItem('googleSignUpData', JSON.stringify(signUpData));
+
     try {
-      // This is necessary to fix Google login issues in some development environments.
-      auth.tenantId = 'fireleagues-drrjw.firebaseapp.com';
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        await signOut(auth);
-        toast({
-          title: 'Already Registered',
-          description: 'This Google account is already registered. Please log in.',
-          variant: 'destructive'
-        });
-        router.push('/login');
-        return;
-      }
-      
-      const userData = {
-        inGameName: user.displayName || inGameName || 'Player',
-        inGameUid: inGameUid, // Still required from user
-        phone: user.phoneNumber || '',
-        email: user.email!,
-        wallet: { deposit: 0, winning: 0, bonus: 0 },
-        duoTeam: {
-            name: isTeamInfoIncomplete ? nullValue : duoTeamName,
-            type: 'Duo',
-            members: isTeamInfoIncomplete ? Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }) : duoMembers
-        },
-        squadTeam: {
-            name: isTeamInfoIncomplete ? nullValue : squadTeamName,
-            type: 'Squad',
-            members: isTeamInfoIncomplete ? Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }) : squadMembers
-        },
-        registeredOn: serverTimestamp(),
-      };
-
-      if (!userData.inGameUid) {
-        toast({ title: "In-Game UID Required", description: "Please enter your In-Game UID before signing up with Google.", variant: "destructive" });
-        await signOut(auth); // Sign out if essential info is missing
-        setGoogleLoading(false);
-        return;
-      }
-
-      await setDoc(userDocRef, userData);
-
-      toast({
-        title: 'Success!',
-        description: 'Your account has been created successfully with Google.',
-      });
-      router.push('/');
-
+      await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
-      console.error('Error during Google sign-up:', error);
+      console.error('Error during Google sign-up redirect:', error);
       toast({
         title: 'Google Sign-Up Failed',
         description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
-    } finally {
       setGoogleLoading(false);
+      window.sessionStorage.removeItem('googleSignUpData');
     }
   };
 

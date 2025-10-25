@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "@/components/ui/separator";
 import { GoogleLogo } from "@/components/icons/GoogleLogo";
@@ -38,6 +38,44 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleRedirect = async () => {
+      setGoogleLoading(true);
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const user = result.user;
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            toast({ title: 'Success', description: 'Logged in successfully!' });
+            router.push('/');
+          } else {
+            await signOut(auth);
+            toast({
+              title: 'Not Registered',
+              description: 'This Google account is not registered. Please sign up first.',
+              variant: 'destructive',
+            });
+            router.push('/register');
+          }
+        }
+      } catch (error: any) {
+        console.error('Error during Google redirect handling:', error);
+        toast({
+          title: 'Google Login Failed',
+          description: error.message || 'An unexpected error occurred.',
+          variant: 'destructive',
+        });
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+    handleRedirect();
+  }, [router, toast]);
+
 
   const setupRecaptcha = () => {
     if (!window.recaptchaVerifier) {
@@ -124,34 +162,14 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      // This is necessary to fix Google login issues in some development environments.
-      auth.tenantId = 'fireleagues-drrjw.firebaseapp.com';
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        toast({ title: 'Success', description: 'Logged in successfully!' });
-        router.push('/');
-      } else {
-        await signOut(auth);
-        toast({
-          title: 'Not Registered',
-          description: 'This Google account is not registered. Please sign up first.',
-          variant: 'destructive',
-        });
-        router.push('/register');
-      }
+      await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
-      console.error('Error during Google login:', error);
+      console.error('Error during Google login redirect:', error);
       toast({
         title: 'Google Login Failed',
         description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
-    } finally {
       setGoogleLoading(false);
     }
   };
