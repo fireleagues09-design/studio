@@ -1,53 +1,109 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
+    // ======================
+    // Helper Functions
+    // ======================
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isUserAuthenticated() && request.auth.uid == userId;
     }
 
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isUserAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
+    function isAdmin() {
+      return isUserAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
-    
-    match /tournaments/{tournamentId} {
-      allow read, list: if true;
+
+    // ======================
+    // Users Collection
+    // ======================
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isUserAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Teams Subcollection
+      match /teams/{teamId} {
+        allow read: if isUserAuthenticated();
+        allow create, delete: if isOwner(userId);
+        allow update: if isOwner(userId) &&
+                      request.resource.data.diff(resource.data).changedKeys()
+                          .hasOnly(['members', 'category']);
+        allow read, write, list: if isAdmin();
+      }
+    }
+
+    // ======================
+    // Sliders & Banners
+    // ======================
+    match /sliders/{sliderId} {
+      allow read: if true;
       allow write: if isAdmin();
     }
-    
-    match /tournaments/{tournamentId}/registrations/{registrationId} {
-        allow read, list: if isUserAuthenticated() || isAdmin();
-        allow create, write, delete: if isUserAuthenticated() || isAdmin();
-    }
-    
-    match /sliders/{sliderId} {
-        allow read, list: if true;
-        allow write, delete: if isAdmin();
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
+    // ======================
+    // Settings
+    // ======================
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ======================
+    // Tournaments
+    // ======================
+    match /tournaments/{tournamentId} {
+      allow read, list: if true; // public read access
+      allow write: if isAdmin();
+
+      // Tournament Registrations
+      match /registrations/{userId} {
+        allow create: if isOwner(userId);
+        allow read, list, delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // ======================
+    // Transactions
+    // ======================
     match /transactions/{transactionId} {
-        allow read, list: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-        allow create: if isUserAuthenticated();
-        allow write: if isAdmin();
+      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow list, update, delete: if isAdmin();
     }
-    
-    match /deletedUsers/{deletedUserId} {
-        allow read, write: if isAdmin();
+
+    // ======================
+    // Withdrawals
+    // ======================
+    match /withdrawals/{withdrawalId} {
+      allow create: if isOwner(request.resource.data.userId);
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow list, update, delete: if isAdmin();
     }
-    
-     match /adminLogs/{logId} {
-        allow read, write: if isAdmin();
+
+    // ======================
+    // Admin Logs
+    // ======================
+    match /adminLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ======================
+    // Deleted Users
+    // ======================
+    match /deletedUsers/{deletedId} {
+      allow read, write: if isAdmin();
     }
   }
 }
