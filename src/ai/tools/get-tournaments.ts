@@ -24,16 +24,17 @@ export const getTournaments = ai.defineTool(
         const docSnap = await docRef.get();
         if (docSnap.exists) {
             const data = docSnap.data();
-             return [{
-                id: docSnap.id,
-                name: data?.name,
-                status: data?.status,
-                date: data?.date,
-                time: data?.time,
-            }];
-        } else {
-            return []; // Not found
+            if (data) {
+                return [{
+                    id: docSnap.id,
+                    name: data.name,
+                    status: data.status,
+                    date: data.date,
+                    time: data.time,
+                }];
+            }
         }
+        return []; // Return empty array if not found
       }
 
       // If status is provided, query by status
@@ -62,6 +63,7 @@ export const getTournaments = ai.defineTool(
 
     } catch (error) {
       console.error("Error fetching tournaments with Admin SDK:", error);
+      // Return an empty array or throw, but returning empty is safer for the AI
       return [];
     }
   }
