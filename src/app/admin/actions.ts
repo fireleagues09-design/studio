@@ -14,13 +14,9 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
             return false;
         }
         
-        const userData = userDoc.data();
-        // Explicitly check the isAdmin field.
-        if (userData && userData.isAdmin === true) {
-            return true;
-        }
-        
-        return false;
+        // This is a more robust way to check the field.
+        const isAdmin = userDoc.data()?.isAdmin === true;
+        return isAdmin;
 
     } catch (error) {
         console.error("Error verifying admin token:", error);
