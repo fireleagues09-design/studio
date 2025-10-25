@@ -3,7 +3,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { db } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { OngoingTournamentsSchema } from '@/ai/schemas/tournaments';
 
 export const getTournamentsByStatus = ai.defineTool(
@@ -17,8 +18,9 @@ export const getTournamentsByStatus = ai.defineTool(
   },
   async ({ status }) => {
     try {
-      const tournamentsRef = db.collection('tournaments');
-      const snapshot = await tournamentsRef.where('status', '==', status).get();
+      const tournamentsRef = collection(db, 'tournaments');
+      const q = query(tournamentsRef, where('status', '==', status), limit(10));
+      const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
         return {
