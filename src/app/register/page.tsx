@@ -21,7 +21,7 @@ import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, Confirmation
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TeamMember } from "@/lib/mock-data";
 import { Separator } from "@/components/ui/separator";
-import { Chrome } from "lucide-react";
+import { GoogleIcon } from "@/components/GoogleIcon";
 
 
 // Add a global declaration for the confirmationResult
@@ -279,7 +279,7 @@ export default function RegisterPage() {
             </div>
 
             <Button variant="outline" onClick={handleGoogleSignUp} disabled={loading}>
-                <Chrome className="mr-2 h-4 w-4" />
+                <GoogleIcon className="mr-2 h-4 w-4" />
                 Sign up with Google
             </Button>
             

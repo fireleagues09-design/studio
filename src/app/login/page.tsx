@@ -19,7 +19,7 @@ import { auth, db, googleProvider } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "@/components/ui/separator";
-import { Chrome } from "lucide-react";
+import { GoogleIcon } from "@/components/GoogleIcon";
 
 
 // Add a global declaration for the confirmationResult
@@ -197,7 +197,7 @@ export default function LoginPage() {
           </div>
 
           <Button variant="outline" onClick={handleGoogleSignIn} disabled={loading}>
-            <Chrome className="mr-2 h-4 w-4" />
+            <GoogleIcon className="mr-2 h-4 w-4" />
             Sign in with Google
           </Button>
 
