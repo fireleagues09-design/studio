@@ -1,106 +1,76 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ======================
-    // Helper Functions
-    // ======================
+    // Helper functions
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
+    function isOwner(userId) {
+      return isUserAuthenticated() && request.auth.uid == userId;
+    }
+
     function isAdmin() {
-      return isUserAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      // Check the user's custom claim or a field in their user document
+      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    function isSuspended() {
+      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.suspended == true;
     }
 
-    // ======================
-    // Users Collection
-    // ======================
+    // User profiles
     match /users/{userId} {
-      // Get own profile or admin can get any
-      allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
-
-      // Admin can list all users
-      allow list: if isAdmin();
-
-      // Update only inGameName for own profile
-      allow update: if isUserAuthenticated() &&
-                    request.auth.uid == userId &&
-                    request.resource.data.keys().hasOnly(['inGameName']);
-
-      // Create own profile
-      allow create: if isUserAuthenticated() && request.auth.uid == userId;
-
-      // Teams Subcollection
-      match /teams/{teamId} {
-        allow read: if isUserAuthenticated();
-        allow create, delete: if isUserAuthenticated() && request.auth.uid == userId;
-        allow update: if isUserAuthenticated() &&
-                      request.auth.uid == userId &&
-                      request.resource.data.diff(resource.data).changedKeys()
-                          .hasOnly(['members', 'category']);
-        allow read, write, list: if isAdmin();
-      }
+      // Users can read their own profile, admins can read any
+      allow get: if (isOwner(userId) || isAdmin()) && !isSuspended();
+      // Admins can list users
+      allow list: if isAdmin() && !isSuspended();
+      // New users can create their own profile
+      allow create: if isOwner(userId);
+      // Users can update their own profile, admins can update any
+      allow update: if (isOwner(userId) || isAdmin());
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
     }
-
-    // ======================
-    // Sliders & Banners
-    // ======================
+    
+    // Sliders for the homepage
     match /sliders/{sliderId} {
-      allow read: if true;
-      allow write: if isAdmin();
+        allow read: if true;
+        allow write: if isAdmin();
     }
 
-    match /banners/{bannerId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // ======================
-    // Settings
-    // ======================
-    match /settings/{settingId} {
-      allow read, write: if isAdmin();
-    }
-
-    // ======================
     // Tournaments
-    // ======================
     match /tournaments/{tournamentId} {
-      allow read, list: if isUserAuthenticated();
-      allow write: if isAdmin();
+      // Anyone can read tournaments
+      allow read, list: if true;
+      allow write: if isAdmin(); // Create, update, delete only for admins
 
+      // Registrations subcollection
       match /registrations/{userId} {
-        allow create: if isUserAuthenticated() && request.auth.uid == userId;
-        allow read, list, delete: if isAdmin();
+        // Users can register themselves, admins can manage any registration
+        allow create: if isOwner(userId) && !isSuspended();
+        // Users can see their own registration, admins can see any
+        allow read: if isOwner(userId) || isAdmin();
+        // Admins can delete registrations
+        allow delete: if isAdmin();
       }
     }
 
-    // ======================
     // Transactions
-    // ======================
     match /transactions/{transactionId} {
-      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if isUserAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow list, write: if isAdmin();
+      // Users can see their own transactions, admins can see all
+      allow list, get: if isOwner(resource.data.userId) || isAdmin();
+      // Users can create their own deposit/withdrawal requests
+      allow create: if isOwner(request.resource.data.userId) && !isSuspended();
+      // Only admins can update transaction status
+      allow update: if isAdmin();
     }
-
-    // ======================
-    // Withdrawals
-    // ======================
-    match /withdrawals/{withdrawalId} {
-      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if isUserAuthenticated() && request.auth.uid == resource.data.userId;
-      allow list, write: if isAdmin();
-    }
-
-    // ======================
-    // Admin Logs
-    // ======================
+    
+    // Admin logs - only admins can access
     match /adminLogs/{logId} {
-      allow read, write: if isAdmin();
+      allow read, list, create: if isAdmin();
     }
   }
 }
