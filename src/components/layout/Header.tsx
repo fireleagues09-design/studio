@@ -94,19 +94,19 @@ export function Header() {
         setUser(currentUser);
         if (currentUser) {
             const userDocRef = doc(db, "users", currentUser.uid);
-            const unsubscribeProfile = onSnapshot(userDocRef, (doc) => {
+            const unsubscribeProfile = onSnapshot(userDocRef, 
+              (doc) => {
                 if (doc.exists()) {
                     setProfile(doc.data() as UserProfile);
                 } else {
-                    // User is authenticated but no profile, could be a deleted user.
-                    // Sign them out to prevent being stuck.
                     if (pathname !== '/login' && pathname !== '/register') {
                          auth.signOut();
                     }
                     setProfile(null);
                 }
                  setLoading(false);
-            }, (error) => {
+              }, 
+              (error) => {
                  const permissionError = new FirestorePermissionError({
                     path: userDocRef.path,
                     operation: 'get',
@@ -114,7 +114,8 @@ export function Header() {
                 errorEmitter.emit('permission-error', permissionError);
                  setLoading(false);
                  setProfile(null);
-            });
+              }
+            );
             return () => unsubscribeProfile();
         } else {
             setProfile(null);
