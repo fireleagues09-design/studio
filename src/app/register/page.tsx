@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, UserCredential } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
+import { GoogleLogo } from "@/components/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -288,6 +289,7 @@ export default function RegisterPage() {
                     </div>
 
                     <Button variant="outline" className="w-full" onClick={startGoogleSignUp} disabled={loading}>
+                        <GoogleLogo className="mr-2 h-4 w-4" />
                         {loading ? 'Processing...' : 'Sign up with Google'}
                     </Button>
                     
