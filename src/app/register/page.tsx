@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -13,11 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, UserCredential } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
 
 
@@ -44,6 +44,63 @@ export default function RegisterPage() {
   const [squadTeamName, setSquadTeamName] = useState("");
   const [duoMembers, setDuoMembers] = useState<TeamMember[]>(Array(1).fill({ inGameName: '', inGameUid: '' }));
   const [squadMembers, setSquadMembers] = useState<TeamMember[]>(Array(3).fill({ inGameName: '', inGameUid: '' }));
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+        setLoading(true);
+        try {
+            const result = await getRedirectResult(auth);
+            if (result) {
+                // User signed up with Google, now we need to save their info
+                await handleGoogleSignUp(result);
+            }
+        } catch (error: any) {
+            console.error("Google sign-up redirect error:", error);
+            toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+    handleRedirectResult();
+  }, [toast, router]);
+
+  const handleGoogleSignUp = async (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+        toast({ title: "Registration Error", description: "This account is already registered. Please log in.", variant: "destructive" });
+        router.push('/login');
+        return;
+    }
+    
+    // For Google Sign-Up, we don't have In-Game Name/UID or teams yet.
+    // We'll use their Google display name as a placeholder and create null teams.
+    const nullValue = '\\\\\\\\\\\\';
+    
+    try {
+        await setDoc(userDocRef, {
+            inGameName: user.displayName || 'New Player',
+            inGameUid: nullValue, // User needs to update this
+            phone: user.phoneNumber || nullValue, // May not be available
+            email: user.email,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            duoTeam: { name: nullValue, type: 'Duo', members: Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }) },
+            squadTeam: { name: nullValue, type: 'Squad', members: Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }) },
+            registeredOn: serverTimestamp(),
+        });
+
+        toast({
+            title: "Welcome!",
+            description: "Account created successfully with Google! Please complete your profile.",
+        });
+        router.push("/profile"); // Redirect to profile to complete details.
+    } catch(error: any) {
+        console.error("Error saving Google user:", error);
+        toast({ title: "Registration Error", description: error.message, variant: 'destructive' });
+    }
+  };
 
 
   const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string, type: 'duo' | 'squad') => {
@@ -203,6 +260,11 @@ export default function RegisterPage() {
       }
   };
 
+    const startGoogleSignUp = async () => {
+        setLoading(true);
+        await signInWithRedirect(auth, googleProvider);
+    };
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
        <div id="recaptcha-container"></div>
@@ -210,12 +272,35 @@ export default function RegisterPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            Create your account to join tournaments.
+            { otpSent ? "Verify your phone to complete registration" : "Create your account to join tournaments." }
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
             {!otpSent && (
                 <>
+                    <div className="relative mb-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Sign up with Google</span>
+                        </div>
+                    </div>
+
+                    <Button variant="outline" className="w-full" onClick={startGoogleSignUp} disabled={loading}>
+                        {loading ? 'Processing...' : 'Sign up with Google'}
+                    </Button>
+                    
+                    <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or with phone</span>
+                        </div>
+                    </div>
+
+
                     <div className="grid gap-2">
                         <Label htmlFor="in-game-uid">In-Game UID</Label>
                         <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>

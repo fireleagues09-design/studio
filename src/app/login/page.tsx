@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -15,9 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithRedirect, getRedirectResult, UserCredential } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { Separator } from "@/components/ui/separator";
 
 
 // Add a global declaration for the confirmationResult
@@ -35,6 +36,45 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+        setLoading(true);
+        try {
+            const result = await getRedirectResult(auth);
+            if (result) {
+                await handleAuthSuccess(result);
+            }
+        } catch (error: any) {
+            console.error("Google login redirect error:", error);
+            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+    handleRedirectResult();
+  }, [toast, router]);
+
+
+  const handleAuthSuccess = async (userCredential: UserCredential) => {
+    const user = userCredential.user;
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+        await auth.signOut();
+        toast({
+            title: "Login Failed",
+            description: "User not registered. Please sign up first.",
+            variant: "destructive"
+        });
+        router.push('/register');
+        return;
+    }
+
+    toast({ title: "Success", description: "Logged in successfully!" });
+    router.push("/");
+  };
 
 
   const setupRecaptcha = () => {
@@ -87,37 +127,23 @@ export default function LoginPage() {
     try {
         if (window.confirmationResult) {
           const userCredential = await window.confirmationResult.confirm(otp);
-          const user = userCredential.user;
-
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (!userDoc.exists()) {
-            // User is not registered, sign them out and redirect
-            await auth.signOut();
-            toast({
-                title: "Login Failed",
-                description: "User not registered. Please sign up first.",
-                variant: "destructive"
-            });
-            router.push('/register');
-            return;
-          }
-
-          toast({ title: "Success", description: "Logged in successfully!" });
-          router.push("/");
+          await handleAuthSuccess(userCredential);
         } else {
             throw new Error("OTP not sent yet or session expired.");
         }
       } catch (error: any) {
         console.error("Error verifying OTP:", error);
-        // Clear confirmation result on failure to prevent unintended session state
         window.confirmationResult = undefined;
         toast({ title: "Verification Error", description: error.message || "Invalid OTP or user not registered. Please try again.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
   };
+
+  const handleGoogleLogin = async () => {
+      setLoading(true);
+      await signInWithRedirect(auth, googleProvider);
+  }
 
 
   return (
@@ -127,7 +153,7 @@ export default function LoginPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your phone number to login."}
+            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your phone number to login or use a provider."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -154,6 +180,22 @@ export default function LoginPage() {
              <Button variant="link" size="sm" onClick={() => setOtpSent(false)} disabled={loading}>
                 Change phone number
             </Button>
+          )}
+
+          {!otpSent && (
+             <>
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                    </div>
+                </div>
+                <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+                    {loading ? 'Redirecting...' : 'Login with Google'}
+                </Button>
+            </>
           )}
 
           <div className="mt-4 text-center text-sm">
