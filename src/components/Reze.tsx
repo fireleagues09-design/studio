@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Sparkle, Send, Loader2, Bot } from 'lucide-react';
+import { Sparkle, Send, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from './ui/card';
 import { Input } from './ui/input';
@@ -84,56 +84,54 @@ export function Reze() {
     };
 
     return (
-        <div className="fixed bottom-4 left-4 z-50">
-            <Card className="w-full max-w-sm shadow-2xl shadow-accent/10">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                        <Sparkle className="h-6 w-6 text-accent" />
-                        <span className='text-xl'>Talk to Reze</span>
-                    </CardTitle>
-                    <CardDescription>Your AI assistant</CardDescription>
-                </CardHeader>
-                <Separator />
-                <CardContent className="p-0">
-                     <ScrollArea ref={scrollAreaRef} className="h-56 p-4">
-                        <div className="space-y-4">
-                            {messages.map((msg, index) => (
-                                <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                                    {msg.role === 'model' && <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />}
-                                    <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
-                                        {msg.content}
-                                    </div>
+        <Card className="w-full max-w-sm shadow-2xl shadow-accent/10">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                    <Sparkle className="h-6 w-6 text-accent" />
+                    <span className='text-xl'>Talk to Reze</span>
+                </CardTitle>
+                <CardDescription>Your AI assistant</CardDescription>
+            </CardHeader>
+            <Separator />
+            <CardContent className="p-0">
+                 <ScrollArea ref={scrollAreaRef} className="h-56 p-4">
+                    <div className="space-y-4">
+                        {messages.map((msg, index) => (
+                            <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                                {msg.role === 'model' && <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />}
+                                <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+                                    {msg.content}
                                 </div>
-                            ))}
-                            {loading && (
-                                <div className="flex items-end gap-2 justify-start">
-                                    <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />
-                                    <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        <span className="text-sm text-muted-foreground">Thinking...</span>
-                                    </div>
+                            </div>
+                        ))}
+                        {loading && (
+                            <div className="flex items-end gap-2 justify-start">
+                                <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />
+                                <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Thinking...</span>
                                 </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </CardContent>
-                <Separator />
-                <CardFooter className="p-2">
-                    <div className="flex w-full items-center space-x-2">
-                        <Input 
-                            placeholder="Ask me anything..." 
-                            value={input} 
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSend()}
-                            disabled={loading}
-                        />
-                        <Button onClick={handleSend} disabled={loading || !input.trim()} size="icon">
-                            <Send className="h-4 w-4" />
-                            <span className="sr-only">Send</span>
-                        </Button>
+                            </div>
+                        )}
                     </div>
-                </CardFooter>
-            </Card>
-        </div>
+                </ScrollArea>
+            </CardContent>
+            <Separator />
+            <CardFooter className="p-2">
+                <div className="flex w-full items-center space-x-2">
+                    <Input 
+                        placeholder="Ask me anything..." 
+                        value={input} 
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        disabled={loading}
+                    />
+                    <Button onClick={handleSend} disabled={loading || !input.trim()} size="icon">
+                        <Send className="h-4 w-4" />
+                        <span className="sr-only">Send</span>
+                    </Button>
+                </div>
+            </CardFooter>
+        </Card>
     );
 }

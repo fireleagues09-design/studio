@@ -108,12 +108,14 @@ export default function Home() {
                 </div>
             )
           }
+        </section>
 
+        <section className="pt-8">
+            <Reze />
         </section>
 
       </main>
       
-      <Reze />
     </div>
   );
 }
