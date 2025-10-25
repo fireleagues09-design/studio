@@ -565,9 +565,11 @@ export default function AdminPage() {
         transaction: Transaction,
         newStatus: 'Completed' | 'Failed'
     ) => {
-        if (!isAdmin) return;
         const currentUser = auth.currentUser;
-        if (!currentUser) return;
+        if (!isAdmin || !currentUser) {
+            toast({ title: 'Permission Denied', description: 'You do not have permission to perform this action.', variant: 'destructive' });
+            return;
+        };
         
         const { id, userId, amount, type } = transaction;
 
@@ -661,6 +663,7 @@ export default function AdminPage() {
                 <TabsList>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
                     <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+                    <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
                 <TabsContent value="transactions" className="mt-6">
@@ -855,6 +858,23 @@ export default function AdminPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+                <TabsContent value="users" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>User Management</CardTitle>
+                      <CardDescription>
+                        Search, view, and manage user details and actions.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
+                        <Button asChild>
+                            <Link href="/admin/users">Go to User Management Page</Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
                  <TabsContent value="settings" className="mt-6 space-y-8">
                     <SliderAdmin />
                 </TabsContent>
@@ -862,3 +882,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    

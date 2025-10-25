@@ -1,139 +1,73 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-<<<<<<< HEAD
-    
-    // Helper function to check if the current user is an admin.
-    function isAdmin() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+
+    // Helper functions
+    function isUserAuthenticated() {
+      return request.auth != null;
     }
 
-    // Rules for the 'users' collection
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin() {
+      return isUserAuthenticated() && getUserData(request.auth.uid).isAdmin == true;
+    }
+
+    // USERS
     match /users/{userId} {
-      // A user can get their own profile, or an admin can get any profile.
-      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
-
-      // Only admins can list all users.
-      allow list: if isAdmin();
-
-      // A user can update their own inGameName.
-      // This rule is specific and prevents other fields from being changed by the user.
-      allow update: if request.auth != null
-                    && request.auth.uid == userId
-                    && request.resource.data.keys().hasOnly(['inGameName']);
-
-      // A logged-in user can create their own profile document.
-      allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Rules for the 'teams' subcollection within a user document.
-      match /teams/{teamId} {
-        // A user can read their own teams. Admins can read any.
-        allow read: if request.auth != null;
-
-        // A user can create or delete their own team documents.
-        allow create, delete: if request.auth != null && request.auth.uid == userId;
-
-        // A user can update their team members or category.
-        allow update: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.resource.data.diff(resource.data).changedKeys()
-                            .hasOnly(['members', 'category']);
-        
-        // Admins have full access to manage any user's teams.
-        allow read, write, list: if isAdmin();
-      }
-    }
-
-    // Rules for the 'sliders' collection
-    match /sliders/{sliderId} {
-      // Anyone can view sliders.
-      allow read: if true;
-      // Only admins can create, update, or delete sliders.
-      allow write: if isAdmin();
-    }
-
-    // Rules for the 'banners' collection
-    match /banners/{bannerId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Rules for the 'settings' collection
-    match /settings/{settingId} {
-      // Only admins can manage settings.
-      allow read, write: if isAdmin();
-    }
-
-    // Rules for the 'tournaments' collection
-    // Helper function to check if a user is an admin
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-=======
-
-<<<<<<< HEAD
-    function isAuth() {
-        return request.auth != null;
->>>>>>> 40eab11 (give rules to me for registered players of tournament FirebaseError: Mis)
-    }
-
-    function isUser(userId) {
-      return isAuth() && request.auth.uid == userId;
+      allow read: if isUserAuthenticated();
+      allow create: if isUserAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
     
-    function isAdmin() {
-        return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    // DELETED USERS (Archive for admins)
+    match /deletedUsers/{docId} {
+        allow read, write: if isAdmin();
     }
 
-    function isRegisteredForTournament(tournamentId) {
-        return isAuth() && request.auth.uid in get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.registeredPlayers;
-=======  
-    // Helper function to check for admin status
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
->>>>>>> 9d43381 (give me the rules to uploading in firestore)
-    }
-
-    // Rules for the 'users' collection
-    match /users/{userId} {
-      // Admins can read/write any user document.
-      // A user can read/write their own document.
-      allow read, write: if request.auth != null && (isAdmin(request.auth.uid) || request.auth.uid == userId);
-    }
-
-    // Rules for the 'tournaments' collection
+    // TOURNAMENTS
     match /tournaments/{tournamentId} {
-      // Anyone can read tournament data.
-      allow read: if true;
-      
-      // Only admins can create, update, or delete tournaments.
-      allow create, update, delete: if request.auth != null && isAdmin(request.auth.uid);
+      allow read: if true; // Publicly readable
+      allow create, update, delete: if isAdmin();
 
-      // Rules for the 'registrations' subcollection
+      // Registrations subcollection
       match /registrations/{userId} {
-        // Admins can read any registration.
-        // A user can read their own registration.
-        allow read: if request.auth != null && (isAdmin(request.auth.uid) || request.auth.uid == userId);
-        // Only authenticated users can register (create).
-        allow create: if request.auth != null && request.auth.uid == userId;
-        // No one can update or delete a registration from the client.
-        allow update, delete: if false;
+        allow read: if isAdmin() || isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isAdmin();
       }
     }
 
-    // Rules for the 'sliders' collection
-    match /sliders/{sliderId} {
-        // Anyone can view sliders
-        allow read: if true;
-        // Only admins can upload, update, or delete sliders
-        allow write: if request.auth != null && isAdmin(request.auth.uid);
+    // TRANSACTIONS
+    match /transactions/{transactionId} {
+        allow read: if isUserAuthenticated() && (getUserData(request.auth.uid).isAdmin == true || get(/databases/$(database)/documents/transactions/$(transactionId)).data.userId == request.auth.uid);
+        allow create: if isUserAuthenticated();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
     }
-
-    // Rules for any other collection (default deny)
-    match /{document=**} {
-      allow read, write: if false;
+    
+    // SLIDERS
+    match /sliders/{sliderId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ADMIN LOGS
+    match /adminLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow write: if false; // Immutable logs
     }
   }
 }
+
+    
