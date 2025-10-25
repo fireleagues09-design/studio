@@ -106,7 +106,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         return format(date, 'PPp');
     };
 
-    if (loading) {
+    if (loading || !isAdmin) {
         return (
              <div className="container mx-auto px-4 py-8 md:py-12">
                 <Skeleton className="h-8 w-48 mb-4" />

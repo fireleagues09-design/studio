@@ -569,11 +569,13 @@ export default function AdminPage() {
 
 
      const handleSearchUsers = useCallback(async (searchTerm: string) => {
+        if (!isAdmin) return;
         const currentUser = auth.currentUser;
         if (!currentUser) return;
+
         setUserSearchLoading(true);
         try {
-            const idToken = await currentUser.getIdToken(true); // Force refresh the token
+            const idToken = await currentUser.getIdToken(true);
             const result = await searchUsers(idToken, searchTerm);
             if (result.success) {
                 setUsers(result.users || []);
@@ -586,7 +588,7 @@ export default function AdminPage() {
         } finally {
             setUserSearchLoading(false);
         }
-    }, [toast]);
+    }, [toast, isAdmin]);
 
     useEffect(() => {
         handleSearchUsers(debouncedSearchTerm);
@@ -596,6 +598,7 @@ export default function AdminPage() {
         transaction: Transaction,
         newStatus: 'Completed' | 'Failed'
     ) => {
+        if (!isAdmin) return;
         const currentUser = auth.currentUser;
         if (!currentUser) return;
         
@@ -603,7 +606,7 @@ export default function AdminPage() {
 
         setActionLoading(prev => ({...prev, [id]: true}));
         try {
-            const idToken = await currentUser.getIdToken(true); // Force refresh the token
+            const idToken = await currentUser.getIdToken(true);
             const result = await updateTransaction(id, newStatus, userId, amount, type, idToken);
             if (result.success) {
                 toast({
@@ -642,7 +645,7 @@ export default function AdminPage() {
          return (
             <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
                 <div className="flex items-center justify-center h-64">
-                    <p>Redirecting...</p>
+                    <p>Access Denied. Redirecting...</p>
                 </div>
             </div>
         )
@@ -936,7 +939,7 @@ export default function AdminPage() {
                                             ) : (
                                                 <TableRow>
                                                     <TableCell colSpan={5} className="h-24 text-center">
-                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Search for a user to see results, or see recent users below."}
+                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Start typing to search for users."}
                                                     </TableCell>
                                                 </TableRow>
                                             )}

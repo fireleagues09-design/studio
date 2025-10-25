@@ -93,7 +93,7 @@ export default function SliderAdmin() {
         return;
     }
     if (!user) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in.', variant: 'destructive' });
+        toast({ title: 'Authentication Error', description: 'You must be logged in and an admin.', variant: 'destructive' });
         return;
     }
 
@@ -104,9 +104,8 @@ export default function SliderAdmin() {
     reader.readAsDataURL(file);
     reader.onloadend = async () => {
         const base64Data = reader.result as string;
-        const idToken = await user.getIdToken();
-        
         try {
+            const idToken = await user.getIdToken(true);
             setUploadProgress(50);
             const result = await uploadSlider(base64Data, file.type, file.name, idToken);
             setUploadProgress(100);
@@ -134,11 +133,12 @@ export default function SliderAdmin() {
 
   const handleDelete = async (slider: Slider) => {
     if (!user) {
-        toast({ title: 'Authentication Error', description: 'You must be logged in.', variant: 'destructive' });
+        toast({ title: 'Authentication Error', description: 'You must be logged in and an admin.', variant: 'destructive' });
         return;
     }
-    const idToken = await user.getIdToken();
+    
     try {
+      const idToken = await user.getIdToken(true);
       const result = await deleteSlider(slider.id, slider.storagePath, idToken);
        if (result.success) {
             toast({ title: 'Success', description: 'Slider deleted successfully' });

@@ -3,37 +3,38 @@
 
 import { auth, db } from '@/lib/firebase-admin';
 
+async function verifyAdmin(idToken: string): Promise<boolean> {
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        if (!userDoc.exists) return false;
+        const userData = userDoc.data();
+        return userData?.isAdmin === true;
+    } catch (error) {
+        console.error("Error verifying admin token:", error);
+        return false;
+    }
+}
+
 export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
     try {
-        // Admin verification removed as per user request.
-        // Any authenticated user can now search.
-        if (!idToken) {
-            return { success: false, message: "Authentication is required to search for users." };
-        }
-        
-        // Verifying the token is still a good practice to ensure the user is logged in.
-        try {
-            await auth.verifyIdToken(idToken);
-        } catch (error) {
-             return { success: false, message: "Invalid authentication token." };
+        const isAdmin = await verifyAdmin(idToken);
+        if (!isAdmin) {
+            return { success: false, message: "Permission denied. You must be an admin to perform this action." };
         }
 
-
-        if (!searchTerm) {
-             const recentUsersQuery = db.collection('users').orderBy('registeredOn', 'desc').limit(10);
-             const recentUsersSnapshot = await recentUsersQuery.get();
-             const recentUsers = recentUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-             return { success: true, users: recentUsers };
+        if (!searchTerm.trim()) {
+             return { success: true, users: [] };
         }
         
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
 
-        // This is not efficient for large datasets, but works for smaller ones.
-        // For production, consider a dedicated search service like Algolia or Elasticsearch.
-        const usersSnapshot = await db.collection('users').limit(1000).get();
+        // This approach is not highly scalable. For larger user bases,
+        // a dedicated search service like Algolia or Elasticsearch is recommended.
+        const usersSnapshot = await db.collection('users').get();
         const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         const filteredUsers = allUsers.filter(user => {
@@ -44,7 +45,7 @@ export async function searchUsers(
             return nameMatch || uidMatch || phoneMatch || emailMatch;
         });
 
-        return { success: true, users: filteredUsers.slice(0, 50) }; // Limit results
+        return { success: true, users: filteredUsers.slice(0, 50) };
 
     } catch (error: any) {
         console.error('Error searching users:', error);

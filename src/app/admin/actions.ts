@@ -5,12 +5,14 @@ import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type { User } from '@/lib/mock-data';
 
+// This is the single source of truth for admin verification in server actions.
 async function verifyAdmin(idToken: string): Promise<boolean> {
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
         const userDoc = await db.collection('users').doc(decodedToken.uid).get();
         
         if (!userDoc.exists) {
+            console.warn(`Admin verification failed: User document not found for UID ${decodedToken.uid}`);
             return false;
         }
         
@@ -19,6 +21,7 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
             return true;
         }
 
+        console.warn(`Admin verification failed: User ${decodedToken.uid} is not an admin.`);
         return false;
 
     } catch (error) {
@@ -115,6 +118,12 @@ export async function updateTransaction(
             if (!userDoc.exists) {
                 throw new Error("User for this transaction not found.");
             }
+
+            const transactionDoc = await t.get(transactionRef);
+            if (!transactionDoc.exists || transactionDoc.data()?.status !== 'Pending') {
+                 throw new Error("Transaction is not pending or does not exist.");
+            }
+
 
             t.update(transactionRef, { status: newStatus });
 
