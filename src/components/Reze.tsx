@@ -20,7 +20,7 @@ export function Reze() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
 
      useEffect(() => {
         // Initial greeting from Reze
@@ -50,9 +50,9 @@ export function Reze() {
 
 
     useEffect(() => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTo({
-                top: scrollAreaRef.current.scrollHeight,
+        if (viewportRef.current) {
+            viewportRef.current.scrollTo({
+                top: viewportRef.current.scrollHeight,
                 behavior: 'smooth',
             });
         }
@@ -94,7 +94,7 @@ export function Reze() {
             </CardHeader>
             <Separator />
             <CardContent className="p-0">
-                 <ScrollArea ref={scrollAreaRef} className="h-56 p-4">
+                 <ScrollArea viewportRef={viewportRef} className="h-56 p-4">
                     <div className="space-y-4">
                         {messages.map((msg, index) => (
                             <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
