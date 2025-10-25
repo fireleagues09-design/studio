@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -42,9 +41,11 @@ export function Reze() {
             }
         };
         
-        getInitialGreeting();
+        if (messages.length === 0) {
+          getInitialGreeting();
+        }
 
-    }, []);
+    }, [messages.length]);
 
 
     useEffect(() => {
@@ -82,7 +83,7 @@ export function Reze() {
     };
 
     return (
-        <Card className="w-full max-w-3xl mx-auto shadow-2xl shadow-primary/10">
+        <Card className="w-full max-w-2xl mx-auto shadow-2xl shadow-primary/10">
             <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                     <Bot className="h-8 w-8 text-primary" />
@@ -92,7 +93,7 @@ export function Reze() {
             </CardHeader>
             <Separator />
             <CardContent className="p-0">
-                 <ScrollArea ref={scrollAreaRef} className="h-80 p-6">
+                 <ScrollArea ref={scrollAreaRef} className="h-64 p-6">
                     <div className="space-y-4">
                         {messages.map((msg, index) => (
                             <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
