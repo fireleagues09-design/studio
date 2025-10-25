@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 
 
 // Add a global declaration for the confirmationResult
@@ -118,6 +120,39 @@ export default function LoginPage() {
       }
   };
 
+   const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        toast({ title: "Success", description: "Logged in successfully!" });
+        router.push("/");
+      } else {
+        await auth.signOut();
+        toast({
+          title: "Login Failed",
+          description: "No account found with this Google account. Please register first.",
+          variant: "destructive"
+        });
+        router.push("/register");
+      }
+    } catch (error: any) {
+      console.error("Error with Google sign-in:", error);
+      toast({
+        title: "Sign-in Error",
+        description: error.message || "An unknown error occurred during Google sign-in.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
@@ -154,6 +189,17 @@ export default function LoginPage() {
                 Change phone number
             </Button>
           )}
+           
+          <div className="flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">OR</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Button variant="outline" onClick={handleGoogleSignIn} disabled={loading}>
+            <Chrome className="mr-2 h-4 w-4" />
+            Sign in with Google
+          </Button>
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}

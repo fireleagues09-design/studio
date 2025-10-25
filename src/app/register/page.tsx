@@ -13,13 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber, signInWithPopup, ConfirmationResult } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { TeamMember } from "@/lib/mock-data";
+import { Separator } from "@/components/ui/separator";
+import { Chrome } from "lucide-react";
 
 
 // Add a global declaration for the confirmationResult
@@ -173,7 +175,7 @@ export default function RegisterPage() {
           inGameName: inGameName,
           inGameUid: inGameUid,
           phone: `+91${phone}`,
-          email: `${phone}@fireleagues.com`,
+          email: user.email || `${phone}@fireleagues.com`,
           wallet: {
             deposit: 0,
             winning: 0,
@@ -203,6 +205,57 @@ export default function RegisterPage() {
       }
   };
 
+  const handleGoogleSignUp = async () => {
+    if (!inGameUid) {
+      toast({ title: "Error", description: "Please fill in your In-Game UID.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        toast({ title: "Registration Error", description: "This Google account is already registered.", variant: "destructive" });
+        await auth.signOut();
+        router.push('/login');
+        return;
+      }
+      
+      const nullValue = '\\\\\\\\\\\\';
+      const duoTeamData = { name: nullValue, type: 'Duo', members: [{ inGameName: nullValue, inGameUid: nullValue }] };
+      const squadTeamData = { name: nullValue, type: 'Squad', members: Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }) };
+
+      await setDoc(userDocRef, {
+        inGameName: user.displayName || 'Gamer',
+        inGameUid: inGameUid,
+        phone: user.phoneNumber || 'Not provided',
+        email: user.email,
+        wallet: { deposit: 0, winning: 0, bonus: 0 },
+        duoTeam: duoTeamData,
+        squadTeam: squadTeamData,
+        registeredOn: serverTimestamp(),
+      });
+
+      toast({ title: "Success", description: "Account created successfully!" });
+      router.push("/");
+
+    } catch (error: any) {
+      console.error("Error creating account with Google:", error);
+      toast({
+        title: "Registration Error",
+        description: error.message || "Failed to create account with Google.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
        <div id="recaptcha-container"></div>
@@ -215,12 +268,28 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="in-game-name">In-Game Name</Label>
-              <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
-            </div>
-             <div className="grid gap-2">
                 <Label htmlFor="in-game-uid">In-Game UID</Label>
                 <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
+            </div>
+            
+            <div className="flex items-center gap-4">
+                <Separator className="flex-1" />
+                <span className="text-xs text-muted-foreground">OR</span>
+                <Separator className="flex-1" />
+            </div>
+
+            <Button variant="outline" onClick={handleGoogleSignUp} disabled={loading}>
+                <Chrome className="mr-2 h-4 w-4" />
+                Sign up with Google
+            </Button>
+            
+            <p className="text-sm text-center text-muted-foreground pt-2">
+                For phone number registration, fill out the fields below.
+            </p>
+
+            <div className="grid gap-2">
+              <Label htmlFor="in-game-name">In-Game Name</Label>
+              <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone Number</Label>
