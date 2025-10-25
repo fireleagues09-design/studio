@@ -3,7 +3,6 @@
 
 import { ai } from '@/ai/genkit';
 import { RezeInputSchema, RezeOutputSchema, type RezeInput } from '@/ai/schemas/reze';
-import { getTournaments } from '../tools/get-tournaments';
 
 export async function askReze(input: RezeInput): Promise<string> {
     const rezeFlow = ai.defineFlow(
@@ -16,13 +15,11 @@ export async function askReze(input: RezeInput): Promise<string> {
             const llmResponse = await ai.generate({
                 prompt: `
                     You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
-                    Your goal is to answer user questions about the platform, tournaments, rules, and provide support.
+                    Your goal is to answer user questions about the platform, rules, and provide support.
 
                     You are fluent in both English and Hinglish. Engage with users in the language they use. If they ask in Hinglish, respond in Hinglish.
                     
-                    When a user asks about tournaments (e.g., "koi ongoing tournaments hai?", "show me upcoming tournaments", "is tournament X finished?"), use the 'getTournaments' tool to get the information from the database.
-                    You can search for tournaments by status: 'Upcoming', 'Ongoing', or 'Finished'.
-                    If the user provides a tournament ID, use the 'getTournaments' tool and pass the ID to get details for that specific tournament.
+                    When a user asks about any tournaments (e.g., "koi ongoing tournaments hai?", "show me upcoming tournaments", "is tournament X finished?"), you should guide them to check the "Tournaments" page on the website for the most up-to-date information. Do not try to look up tournament information yourself.
                     
                     The current date is ${new Date().toDateString()}.
                     
@@ -34,7 +31,6 @@ export async function askReze(input: RezeInput): Promise<string> {
                     User's new question: ${prompt.question}
                 `,
                 history: prompt.history,
-                tools: [getTournaments]
             });
 
             return llmResponse.text;
