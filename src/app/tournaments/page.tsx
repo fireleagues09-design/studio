@@ -11,6 +11,7 @@ import { db, auth } from "@/lib/firebase";
 import type { Tournament } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 
 export default function TournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,14 +95,19 @@ export default function TournamentsPage() {
             <h1 className="text-4xl font-bold tracking-tight">All Tournaments</h1>
             <p className="text-muted-foreground mt-1">Find your next challenge. Compete and conquer.</p>
         </div>
-        <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-                placeholder="Search tournaments..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="flex w-full md:w-auto md:max-w-sm items-center space-x-2">
+            <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder="Search tournaments..."
+                    className="pl-9"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Button>
+              <Search className="h-4 w-4" />
+            </Button>
         </div>
       </div>
 
