@@ -23,20 +23,19 @@ export const getTournaments = ai.defineTool(
       if (snapshot.empty) {
         return [];
       }
-
-      const tournaments: any[] = [];
-      snapshot.forEach(doc => {
+      
+      // Correctly map over the documents in the snapshot
+      return snapshot.docs.map(doc => {
         const data = doc.data();
-        tournaments.push({
+        return {
           id: doc.id,
           name: data.name,
           status: data.status,
           date: data.date,
           time: data.time,
-        });
+        };
       });
-      
-      return tournaments;
+
     } catch (error) {
       console.error("Error fetching tournaments with Admin SDK:", error);
       // It's better to return an empty array and let the AI say there was an issue
