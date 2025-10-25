@@ -73,7 +73,7 @@ export default function Home() {
       )}
 
 
-      <main className="container mx-auto px-4 flex flex-col gap-8 md:gap-12">
+      <main className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-8 md:pb-12">
         
         <section>
           <div className="flex justify-between items-center mb-4">
@@ -110,12 +110,10 @@ export default function Home() {
           }
 
         </section>
-        
-        <section className="pb-8 md:pb-12">
-          <Reze />
-        </section>
 
       </main>
+      
+      <Reze />
     </div>
   );
 }
