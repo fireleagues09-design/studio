@@ -16,7 +16,7 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
             return false;
         }
         
-        const isAdmin = !!userDoc.data()?.isAdmin;
+        const isAdmin = userDoc.data()?.isAdmin === true;
         if (!isAdmin) {
             console.error(`Admin verification failed: User ${uid} does not have 'isAdmin' flag set to true.`);
         }
@@ -37,36 +37,30 @@ export async function searchUsers(
         return { success: false, message: 'Permission denied. User is not an admin.' };
     }
 
-    if (!searchTerm) {
-        // Return recent users if search term is empty
-        try {
-            const snapshot = await db.collection('users').orderBy('registeredOn', 'desc').limit(10).get();
-            const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return { success: true, users };
-        } catch (error: any) {
-            console.error("Error fetching recent users:", error);
-            return { success: false, message: error.message };
-        }
-    }
-
     try {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        
-        // Firestore doesn't support case-insensitive queries directly or OR queries on different fields.
-        // We fetch all users and filter on the server. This is not optimal for very large user bases.
-        // For production apps with >10k users, consider a dedicated search service like Algolia or Typesense.
-        const usersSnapshot = await db.collection('users').get();
-        
-        const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Always filter for admin users first.
+        const adminUsersQuery = db.collection('users').where('isAdmin', '==', true);
+        const adminUsersSnapshot = await adminUsersQuery.get();
+        const adminUsers = adminUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const filteredUsers = allUsers.filter(user => {
+        if (!searchTerm) {
+            // Return recent admin users if search term is empty
+            const recentAdminUsers = adminUsers
+                .sort((a, b) => (b.registeredOn?.seconds || 0) - (a.registeredOn?.seconds || 0))
+                .slice(0, 10);
+            return { success: true, users: recentAdminUsers };
+        }
+        
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+
+        const filteredUsers = adminUsers.filter(user => {
             const nameMatch = user.inGameName?.toLowerCase().includes(lowerCaseSearchTerm);
             const uidMatch = user.inGameUid?.toLowerCase().includes(lowerCaseSearchTerm);
             const phoneMatch = user.phone?.toLowerCase().includes(lowerCaseSearchTerm);
             return nameMatch || uidMatch || phoneMatch;
         });
 
-        return { success: true, users: filteredUsers.slice(0, 50) }; // Limit results to avoid sending huge payloads
+        return { success: true, users: filteredUsers.slice(0, 50) }; // Limit results
 
     } catch (error: any) {
         console.error('Error searching users:', error);
@@ -184,3 +178,4 @@ export async function updateTransaction(
         return { success: false, message: error.message || "An unknown error occurred."};
     }
 }
+
