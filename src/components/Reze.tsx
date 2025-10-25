@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Sparkle, Send, Loader2, MessageCircle, X } from 'lucide-react';
+import { Sparkle, Send, Loader2, Bot } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from './ui/card';
 import { Input } from './ui/input';
@@ -20,11 +20,10 @@ export function Reze() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
      useEffect(() => {
-        // Initial greeting from Reze, only when chat is opened for the first time
+        // Initial greeting from Reze
         const getInitialGreeting = async () => {
             setLoading(true);
             try {
@@ -43,11 +42,11 @@ export function Reze() {
             }
         };
         
-        if (isOpen && messages.length === 0) {
+        if (messages.length === 0) {
           getInitialGreeting();
         }
 
-    }, [isOpen, messages.length]);
+    }, [messages.length]);
 
 
     useEffect(() => {
@@ -84,34 +83,15 @@ export function Reze() {
         }
     };
 
-    if (!isOpen) {
-        return (
-            <Button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-4 left-4 z-50 rounded-full w-16 h-16 shadow-lg"
-            >
-                <Sparkle className="h-8 w-8 text-accent-foreground" />
-            </Button>
-        );
-    }
-
     return (
         <div className="fixed bottom-4 left-4 z-50">
             <Card className="w-full max-w-sm shadow-2xl shadow-accent/10">
-                <CardHeader className="relative">
+                <CardHeader>
                     <CardTitle className="flex items-center gap-3">
                         <Sparkle className="h-6 w-6 text-accent" />
                         <span className='text-xl'>Talk to Reze</span>
                     </CardTitle>
                     <CardDescription>Your AI assistant</CardDescription>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-3 right-3"
-                        onClick={() => setIsOpen(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
                 </CardHeader>
                 <Separator />
                 <CardContent className="p-0">
