@@ -107,7 +107,6 @@ export function Header() {
                  setLoading(false);
               }, 
               (error) => {
-                 console.error("onSnapshot error:", error)
                  const permissionError = new FirestorePermissionError({
                     path: userDocRef.path,
                     operation: 'get',
@@ -315,5 +314,3 @@ export function Header() {
     </header>
   );
 }
-
-    
