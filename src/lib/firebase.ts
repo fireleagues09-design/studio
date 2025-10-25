@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -19,6 +20,10 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
+// This is necessary to fix Google login issues in some development environments.
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    auth.tenantId = 'fireleagues-drrjw.firebaseapp.com';
+}
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
