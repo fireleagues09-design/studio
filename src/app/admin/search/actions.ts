@@ -3,39 +3,15 @@
 
 import { auth, db } from '@/lib/firebase-admin';
 
-async function verifyAdmin(idToken: string): Promise<boolean> {
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-        
-        if (!userDoc.exists) {
-            console.warn(`Admin verification failed: User document not found for UID ${decodedToken.uid}`);
-            return false;
-        }
-        
-        const userData = userDoc.data();
-        if (userData && userData.isAdmin === true) {
-            return true;
-        }
-
-        console.warn(`Admin verification failed: User ${decodedToken.uid} is not an admin.`);
-        return false;
-
-    } catch (error) {
-        console.error("Error verifying admin token:", error);
-        return false;
-    }
-}
+// Admin verification is removed as per user request.
 
 export async function searchUsers(
     idToken: string,
     searchTerm: string
 ): Promise<{ success: boolean; users?: any[]; message?: string }> {
     try {
-        const isAdmin = await verifyAdmin(idToken);
-        if (!isAdmin) {
-            return { success: false, message: "Permission denied. You must be an admin to perform this action." };
-        }
+        // Verify the user is authenticated, but no admin check.
+        await auth.verifyIdToken(idToken);
 
         if (!searchTerm.trim()) {
              return { success: true, users: [] };
@@ -60,6 +36,10 @@ export async function searchUsers(
 
     } catch (error: any) {
         console.error('Error searching users:', error);
+        // Provide a more generic error if token is invalid, but don't mention admin status
+        if (error.code === 'auth/id-token-revoked' || error.code === 'auth/argument-error') {
+            return { success: false, message: 'Your session has expired. Please refresh the page and try again.' };
+        }
         return { success: false, message: error.message || 'An unknown server error occurred.' };
     }
 }
