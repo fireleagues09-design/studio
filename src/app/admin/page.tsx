@@ -569,10 +569,11 @@ export default function AdminPage() {
 
 
      const handleSearchUsers = useCallback(async (searchTerm: string) => {
-        if (!user) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
         setUserSearchLoading(true);
         try {
-            const idToken = await user.getIdToken();
+            const idToken = await currentUser.getIdToken(true); // Force refresh the token
             const result = await searchUsers(idToken, searchTerm);
             if (result.success) {
                 setUsers(result.users || []);
@@ -585,7 +586,7 @@ export default function AdminPage() {
         } finally {
             setUserSearchLoading(false);
         }
-    }, [user, toast]);
+    }, [toast]);
 
     useEffect(() => {
         handleSearchUsers(debouncedSearchTerm);
@@ -595,13 +596,14 @@ export default function AdminPage() {
         transaction: Transaction,
         newStatus: 'Completed' | 'Failed'
     ) => {
-        if (!user) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
         
         const { id, userId, amount, type } = transaction;
 
         setActionLoading(prev => ({...prev, [id]: true}));
         try {
-            const idToken = await user.getIdToken();
+            const idToken = await currentUser.getIdToken(true); // Force refresh the token
             const result = await updateTransaction(id, newStatus, userId, amount, type, idToken);
             if (result.success) {
                 toast({
