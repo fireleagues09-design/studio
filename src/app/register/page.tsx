@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
 import { Separator } from "@/components/ui/separator";
-import { Chrome } from "lucide-react";
+import { GoogleLogo } from "@/components/icons/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -212,7 +212,7 @@ export default function RegisterPage() {
     const nullValue = '\\\\\\\\\\\\';
 
     if (isTeamInfoIncomplete) {
-        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." })
+        toast({ title: "Team Info Auto-filled", description: "Team details were missing and have been auto-filled. You can update them later via support." });
     }
 
     try {
@@ -410,7 +410,7 @@ export default function RegisterPage() {
             </div>
 
             <Button variant="outline" onClick={handleGoogleSignUp} disabled={loading || googleLoading || !inGameUid}>
-                {googleLoading ? 'Signing up...' : <><Chrome className="mr-2 h-4 w-4" /> Sign Up with Google</>}
+                {googleLoading ? 'Signing up...' : <><GoogleLogo className="mr-2 h-4 w-4" /> Sign Up with Google</>}
             </Button>
 
 

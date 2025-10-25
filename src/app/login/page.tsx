@@ -19,7 +19,7 @@ import { auth, db, googleProvider } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "@/components/ui/separator";
-import { Chrome } from "lucide-react";
+import { GoogleLogo } from "@/components/icons/GoogleLogo";
 
 
 // Add a global declaration for the confirmationResult
@@ -201,7 +201,7 @@ export default function LoginPage() {
           </div>
 
            <Button variant="outline" onClick={handleGoogleLogin} disabled={loading || googleLoading}>
-            {googleLoading ? 'Signing in...' : <><Chrome className="mr-2 h-4 w-4" /> Google</>}
+            {googleLoading ? 'Signing in...' : <><GoogleLogo className="mr-2 h-4 w-4" /> Google</>}
           </Button>
 
           <div className="mt-4 text-center text-sm">
