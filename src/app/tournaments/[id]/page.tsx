@@ -533,11 +533,11 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 }
 
 interface TournamentPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function TournamentPage({ params }: TournamentPageProps) {
-  const { id } = params;
+  const { id } = use(params);
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
