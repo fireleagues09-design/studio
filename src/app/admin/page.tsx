@@ -565,8 +565,7 @@ export default function AdminPage() {
         transaction: Transaction,
         newStatus: 'Completed' | 'Failed'
     ) => {
-        const currentUser = auth.currentUser;
-        if (!isAdmin || !currentUser) {
+        if (!isAdmin || !auth.currentUser) {
             toast({ title: 'Permission Denied', description: 'You do not have permission to perform this action.', variant: 'destructive' });
             return;
         };
@@ -575,8 +574,7 @@ export default function AdminPage() {
 
         setActionLoading(prev => ({...prev, [id]: true}));
         try {
-            const idToken = await currentUser.getIdToken(true);
-            const result = await updateTransaction(id, newStatus, userId, amount, type, idToken);
+            const result = await updateTransaction(id, newStatus, userId, amount, type);
             if (result.success) {
                 toast({
                     title: 'Success',

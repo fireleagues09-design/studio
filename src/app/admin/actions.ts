@@ -101,14 +101,8 @@ export async function updateTransaction(
     newStatus: 'Completed' | 'Failed',
     userId: string,
     amount: number,
-    type: 'deposit' | 'withdrawal',
-    idToken: string
+    type: 'deposit' | 'withdrawal'
 ): Promise<{ success: boolean, message: string }> {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
-    }
-
     const transactionRef = db.collection('transactions').doc(transactionId);
     const userRef = db.collection('users').doc(userId);
 
