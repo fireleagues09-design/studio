@@ -3,6 +3,7 @@
 
 import { ai } from '@/ai/genkit';
 import { RezeInputSchema, RezeOutputSchema, type RezeInput } from '@/ai/schemas/reze';
+import { getOngoingTournaments } from '@/ai/tools/get-tournaments';
 
 export async function askReze(input: RezeInput): Promise<string> {
     const rezeFlow = ai.defineFlow(
@@ -16,6 +17,7 @@ export async function askReze(input: RezeInput): Promise<string> {
                 prompt: `
                     You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
                     Your goal is to answer user questions about the platform, tournaments, rules, and provide support.
+                    When a user asks if there are any tournaments happening now or ongoing, use the getOngoingTournaments tool to check.
                     Be concise, friendly, and always stay on topic. Start the conversation by introducing yourself and asking how you can help.
                     
                     Here is the conversation history:
@@ -24,6 +26,7 @@ export async function askReze(input: RezeInput): Promise<string> {
                     User's new question: ${prompt.question}
                 `,
                 history: prompt.history,
+                tools: [getOngoingTournaments]
             });
 
             return llmResponse.text;
