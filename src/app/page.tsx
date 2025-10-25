@@ -51,7 +51,7 @@ export default function Home() {
   const viewAllLink = !loadingAuth && user ? "/tournaments" : "/register";
 
   return (
-    <div className="flex flex-col gap-8 pb-12">
+    <div className="flex flex-col gap-8 py-8 md:py-12">
       
       <section className="container mx-auto px-4">
         <HomeSlider isAuthenticated={!!user} />
