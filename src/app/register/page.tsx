@@ -216,6 +216,8 @@ export default function RegisterPage() {
     }
 
     try {
+      // This is necessary to fix Google login issues in some development environments.
+      auth.tenantId = 'fireleagues-drrjw.firebaseapp.com';
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
