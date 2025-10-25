@@ -22,8 +22,6 @@ import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
-import { searchUsers } from './search/actions';
-import { useDebounce } from 'use-debounce';
 import { updateTransaction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -472,7 +470,6 @@ function DeleteTournamentDialog({tournamentId, tournamentName }: { tournamentId:
 export default function AdminPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [users, setUsers] = useState<UserData[]>([]);
     const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>([]);
     const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [loading, setLoading] = useState(true);
@@ -484,9 +481,6 @@ export default function AdminPage() {
 
     const router = useRouter();
     const { toast } = useToast();
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [debouncedSearchTerm] = useDebounce(userSearchTerm, 500);
-    const [userSearchLoading, setUserSearchLoading] = useState(false);
     
 
     useEffect(() => {
@@ -566,33 +560,6 @@ export default function AdminPage() {
             unsubscribeTransactions();
         };
     }, [isAdmin, user]);
-
-
-     const handleSearchUsers = useCallback(async (searchTerm: string) => {
-        if (!isAdmin) return;
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        setUserSearchLoading(true);
-        try {
-            const idToken = await currentUser.getIdToken(true);
-            const result = await searchUsers(idToken, searchTerm);
-            if (result.success) {
-                setUsers(result.users || []);
-            } else {
-                toast({ title: "Search Error", description: result.message, variant: "destructive" });
-            }
-        } catch (error: any) {
-            console.error("Failed to search users:", error);
-            toast({ title: "Search Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
-        } finally {
-            setUserSearchLoading(false);
-        }
-    }, [toast, isAdmin]);
-
-    useEffect(() => {
-        handleSearchUsers(debouncedSearchTerm);
-    }, [debouncedSearchTerm, handleSearchUsers]);
     
     const handleTransactionUpdate = async (
         transaction: Transaction,
@@ -694,7 +661,6 @@ export default function AdminPage() {
                 <TabsList>
                     <TabsTrigger value="transactions">Transactions</TabsTrigger>
                     <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
                     <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
                 <TabsContent value="transactions" className="mt-6">
@@ -882,67 +848,6 @@ export default function AdminPage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="users" className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>User Management</CardTitle>
-                            <CardDescription>Search for users by name, UID, phone number, or email.</CardDescription>
-                            <div className="relative mt-4">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search users..."
-                                    className="pl-9"
-                                    value={userSearchTerm}
-                                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                                />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {userSearchLoading ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                </div>
-                            ) : (
-                                <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>In-Game Name</TableHead>
-                                                <TableHead>Email</TableHead>
-                                                <TableHead>Phone</TableHead>
-                                                <TableHead>In-Game UID</TableHead>
-                                                <TableHead className="text-right">Admin</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {users.length > 0 ? (
-                                                users.map(user => (
-                                                    <TableRow key={user.id}>
-                                                        <TableCell className="font-medium">{user.inGameName}</TableCell>
-                                                        <TableCell>{user.email}</TableCell>
-                                                        <TableCell>{user.phone}</TableCell>
-                                                        <TableCell>{user.inGameUid}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {user.isAdmin && <Badge>Admin</Badge>}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={5} className="h-24 text-center">
-                                                        {debouncedSearchTerm ? `No users found for "${debouncedSearchTerm}"` : "Start typing to search for users."}
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
                                         </TableBody>
                                     </Table>
                                 </div>
