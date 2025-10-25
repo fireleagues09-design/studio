@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
           }
 
           // 2) If input is numeric maybe phone
-          if (/^\\+?\\d{4,}$/.test(q)) {
+          if (/^\+?\d{4,}$/.test(q)) {
             const usersRef = collection(db, "users");
             const q1 = query(usersRef, where("phone", "==", q), limit(20));
             const unsubPhone = onSnapshot(q1, (snap) => {
@@ -483,5 +483,3 @@ function RecentAdminLogs({ limit: logLimit = 10 }: { limit?: number }) {
     </div>
   );
 }
-
-    
