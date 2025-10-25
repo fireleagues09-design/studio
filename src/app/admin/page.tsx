@@ -22,7 +22,7 @@ import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
-import { searchUsers } from './actions';
+import { searchUsers } from './search/actions';
 import { useDebounce } from 'use-debounce';
 import { updateTransaction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -579,9 +579,9 @@ export default function AdminPage() {
             } else {
                 toast({ title: "Search Error", description: result.message, variant: "destructive" });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to search users:", error);
-            toast({ title: "Search Error", description: "An unexpected error occurred.", variant: "destructive" });
+            toast({ title: "Search Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
         } finally {
             setUserSearchLoading(false);
         }
