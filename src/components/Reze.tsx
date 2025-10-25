@@ -99,7 +99,7 @@ export function Reze() {
                         {messages.map((msg, index) => (
                             <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                                 {msg.role === 'model' && <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />}
-                                <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+                                <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-accent text-accent-foreground' : 'bg-muted')}>
                                     {msg.content}
                                 </div>
                             </div>
@@ -125,8 +125,14 @@ export function Reze() {
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSend()}
                         disabled={loading}
+                        className="focus-visible:ring-accent"
                     />
-                    <Button onClick={handleSend} disabled={loading || !input.trim()} size="icon">
+                    <Button 
+                        onClick={handleSend} 
+                        disabled={loading || !input.trim()} 
+                        size="icon"
+                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                    >
                         <Send className="h-4 w-4" />
                         <span className="sr-only">Send</span>
                     </Button>
