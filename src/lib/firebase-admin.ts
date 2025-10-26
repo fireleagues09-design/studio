@@ -8,11 +8,9 @@ let db: admin.firestore.Firestore;
 let storage: admin.storage.Storage;
 
 try {
-  // Ensure the service account key is provided
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     throw new Error(
-      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing. " +
-      "Please set it with your Firebase service account JSON string. Admin features will be disabled."
+      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing. This is required for all admin and server-side Firebase features. Please create a .env.local file and add your service account key."
     );
   }
 
@@ -21,8 +19,7 @@ try {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
   } catch (err: any) {
     throw new Error(
-      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. " +
-      "Please check your environment variable. Error: " + err.message
+      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. Please check your .env.local file. Error: " + err.message
     );
   }
 
@@ -49,10 +46,9 @@ try {
   storage = admin.storage(app);
 
 } catch (error: any) {
-    console.warn(error.message);
-    console.warn("⚠️ Firebase Admin SDK not initialized. Admin features will not work.");
+    console.warn("⚠️ Firebase Admin SDK Initialization Error:", error.message);
 
-    // Provide mock objects to prevent the app from crashing.
+    // Provide mock objects to prevent the entire app from crashing, while logging the issue.
     const mockAuth = {} as admin.auth.Auth;
     const mockDb = {} as admin.firestore.Firestore;
     const mockStorage = { bucket: () => ({ file: () => ({ save: () => {}, getSignedUrl: () => Promise.resolve(['']), delete: () => {} }) }) } as any;
