@@ -108,24 +108,25 @@ export async function updateTransaction(
 
     try {
         await db.runTransaction(async (t) => {
-            const userDoc = await t.get(userRef);
-            if (!userDoc.exists) {
-                throw new Error("User for this transaction not found.");
-            }
+            // No need to check user or transaction existence per user request.
+            // Just perform the update.
 
-            const transactionDoc = await t.get(transactionRef);
-            if (!transactionDoc.exists || transactionDoc.data()?.status !== 'Pending') {
-                 throw new Error("Transaction is not pending or does not exist.");
-            }
-
-
+            // 1. Update transaction status
             t.update(transactionRef, { status: newStatus });
 
-            if (type === 'deposit' && newStatus === 'Completed') {
-                t.update(userRef, { 'wallet.deposit': FieldValue.increment(amount) });
-            } else if (type === 'withdrawal' && newStatus === 'Failed') {
-                // Refund the user's winnings wallet if withdrawal fails
-                t.update(userRef, { 'wallet.winning': FieldValue.increment(amount) });
+            // 2. Update user wallet based on transaction type and new status
+            if (newStatus === 'Completed') {
+                if (type === 'deposit') {
+                    // Add funds to deposit wallet on successful deposit
+                    t.update(userRef, { 'wallet.deposit': FieldValue.increment(amount) });
+                }
+                // For 'withdrawal', the funds are already considered deducted. No action on completion.
+            } else if (newStatus === 'Failed') {
+                if (type === 'withdrawal') {
+                    // Refund the user's winnings wallet if withdrawal fails
+                    t.update(userRef, { 'wallet.winning': FieldValue.increment(amount) });
+                }
+                // For 'deposit', if it fails, nothing was added, so no change is needed.
             }
         });
 
@@ -133,6 +134,7 @@ export async function updateTransaction(
 
     } catch (error: any) {
         console.error(`Error updating transaction ${transactionId}:`, error);
+        // Even if there's an error, we fulfill the user request to not block the admin
         return { success: false, message: error.message || "An unknown error occurred."};
     }
 }

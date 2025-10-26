@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
        }
     ],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['firebase-admin'],
+  },
 };
 
 export default nextConfig;
