@@ -1,109 +1,68 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ======================
-    // Helper Functions
-    // ======================
+    // Helper functions
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isUserAuthenticated() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
-
+    
     function isAdmin() {
-      return isUserAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    // ======================
-    // Users Collection
-    // ======================
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isUserAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
-
-      // Teams Subcollection
-      match /teams/{teamId} {
-        allow read: if isUserAuthenticated();
-        allow create, delete: if isOwner(userId);
-        allow update: if isOwner(userId) &&
-                      request.resource.data.diff(resource.data).changedKeys()
-                          .hasOnly(['members', 'category']);
-        allow read, write, list: if isAdmin();
-      }
-    }
-
-    // ======================
-    // Sliders & Banners
-    // ======================
+    // Sliders: Public can read, only admins can write (from server)
     match /sliders/{sliderId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if false; // All writes should be from admin backend
     }
 
-    match /banners/{bannerId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // ======================
-    // Settings
-    // ======================
-    match /settings/{settingId} {
-      allow read, write: if isAdmin();
-    }
-
-    // ======================
-    // Tournaments
-    // ======================
+    // Tournaments: Public can read, only admins can write (from server)
     match /tournaments/{tournamentId} {
-      allow read, list: if true; // public read access
-      allow write: if isAdmin();
+      allow read: if true;
+      allow write: if false; // All writes should be from admin backend
 
-      // Tournament Registrations
+      // Registrations subcollection
       match /registrations/{userId} {
-        allow create: if isOwner(userId);
-        allow read, list, delete: if isOwner(userId) || isAdmin();
+        allow read: if isUserAuthenticated() && (isOwner(userId) || isAdmin());
+        allow create: if isUserAuthenticated() && isOwner(userId);
+        allow update, delete: if false; // Prevent client-side updates/deletes
       }
     }
+    
+    // Users: Users can read/write their own data. Admins can read anyone's data.
+    match /users/{userId} {
+      allow get: if isUserAuthenticated() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isUserAuthenticated() && isOwner(userId);
+      allow update: if isUserAuthenticated() && isOwner(userId);
+      allow delete: if isAdmin();
+    }
 
-    // ======================
-    // Transactions
-    // ======================
+    // Transactions: Users can create their own transactions. Admins can read all.
     match /transactions/{transactionId} {
-      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow list, update, delete: if isAdmin();
+      allow read: if isUserAuthenticated() && (get(/databases/$(database)/documents/transactions/$(transactionId)).data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isUserAuthenticated();
+      allow update, delete: if false; // Updates must happen on the backend
     }
-
-    // ======================
-    // Withdrawals
-    // ======================
-    match /withdrawals/{withdrawalId} {
-      allow create: if isOwner(request.resource.data.userId);
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow list, update, delete: if isAdmin();
-    }
-
-    // ======================
-    // Admin Logs
-    // ======================
+    
+    // Admin Logs: Read-only for admins. No client writes.
     match /adminLogs/{logId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if false;
     }
-
-    // ======================
-    // Deleted Users
-    // ======================
-    match /deletedUsers/{deletedId} {
-      allow read, write: if isAdmin();
+    
+    // Deleted Users: Read-only for admins. No client writes.
+     match /deletedUsers/{deletedId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }
