@@ -85,10 +85,10 @@ export function Reze() {
     };
 
     return (
-        <Card className="w-full max-w-sm shadow-2xl shadow-accent/10">
+        <Card className="w-full max-w-sm shadow-2xl shadow-purple-500/10">
             <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                    <Sparkle className="h-6 w-6 text-accent" />
+                    <Sparkle className="h-6 w-6 text-purple-500" />
                     <span className='text-xl'>Talk to Reze</span>
                 </CardTitle>
                 <CardDescription>Your AI assistant</CardDescription>
@@ -99,15 +99,15 @@ export function Reze() {
                     <div className="space-y-4">
                         {messages.map((msg, index) => (
                             <div key={index} className={cn('flex items-end gap-2', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                                {msg.role === 'model' && <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />}
-                                <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-accent text-accent-foreground' : 'bg-muted')}>
+                                {msg.role === 'model' && <Sparkle className="h-5 w-5 text-purple-500 flex-shrink-0" />}
+                                <div className={cn('max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap', msg.role === 'user' ? 'bg-purple-600 text-purple-50' : 'bg-muted')}>
                                     {msg.content}
                                 </div>
                             </div>
                         ))}
                         {loading && (
                             <div className="flex items-end gap-2 justify-start">
-                                <Sparkle className="h-5 w-5 text-accent flex-shrink-0" />
+                                <Sparkle className="h-5 w-5 text-purple-500 flex-shrink-0" />
                                 <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     <span className="text-sm text-muted-foreground">Thinking...</span>
@@ -126,13 +126,13 @@ export function Reze() {
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleSend()}
                         disabled={loading}
-                        className="focus-visible:ring-accent"
+                        className="focus-visible:ring-purple-500"
                     />
                     <Button 
                         onClick={handleSend} 
                         disabled={loading || !input.trim()} 
                         size="icon"
-                        className="bg-accent text-accent-foreground hover:bg-accent/90"
+                        className="bg-purple-600 text-purple-50 hover:bg-purple-600/90"
                     >
                         <Send className="h-4 w-4" />
                         <span className="sr-only">Send</span>
