@@ -4,10 +4,10 @@
 import { ai } from '@/ai/genkit';
 import { RezeInputSchema, RezeOutputSchema, type RezeInput } from '@/ai/schemas/reze';
 
-
 const systemPrompt = ai.definePrompt(
     {
         name: 'rezePrompt',
+        model: 'googleai/gemini-1.5-flash-latest',
         input: { schema: RezeInputSchema },
         output: { schema: RezeOutputSchema },
         prompt: `You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
@@ -37,5 +37,6 @@ const rezeFlow = ai.defineFlow(
 );
 
 export async function askReze(input: RezeInput): Promise<string> {
-    return await rezeFlow(input);
+    const result = await rezeFlow(input);
+    return result;
 }
