@@ -1,12 +1,8 @@
+import { MessagePartSchema } from 'genkit';
 import { z } from 'zod';
 
 export const RezeInputSchema = z.object({
-  history: z.array(
-    z.object({
-      role: z.enum(['user', 'model']),
-      content: z.string(),
-    })
-  ).describe("The history of the conversation."),
+  history: z.array(MessagePartSchema).optional().describe("The history of the conversation."),
   question: z.string().describe("The user's current question."),
 });
 export type RezeInput = z.infer<typeof RezeInputSchema>;

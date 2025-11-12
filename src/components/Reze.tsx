@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { askReze } from '@/ai/flows/reze-flow';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import type { MessagePart } from 'genkit';
+
 
 type Message = {
     role: 'user' | 'model';
@@ -63,14 +65,22 @@ export function Reze() {
         if (!input.trim() || loading) return;
 
         const userMessage: Message = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
+
         const currentInput = input;
         setInput('');
         setLoading(true);
 
         try {
+            // Convert message history to MessagePart[]
+            const history: MessagePart[] = newMessages.slice(0, -1).map(msg => ({
+                role: msg.role,
+                text: msg.content,
+            }));
+
             const response = await askReze({
-                history: messages,
+                history: history,
                 question: currentInput,
             });
             const modelMessage: Message = { role: 'model', content: response };
