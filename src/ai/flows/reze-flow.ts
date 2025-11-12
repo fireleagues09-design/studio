@@ -13,7 +13,6 @@ const rezeFlow = ai.defineFlow(
     },
     async (prompt) => {
         const llmResponse = await ai.generate({
-            model: 'googleai/gemini-2.5-flash',
             prompt: `
                 You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
                 Your goal is to answer user questions about the platform, rules, and provide support.
