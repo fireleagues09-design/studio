@@ -31,6 +31,40 @@ async function verifyAdmin(idToken: string): Promise<boolean> {
 }
 
 
+export async function setAdminStatus(
+    targetUserId: string, 
+    makeAdmin: boolean,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
+
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const callerId = decodedToken.uid;
+
+        if (callerId === targetUserId) {
+            return { success: false, message: "Admins cannot change their own status." };
+        }
+
+        await db.collection('users').doc(targetUserId).update({
+            isAdmin: makeAdmin
+        });
+
+        // This ensures the user's token will have the admin claim on next refresh.
+        await auth.setCustomUserClaims(targetUserId, { isAdmin: makeAdmin });
+
+
+        return { success: true, message: `User status updated successfully.` };
+    } catch (error: any) {
+        console.error('Error updating admin status:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}
+
+
 export async function uploadSlider(
   base64Data: string,
   contentType: string,
@@ -101,16 +135,19 @@ export async function updateTransaction(
     newStatus: 'Completed' | 'Failed',
     userId: string,
     amount: number,
-    type: 'deposit' | 'withdrawal'
+    type: 'deposit' | 'withdrawal',
+    idToken: string
 ): Promise<{ success: boolean, message: string }> {
+    const isAdmin = await verifyAdmin(idToken);
+    if (!isAdmin) {
+        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    }
+
     const transactionRef = db.collection('transactions').doc(transactionId);
     const userRef = db.collection('users').doc(userId);
 
     try {
         await db.runTransaction(async (t) => {
-            // No need to check user or transaction existence per user request.
-            // Just perform the update.
-
             // 1. Update transaction status
             t.update(transactionRef, { status: newStatus });
 
@@ -134,7 +171,6 @@ export async function updateTransaction(
 
     } catch (error: any) {
         console.error(`Error updating transaction ${transactionId}:`, error);
-        // Even if there's an error, we fulfill the user request to not block the admin
         return { success: false, message: error.message || "An unknown error occurred."};
     }
 }

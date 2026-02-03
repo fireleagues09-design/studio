@@ -26,6 +26,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { setAdminStatus } from "../actions";
 
 // ---------------------- TYPES ----------------------
 type UserDoc = {
@@ -208,6 +209,31 @@ export default function AdminUsersPage() {
       return false;
     }
     return true;
+  };
+
+  const toggleAdmin = async (id: string, currentlyAdmin?: boolean) => {
+    if (!requireAdmin() || !currentUser) return;
+    const confirmMsg = currentlyAdmin
+      ? "Revoke admin rights from this user?"
+      : "Grant admin rights to this user?";
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const idToken = await currentUser.getIdToken();
+        const result = await setAdminStatus(id, !currentlyAdmin, idToken);
+        if (result.success) {
+            alert("Done.");
+            // refresh selected user to show new state
+            if (selectedUser) {
+              selectUser(selectedUser.id);
+            }
+        } else {
+            throw new Error(result.message);
+        }
+    } catch(e: any) {
+        console.error(e);
+        alert(`Failed to update admin status: ${e.message}`);
+    }
   };
 
   const toggleSuspend = async (id: string, currentlySuspended?: boolean) => {
@@ -418,9 +444,16 @@ export default function AdminUsersPage() {
                 <div className="text-sm text-gray-400">Phone: {selectedUser.data.phone ?? "—"}</div>
                 <div className="text-sm text-gray-400">Registered: {formatTime(selectedUser.data.registeredOn)}</div>
                 <div className="text-sm text-gray-400">Balance: ₹{totalBalance(selectedUser.data.wallet).toFixed(2)}</div>
+                <div className="text-sm text-gray-400">Admin: {selectedUser.data.isAdmin ? 'Yes' : 'No'}</div>
                 <div className="text-sm text-gray-400 mb-3">Status: {selectedUser.data.suspended ? "Suspended" : "Active"}</div>
 
                 <div className="flex flex-col gap-2 mt-4">
+                  <button
+                    className={`px-3 py-2 border rounded ${selectedUser.data.isAdmin ? 'bg-orange-600 hover:bg-orange-500' : 'bg-teal-600 hover:bg-teal-500'}`}
+                    onClick={() => toggleAdmin(selectedUser.id, !!selectedUser.data.isAdmin)}
+                  >
+                    {selectedUser.data.isAdmin ? "Revoke Admin" : "Make Admin"}
+                  </button>
                   <button
                     className={`px-3 py-2 border rounded ${selectedUser.data.suspended ? 'bg-green-600 hover:bg-green-500' : 'bg-yellow-600 hover:bg-yellow-500'}`}
                     onClick={() => toggleSuspend(selectedUser.id, !!selectedUser.data.suspended)}

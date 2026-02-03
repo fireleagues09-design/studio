@@ -574,7 +574,8 @@ export default function AdminPage() {
 
         setActionLoading(prev => ({...prev, [id]: true}));
         try {
-            const result = await updateTransaction(id, newStatus, userId, amount, type);
+            const idToken = await auth.currentUser.getIdToken();
+            const result = await updateTransaction(id, newStatus, userId, amount, type, idToken);
             if (result.success) {
                 toast({
                     title: 'Success',
