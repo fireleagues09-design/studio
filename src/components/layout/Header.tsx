@@ -32,8 +32,6 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 
 type WalletData = {
@@ -107,11 +105,7 @@ export function Header() {
                  setLoading(false);
               }, 
               (error) => {
-                 const permissionError = new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'get',
-                });
-                errorEmitter.emit('permission-error', permissionError);
+                 console.error("Error fetching user profile:", error);
                  setLoading(false);
                  setProfile(null);
               }

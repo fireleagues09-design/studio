@@ -5,7 +5,6 @@ import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { FloatingHomeButton } from "@/components/FloatingHomeButton";
-import { FirebaseErrorListener } from "@/components/FirebaseErrorListener";
 
 export const metadata: Metadata = {
   title: "FireLeagues - Free Fire Tournaments",
@@ -39,7 +38,6 @@ export default function RootLayout({
           <Footer />
         </div>
         <FloatingHomeButton />
-        <FirebaseErrorListener />
         <Toaster />
       </body>
     </html>
