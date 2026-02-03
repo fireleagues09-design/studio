@@ -225,131 +225,207 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-                <>
-                    <div className="relative mb-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Sign up with Google</span>
-                        </div>
-                    </div>
+          <>
+            <div className="relative mb-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Sign up with Google
+                </span>
+              </div>
+            </div>
 
-                    <Button variant="outline" className="w-full" onClick={startGoogleSignUp} disabled={loading}>
-                        <GoogleLogo className="mr-2 h-4 w-4" />
-                        {loading ? 'Processing...' : 'Sign up with Google'}
-                    </Button>
-                    
-                    <div className="relative my-2">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Or with email</span>
-                        </div>
-                    </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={startGoogleSignUp}
+              disabled={loading}
+            >
+              <GoogleLogo className="mr-2 h-4 w-4" />
+              {loading ? "Processing..." : "Sign up with Google"}
+            </Button>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="in-game-uid">In-Game UID</Label>
-                            <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} />
-                        </div>
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or with email
+                </span>
+              </div>
+            </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="in-game-name">In-Game Name</Label>
-                            <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} />
-                        </div>
-                    </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="in-game-uid">In-Game UID</Label>
+                <Input
+                  id="in-game-uid"
+                  placeholder="e.g. 1234567890"
+                  required
+                  value={inGameUid}
+                  onChange={(e) => setInGameUid(e.target.value)}
+                />
+              </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
-                    </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-                    </div>
+              <div className="grid gap-2">
+                <Label htmlFor="in-game-name">In-Game Name</Label>
+                <Input
+                  id="in-game-name"
+                  placeholder="ProGamer"
+                  required
+                  value={inGameName}
+                  onChange={(e) => setInGameName(e.target.value)}
+                />
+              </div>
+            </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
 
-                    <div className="space-y-4 pt-4 border-t">
-                        <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
-                        <div className="grid gap-2">
-                            <Label htmlFor="duo-team-name">Duo Team Name</Label>
-                            <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" required/>
-                        </div>
-                        
-                        {Array.from({ length: 1 }).map((_, index) => (
-                        <div key={`duo-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
-                            <Label>Teammate {index + 1}</Label>
-                            <Input 
-                                    placeholder="In-Game Name" 
-                                    value={duoMembers[index]?.inGameName || ''} 
-                                    onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'duo')} 
-                                    required
-                                />
-                            <Input 
-                                    placeholder="In-Game UID" 
-                                    value={duoMembers[index]?.inGameUid || ''} 
-                                    onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'duo')} 
-                                    required
-                                />
-                        </div>
-                        ))}
-                    </div>
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
+              <div className="grid gap-2">
+                <Label htmlFor="duo-team-name">Duo Team Name</Label>
+                <Input
+                  id="duo-team-name"
+                  value={duoTeamName}
+                  onChange={(e) => setDuoTeamName(e.target.value)}
+                  placeholder="e.g. The Duo Champions"
+                  required
+                />
+              </div>
 
-                    <div className="space-y-4 pt-4 border-t">
-                        <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
-                        <div className="grid gap-2">
-                            <Label htmlFor="squad-team-name">Squad Team Name</Label>
-                            <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" required/>
-                        </div>
-                        
-                        {Array.from({ length: 3 }).map((_, index) => (
-                        <div key={`squad-${index}`} className="p-3 border rounded-md space-y-2 bg-secondary/30">
-                            <Label>Teammate {index + 1}</Label>
-                            <Input 
-                                    placeholder="In-Game Name" 
-                                    value={squadMembers[index]?.inGameName || ''} 
-                                    onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'squad')} 
-                                    required
-                                />
-                            <Input 
-                                    placeholder="In-Game UID" 
-                                    value={squadMembers[index]?.inGameUid || ''} 
-                                    onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'squad')} 
-                                    required
-                                />
-                        </div>
-                        ))}
-                    </div>
-                    
-                    <div className="pt-4 border-t">
-                        <p className="text-xs text-center text-muted-foreground pt-2">
-                            if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
-                        </p>
-                        <Button variant="outline" onClick={handleNullButtonClick} className="w-full mt-2">
-                            Null
-                        </Button>
-                    </div>
-                </>
+              {Array.from({ length: 1 }).map((_, index) => (
+                <div
+                  key={`duo-${index}`}
+                  className="p-3 border rounded-md space-y-2 bg-secondary/30"
+                >
+                  <Label>Teammate {index + 1}</Label>
+                  <Input
+                    placeholder="In-Game Name"
+                    value={duoMembers[index]?.inGameName || ""}
+                    onChange={(e) =>
+                      handleMemberChange(index, "inGameName", e.target.value, "duo")
+                    }
+                    required
+                  />
+                  <Input
+                    placeholder="In-Game UID"
+                    value={duoMembers[index]?.inGameUid || ""}
+                    onChange={(e) =>
+                      handleMemberChange(index, "inGameUid", e.target.value, "duo")
+                    }
+                    required
+                  />
+                </div>
+              ))}
+            </div>
 
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
+              <div className="grid gap-2">
+                <Label htmlFor="squad-team-name">Squad Team Name</Label>
+                <Input
+                  id="squad-team-name"
+                  value={squadTeamName}
+                  onChange={(e) => setSquadTeamName(e.target.value)}
+                  placeholder="e.g. The Squad Champions"
+                  required
+                />
+              </div>
+
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={`squad-${index}`}
+                  className="p-3 border rounded-md space-y-2 bg-secondary/30"
+                >
+                  <Label>Teammate {index + 1}</Label>
+                  <Input
+                    placeholder="In-Game Name"
+                    value={squadMembers[index]?.inGameName || ""}
+                    onChange={(e) =>
+                      handleMemberChange(
+                        index,
+                        "inGameName",
+                        e.target.value,
+                        "squad"
+                      )
+                    }
+                    required
+                  />
+                  <Input
+                    placeholder="In-Game UID"
+                    value={squadMembers[index]?.inGameUid || ""}
+                    onChange={(e) =>
+                      handleMemberChange(
+                        index,
+                        "inGameUid",
+                        e.target.value,
+                        "squad"
+                      )
+                    }
+                    required
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t">
+              <p className="text-xs text-center text-muted-foreground pt-2">
+                if you don't have team members, then click on the null button
+                down below. you can add team members later by contacting players
+                support
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleNullButtonClick}
+                className="w-full mt-2"
+              >
+                Null
+              </Button>
+            </div>
+            
             <Button onClick={handleRegister} className="w-full" disabled={loading}>
                 {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
+          </>
 
-
-            <div className="mt-4 text-center text-sm">
-                By signing up, you agree to our{' '}
-                <Link href="/terms" className="underline">
-                    Terms and Conditions
-                </Link>.
-            </div>
-            <div className="mt-2 text-center text-sm">
-                Already have an account?{" "}
-                <Link href="/login" className="underline">
-                    Login
-                </Link>
-            </div>
+          <div className="mt-4 text-center text-sm">
+            By signing up, you agree to our{" "}
+            <Link href="/terms" className="underline">
+              Terms and Conditions
+            </Link>
+            .
+          </div>
+          <div className="mt-2 text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/login" className="underline">
+              Login
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
