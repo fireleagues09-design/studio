@@ -6,7 +6,7 @@ import { RezeInputSchema, RezeOutputSchema, type RezeInput } from '@/ai/schemas/
 const systemPrompt = ai.definePrompt(
     {
         name: 'rezePrompt',
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-pro',
         input: { schema: RezeInputSchema },
         output: { schema: RezeOutputSchema },
         prompt: `You are Reze, a friendly and helpful AI assistant for FireLeagues, an esports tournament platform.
