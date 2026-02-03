@@ -116,7 +116,7 @@ export default function ProfilePage() {
         return (
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">{team?.name !== `\\\\\\\\\\\\` ? team?.name : `${teamType} Team`}</h3>
+                    <h3 className="font-semibold text-lg">{team?.name !== 'N/A' ? team?.name : `${teamType} Team`}</h3>
                 </div>
                 <ul className="space-y-3">
                     {team?.members.map((member, index) => (

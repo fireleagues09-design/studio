@@ -61,7 +61,7 @@ export default function RegisterPage() {
     
     // For Google Sign-Up, we don't have In-Game Name/UID or teams yet.
     // We'll use their Google display name as a placeholder and create null teams.
-    const nullValue = '\\\\\\\\\\\\';
+    const nullValue = 'N/A';
     
     try {
         await setDoc(userDocRef, {
@@ -102,7 +102,7 @@ export default function RegisterPage() {
   };
   
   const handleNullButtonClick = () => {
-    const nullValue = '\\\\\\\\\\\\';
+    const nullValue = 'N/A';
     setDuoTeamName(nullValue);
     setSquadTeamName(nullValue);
     setDuoMembers(Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }));
