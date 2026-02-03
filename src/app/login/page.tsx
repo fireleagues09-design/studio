@@ -108,7 +108,7 @@ export default function LoginPage() {
                 Forgot your password?
               </Link> */}
             </div>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
           </div>
           
           <Button onClick={handleLogin} className="w-full" disabled={loading}>
