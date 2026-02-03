@@ -1,4 +1,8 @@
 
+import { config } from 'dotenv';
+config({ path: '.env' });
+config({ path: '.env.local' });
+
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
