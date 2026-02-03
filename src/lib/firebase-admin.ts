@@ -1,5 +1,4 @@
 
-import 'dotenv/config';
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
