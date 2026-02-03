@@ -53,25 +53,32 @@ export default function Home() {
     <div className="flex flex-col gap-8 md:gap-12">
       
       <section className="container mx-auto px-4 pt-8 md:pt-12">
-        <HomeSlider isAuthenticated={!!user} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4 text-center md:text-left">
+                <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
+                    Join the Ultimate Esports Arena
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                    Compete in daily Free Fire tournaments, prove your skills, and win exciting prizes. Your battle for glory starts here.
+                </p>
+                {!loadingAuth && !user && (
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
+                        <Button asChild size="lg">
+                            <Link href="/register">Register Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                        </Button>
+                        <Button asChild variant="outline" size="lg">
+                            <Link href="/login">Login</Link>
+                        </Button>
+                    </div>
+                )}
+            </div>
+            <div className="w-full">
+              <HomeSlider isAuthenticated={!!user} />
+            </div>
+        </div>
       </section>
 
-      {!loadingAuth && !user && (
-        <section className="container mx-auto px-4 md:hidden">
-            <div className="grid grid-cols-2 gap-4">
-                <Button variant="ghost" asChild>
-                    <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild>
-                    <Link href="/register">Register</Link>
-
-                </Button>
-            </div>
-        </section>
-      )}
-
-
-      <main className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-8 md:pb-12">
+      <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-8 md:pb-12">
         
         <section>
           <div className="flex justify-between items-center mb-4">
@@ -108,7 +115,7 @@ export default function Home() {
           }
         </section>
 
-      </main>
+      </div>
       
     </div>
   );
