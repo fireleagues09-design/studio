@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -16,25 +16,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, UserCredential } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { Separator } from "@/components/ui/separator";
 import { GoogleLogo } from "@/components/GoogleLogo";
 
-
-// Add a global declaration for the confirmationResult
-declare global {
-  interface Window {
-    recaptchaVerifier?: RecaptchaVerifier;
-    confirmationResult?: ConfirmationResult;
-  }
-}
-
 export default function LoginPage() {
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -57,66 +46,25 @@ export default function LoginPage() {
     toast({ title: "Success", description: "Logged in successfully!" });
     router.push("/");
   };
-
-
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-    }
-    return window.recaptchaVerifier;
-  };
   
-  const handleSendOtp = async () => {
-    if (!phone) {
-        toast({ title: "Error", description: "Please enter a phone number.", variant: "destructive" });
+  const handleLogin = async () => {
+    if (!email || !password) {
+        toast({ title: "Error", description: "Please enter email and password.", variant: "destructive" });
         return;
     }
     setLoading(true);
     try {
-        const phoneNumber = `+91${phone}`;
-        const appVerifier = setupRecaptcha();
-        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-        window.confirmationResult = confirmationResult;
-        setOtpSent(true);
-        toast({ title: "Success", description: "OTP sent to your phone!" });
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await handleAuthSuccess(userCredential);
       } catch (error: any) {
-        console.error("Error sending OTP:", error);
-        let description = "Failed to send OTP. Please try again.";
-        if (error.code === 'auth/too-many-requests') {
-          description = "You have requested too many OTPs. Please try again later.";
-        } else if (error.message && error.message.includes('reCAPTCHA client element has been removed')) {
-          description = "OTP Error Please Refresh The Page";
+        console.error("Error signing in:", error);
+        let description = "Failed to login. Please check your credentials.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          description = "Invalid email or password.";
         } else if (error.message) {
-          description = error.message;
+            description = error.message;
         }
-        toast({ title: "OTP Error", description, variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otp) {
-        toast({ title: "Error", description: "Please enter the OTP.", variant: "destructive" });
-        return;
-    }
-    setLoading(true);
-    try {
-        if (window.confirmationResult) {
-          const userCredential = await window.confirmationResult.confirm(otp);
-          await handleAuthSuccess(userCredential);
-        } else {
-            throw new Error("OTP not sent yet or session expired.");
-        }
-      } catch (error: any) {
-        console.error("Error verifying OTP:", error);
-        window.confirmationResult = undefined;
-        toast({ title: "Verification Error", description: error.message || "Invalid OTP or user not registered. Please try again.", variant: "destructive" });
+        toast({ title: "Login Error", description, variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -140,42 +88,34 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
-      <div id="recaptcha-container"></div>
       <Card className="w-full max-w-sm mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            {otpSent ? "Enter the OTP we sent to your phone." : "Enter your phone number to login or use a provider."}
+            Enter your email below to login to your account.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          {!otpSent ? (
-             <div className="grid gap-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="flex items-center">
-                    <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
-                    <Input id="phone" type="tel" placeholder="00000 00000" required value={phone} onChange={(e) => setPhone(e.target.value)} className="rounded-l-none" />
-                </div>
+           <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-center">
+              <Label htmlFor="password">Password</Label>
+              {/* Optional: Add a forgot password link here */}
+              {/* <Link href="/forgot-password" className="ml-auto inline-block text-sm underline">
+                Forgot your password?
+              </Link> */}
             </div>
-          ) : (
-            <div className="grid gap-2">
-              <Label htmlFor="otp">One-Time Password (OTP)</Label>
-              <Input id="otp" type="text" placeholder="123456" required value={otp} onChange={(e) => setOtp(e.target.value)} />
-            </div>
-          )}
+            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
           
-          <Button onClick={otpSent ? handleVerifyOtp : handleSendOtp} className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : (otpSent ? 'Verify OTP' : 'Send OTP')}
+          <Button onClick={handleLogin} className="w-full" disabled={loading}>
+            {loading ? 'Processing...' : 'Login'}
           </Button>
 
-          {otpSent && (
-             <Button variant="link" size="sm" onClick={() => setOtpSent(false)} disabled={loading}>
-                Change phone number
-            </Button>
-          )}
-
-          {!otpSent && (
-             <>
+            <>
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
                         <span className="w-full border-t" />
@@ -189,7 +129,6 @@ export default function LoginPage() {
                     {loading ? 'Processing...' : 'Login with Google'}
                 </Button>
             </>
-          )}
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}

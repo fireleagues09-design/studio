@@ -17,26 +17,17 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithPopup, UserCredential } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
 import type { TeamMember } from "@/lib/mock-data";
 import { GoogleLogo } from "@/components/GoogleLogo";
 
 
-// Add a global declaration for the confirmationResult
-declare global {
-    interface Window {
-      recaptchaVerifier?: RecaptchaVerifier;
-      confirmationResult?: ConfirmationResult;
-    }
-  }
-
 export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [inGameName, setInGameName] = useState("");
   const [inGameUid, setInGameUid] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -108,28 +99,20 @@ export default function RegisterPage() {
     setDuoMembers(Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }));
     setSquadMembers(Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }));
   }
-
-  const setupRecaptcha = () => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response: any) => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-    }
-    return window.recaptchaVerifier;
-  };
-
-  const handleSendOtp = async () => {
-    if (!inGameName || !phone || !inGameUid) {
+  
+  const validateFields = () => {
+    if (!email || !password || !inGameName || !inGameUid) {
       toast({ title: "Error", description: "Please fill in all required personal fields.", variant: "destructive" });
-      return;
+      return false;
+    }
+    if (password.length < 6) {
+      toast({ title: "Error", description: "Password should be at least 6 characters.", variant: "destructive" });
+      return false;
     }
     
     if (!duoTeamName || !squadTeamName) {
         toast({ title: "Error", description: "Please provide team names for both Duo and Squad.", variant: "destructive"});
-        return;
+        return false;
     }
 
     const areDuoTeammatesValid = duoMembers.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
@@ -139,7 +122,7 @@ export default function RegisterPage() {
             description: `Please fill out all In-Game Names and UIDs for your Duo members.`,
             variant: "destructive",
         });
-        return;
+        return false;
     }
     
     const areSquadTeammatesValid = squadMembers.every(tm => tm.inGameName.trim() !== '' && tm.inGameUid.trim() !== '');
@@ -149,58 +132,21 @@ export default function RegisterPage() {
             description: `Please fill out all In-Game Names and UIDs for your Squad members.`,
             variant: "destructive",
         });
-        return;
+        return false;
     }
-
-
-    setLoading(true);
-    try {
-      const phoneNumber = `+91${phone}`;
-      const appVerifier = setupRecaptcha();
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      window.confirmationResult = confirmationResult;
-      setOtpSent(true);
-      toast({ title: "Success", description: "OTP sent to your phone!" });
-    } catch (error: any) {
-      console.error("Error sending OTP:", error);
-      let description = "Failed to send OTP. Please try again.";
-      if (error.code === 'auth/too-many-requests') {
-        description = "You have requested too many OTPs. Please try again later.";
-      } else if (error.message && error.message.includes('reCAPTCHA client element has been removed')) {
-          description = "OTP Error Please Refresh The Page";
-      } else if (error.message) {
-        description = error.message;
-      }
-      toast({ title: "OTP Error", description, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    return true;
+  }
 
   const handleRegister = async () => {
-    if (!otp) {
-      toast({ title: "Error", description: "Please enter the OTP.", variant: "destructive" });
-      return;
-    }
+    if (!validateFields()) return;
+
     setLoading(true);
     try {
-        if (!window.confirmationResult) {
-            throw new Error("OTP not sent yet or session expired.");
-        }
-        const userCredential = await window.confirmationResult.confirm(otp);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-            toast({ title: "Registration Error", description: "This phone number is already registered.", variant: "destructive" });
-            router.push('/login');
-            setLoading(false);
-            return;
-        }
-
+        
         const duoTeamData = {
             name: duoTeamName,
             type: 'Duo',
@@ -215,8 +161,8 @@ export default function RegisterPage() {
         await setDoc(userDocRef, {
           inGameName: inGameName,
           inGameUid: inGameUid,
-          phone: `+91${phone}`,
-          email: user.email || `${phone}@fireleagues.com`,
+          email: email,
+          phone: '', // Phone is no longer primary, can be added later in profile
           wallet: {
             deposit: 0,
             winning: 0,
@@ -236,9 +182,16 @@ export default function RegisterPage() {
 
       } catch (error: any) {
         console.error("Error creating account:", error);
+        let description = "Failed to create account. Please try again.";
+        if (error.code === 'auth/email-already-in-use') {
+            description = "This email is already registered. Please login instead.";
+        } else if (error.message) {
+            description = error.message;
+        }
+
         toast({
           title: "Registration Error",
-          description: error.message || "Failed to create account. Please try again.",
+          description: description,
           variant: "destructive",
         });
       } finally {
@@ -251,7 +204,8 @@ export default function RegisterPage() {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             await handleGoogleSignUp(result);
-        } catch (error: any) {
+        } catch (error: any)
+        {
             console.error("Google sign up error:", error);
             if (error.code !== 'auth/popup-closed-by-user') {
                 toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
@@ -263,16 +217,14 @@ export default function RegisterPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
-       <div id="recaptcha-container"></div>
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
           <CardDescription>
-            { otpSent ? "Verify your phone to complete registration" : "Create your account to join tournaments." }
+            Create your account to join tournaments.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            {!otpSent && (
                 <>
                     <div className="relative mb-2">
                         <div className="absolute inset-0 flex items-center">
@@ -293,33 +245,37 @@ export default function RegisterPage() {
                             <span className="w-full border-t" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">Or with phone</span>
+                            <span className="bg-background px-2 text-muted-foreground">Or with email</span>
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="in-game-uid">In-Game UID</Label>
+                            <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} />
+                        </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="in-game-uid">In-Game UID</Label>
-                        <Input id="in-game-uid" placeholder="e.g. 1234567890" required value={inGameUid} onChange={(e) => setInGameUid(e.target.value)} disabled={otpSent}/>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="in-game-name">In-Game Name</Label>
-                        <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} disabled={otpSent}/>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <div className="flex items-center">
-                            <span className="h-10 flex items-center justify-center rounded-l-md border border-r-0 border-input bg-background px-3 text-muted-foreground text-sm">+91</span>
-                            <Input id="phone" type="tel" placeholder="0000000000" required value={phone} onChange={(e) => setPhone(e.target.value)} disabled={otpSent} className="rounded-l-none"/>
+                        <div className="grid gap-2">
+                            <Label htmlFor="in-game-name">In-Game Name</Label>
+                            <Input id="in-game-name" placeholder="ProGamer" required value={inGameName} onChange={(e) => setInGameName(e.target.value)} />
                         </div>
                     </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+                    </div>
+
 
                     <div className="space-y-4 pt-4 border-t">
                         <h3 className="text-lg font-semibold">Register Your Duo Team</h3>
                         <div className="grid gap-2">
                             <Label htmlFor="duo-team-name">Duo Team Name</Label>
-                            <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" disabled={otpSent} required/>
+                            <Input id="duo-team-name" value={duoTeamName} onChange={e => setDuoTeamName(e.target.value)} placeholder="e.g. The Duo Champions" required/>
                         </div>
                         
                         {Array.from({ length: 1 }).map((_, index) => (
@@ -330,14 +286,12 @@ export default function RegisterPage() {
                                     value={duoMembers[index]?.inGameName || ''} 
                                     onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'duo')} 
                                     required
-                                    disabled={otpSent}
                                 />
                             <Input 
                                     placeholder="In-Game UID" 
                                     value={duoMembers[index]?.inGameUid || ''} 
                                     onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'duo')} 
                                     required
-                                    disabled={otpSent}
                                 />
                         </div>
                         ))}
@@ -347,7 +301,7 @@ export default function RegisterPage() {
                         <h3 className="text-lg font-semibold">Register Your Squad Team</h3>
                         <div className="grid gap-2">
                             <Label htmlFor="squad-team-name">Squad Team Name</Label>
-                            <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" disabled={otpSent} required/>
+                            <Input id="squad-team-name" value={squadTeamName} onChange={e => setSquadTeamName(e.target.value)} placeholder="e.g. The Squad Champions" required/>
                         </div>
                         
                         {Array.from({ length: 3 }).map((_, index) => (
@@ -358,14 +312,12 @@ export default function RegisterPage() {
                                     value={squadMembers[index]?.inGameName || ''} 
                                     onChange={(e) => handleMemberChange(index, 'inGameName', e.target.value, 'squad')} 
                                     required
-                                    disabled={otpSent}
                                 />
                             <Input 
                                     placeholder="In-Game UID" 
                                     value={squadMembers[index]?.inGameUid || ''} 
                                     onChange={(e) => handleMemberChange(index, 'inGameUid', e.target.value, 'squad')} 
                                     required
-                                    disabled={otpSent}
                                 />
                         </div>
                         ))}
@@ -375,22 +327,14 @@ export default function RegisterPage() {
                         <p className="text-xs text-center text-muted-foreground pt-2">
                             if you don't have team members, then click on the null button down below. you can add team members later by contacting players support
                         </p>
-                        <Button variant="outline" onClick={handleNullButtonClick} disabled={otpSent} className="w-full mt-2">
+                        <Button variant="outline" onClick={handleNullButtonClick} className="w-full mt-2">
                             Null
                         </Button>
                     </div>
                 </>
-            )}
 
-            {otpSent && (
-                <div className="grid gap-2">
-                    <Label htmlFor="otp">One-Time Password (OTP)</Label>
-                    <Input id="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="123456" />
-                </div>
-            )}
-
-            <Button onClick={otpSent ? handleRegister : handleSendOtp} className="w-full" disabled={loading}>
-                {loading ? 'Processing...' : (otpSent ? 'Create Account' : 'Send OTP & Register')}
+            <Button onClick={handleRegister} className="w-full" disabled={loading}>
+                {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
 
 

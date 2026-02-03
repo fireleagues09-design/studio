@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { User, KeySquare, Pencil, Fingerprint, Users, PlusCircle, Trash2 } from 'lucide-react';
+import { User, KeySquare, Pencil, Fingerprint, Users, PlusCircle, Trash2, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -154,8 +154,11 @@ export default function ProfilePage() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Phone Number</Label>
-                        <p className="text-muted-foreground">{profile.phone}</p>
+                        <Label>Email</Label>
+                        <div className="flex items-center gap-2 text-muted-foreground border p-2 rounded-md bg-secondary/50">
+                           <Mail className="h-4 w-4" />
+                           <p>{profile.email}</p>
+                        </div>
                     </div>
                 </CardContent>
                 <CardFooter className="flex justify-end items-center bg-secondary/50 p-4 rounded-b-lg">
