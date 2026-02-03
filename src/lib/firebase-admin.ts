@@ -1,4 +1,5 @@
 
+import 'dotenv/config';
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
@@ -13,6 +14,12 @@ let serviceAccount: ServiceAccount;
 try {
   // Attempt to parse the service account key from the environment variable.
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+
+  // FIX: Replace escaped newlines in the private key to ensure correct PEM format.
+  if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+
 } catch (e: any) {
   // If parsing fails, throw a descriptive error.
   throw new Error(
