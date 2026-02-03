@@ -26,7 +26,7 @@ export default function TournamentsPage() {
       setLoadingAuth(false);
     });
 
-    const tournamentsQuery = query(collection(db, "tournaments"), orderBy("createdAt", "desc"));
+    const tournamentsQuery = query(collection(db, "tournaments"), orderBy("status"), orderBy("createdAt", "desc"));
     const unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
         const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
         setTournaments(tournamentsData);

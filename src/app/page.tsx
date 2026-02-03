@@ -28,7 +28,7 @@ export default function Home() {
     const tournamentsQuery = query(
         collection(db, "tournaments"), 
         where("status", "==", "Upcoming"),
-        orderBy("date", "desc"), 
+        orderBy("createdAt", "desc"), 
         limit(4)
     );
 
