@@ -16,7 +16,7 @@ async function verifyAdmin(idToken: string): Promise<{ isAdmin: boolean; message
         const userDocRef = db.collection('users').doc(decodedToken.uid);
         const userDoc = await userDocRef.get();
         
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
             return { isAdmin: false, message: `Admin verification failed: User document not found for UID ${decodedToken.uid}.` };
         }
         
