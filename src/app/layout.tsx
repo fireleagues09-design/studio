@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { FloatingHomeButton } from "@/components/FloatingHomeButton";
 import { FirebaseErrorListener } from "@/components/FirebaseErrorListener";
-import { MaintenancePopup } from "@/components/MaintenancePopup";
 
 export const metadata: Metadata = {
   title: "FireLeagues - Free Fire Tournaments",
@@ -34,7 +33,6 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("font-body antialiased")}>
-        <MaintenancePopup />
         <div className="relative flex min-h-screen flex-col bg-background">
           <Header />
           <main className="flex-1">{children}</main>
