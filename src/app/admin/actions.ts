@@ -6,27 +6,31 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import type { User } from '@/lib/mock-data';
 
 // This is the single source of truth for admin verification in server actions.
-async function verifyAdmin(idToken: string): Promise<boolean> {
+// It returns a detailed object to help diagnose issues.
+async function verifyAdmin(idToken: string): Promise<{ isAdmin: boolean; message: string; uid?: string }> {
+    if (!idToken) {
+        return { isAdmin: false, message: "Authentication token was not provided." };
+    }
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
-        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+        const userDocRef = db.collection('users').doc(decodedToken.uid);
+        const userDoc = await userDocRef.get();
         
-        if (!userDoc.exists) {
-            console.warn(`Admin verification failed: User document not found for UID ${decodedToken.uid}`);
-            return false;
+        if (!userDoc.exists()) {
+            return { isAdmin: false, message: `Admin verification failed: User document not found for UID ${decodedToken.uid}.` };
         }
         
         const userData = userDoc.data();
         if (userData && userData.isAdmin === true) {
-            return true;
+            return { isAdmin: true, message: "Success", uid: decodedToken.uid };
         }
 
-        console.warn(`Admin verification failed: User ${decodedToken.uid} is not an admin.`);
-        return false;
+        return { isAdmin: false, message: "Permission denied. The calling user is not an admin." };
 
-    } catch (error) {
-        console.error("Error verifying admin token:", error);
-        return false;
+    } catch (error: any) {
+        console.error("Error during admin verification in server action:", error);
+        // This will catch errors from verifyIdToken (e.g., bad service key) or db.get() (SDK not init)
+        return { isAdmin: false, message: `Server error during admin check: ${error.code || error.message}` };
     }
 }
 
@@ -36,14 +40,13 @@ export async function setAdminStatus(
     makeAdmin: boolean,
     idToken: string
 ): Promise<{ success: boolean; message: string }> {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
     }
 
     try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const callerId = decodedToken.uid;
+        const callerId = adminCheck.uid;
 
         if (callerId === targetUserId) {
             return { success: false, message: "Admins cannot change their own status." };
@@ -71,9 +74,9 @@ export async function uploadSlider(
   fileName: string,
   idToken: string
 ): Promise<{ success: boolean; message: string }> {
-   const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+   const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
     }
   try {
     const fileBuffer = Buffer.from(base64Data.split(',')[1], 'base64');
@@ -109,9 +112,9 @@ export async function deleteSlider(
     storagePath: string,
     idToken: string
 ): Promise<{ success: boolean, message: string}> {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
     }
 
     try {
@@ -138,9 +141,9 @@ export async function updateTransaction(
     type: 'deposit' | 'withdrawal',
     idToken: string
 ): Promise<{ success: boolean, message: string }> {
-    const isAdmin = await verifyAdmin(idToken);
-    if (!isAdmin) {
-        return { success: false, message: "Permission denied. You must be an admin to perform this action." };
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
     }
 
     const transactionRef = db.collection('transactions').doc(transactionId);
