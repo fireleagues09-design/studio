@@ -2,61 +2,49 @@
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
 
-let app: admin.app.App;
-let auth: admin.auth.Auth;
-let db: admin.firestore.Firestore;
-let storage: admin.storage.Storage;
-
-try {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    throw new Error(
-      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing. This is required for all admin and server-side Firebase features. Please create a .env.local file and add your service account key."
-    );
-  }
-
-  let serviceAccount: ServiceAccount;
-  try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-  } catch (err: any) {
-    throw new Error(
-      "🔥 FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. Please check your .env.local file. Error: " + err.message
-    );
-  }
-
-  if (!admin.apps.length) {
-    const projectId = serviceAccount.project_id;
-    if (!projectId) {
-        throw new Error('The provided service account key is missing the "project_id" field.');
-    }
-    
-    const storageBucket = `${projectId}.appspot.com`;
-
-    app = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: projectId,
-      storageBucket: storageBucket,
-    });
-    console.log("✅ Firebase Admin initialized successfully");
-  } else {
-    app = admin.app();
-  }
-
-  auth = admin.auth(app);
-  db = admin.firestore(app);
-  storage = admin.storage(app);
-
-} catch (error: any) {
-    console.warn("⚠️ Firebase Admin SDK Initialization Error:", error.message);
-
-    // Provide mock objects to prevent the entire app from crashing, while logging the issue.
-    const mockAuth = {} as admin.auth.Auth;
-    const mockDb = {} as admin.firestore.Firestore;
-    const mockStorage = { bucket: () => ({ file: () => ({ save: () => {}, getSignedUrl: () => Promise.resolve(['']), delete: () => {} }) }) } as any;
-
-    auth = mockAuth;
-    db = mockDb;
-    storage = mockStorage as admin.storage.Storage;
+// Check for the environment variable first and throw if it's missing.
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  throw new Error(
+    "🔥 FATAL ERROR: The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for all server-side Firebase functionality. Please add your service account key to your .env.local file and restart the server."
+  );
 }
 
+let serviceAccount: ServiceAccount;
+try {
+  // Attempt to parse the service account key from the environment variable.
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+} catch (e: any) {
+  // If parsing fails, throw a descriptive error.
+  throw new Error(
+    `🔥 FATAL ERROR: Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY. Please ensure it is a valid JSON string. Parse Error: ${e.message}`
+  );
+}
+
+// Initialize the Firebase Admin SDK if it hasn't been already.
+if (!admin.apps.length) {
+    try {
+        const projectId = serviceAccount.project_id;
+        if (!projectId) {
+            throw new Error('The service account key is missing the "project_id" field.');
+        }
+        const storageBucket = `${projectId}.appspot.com`;
+
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+            projectId: projectId,
+            storageBucket: storageBucket,
+        });
+
+        console.log("✅ Firebase Admin SDK initialized successfully.");
+    } catch (e: any) {
+        throw new Error(`🔥 FATAL ERROR: Failed to initialize Firebase Admin SDK. Error: ${e.message}`);
+    }
+}
+
+// Export the initialized services.
+// This code will only be reached if the initialization is successful.
+const auth = admin.auth();
+const db = admin.firestore();
+const storage = admin.storage();
 
 export { auth, db, storage };
