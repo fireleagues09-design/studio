@@ -38,7 +38,7 @@ export default function LoginPage() {
         await auth.signOut();
         toast({
             title: "Login Failed",
-            description: "User not registered. Please sign up first.",
+            description: "No account found with this email. Please sign up first.",
             variant: "destructive"
         });
         router.push('/register');
@@ -49,7 +49,7 @@ export default function LoginPage() {
     router.push("/");
   };
   
-  const handleLogin = async () => {
+  const handleEmailLogin = async () => {
     if (!email || !password) {
         toast({ title: "Error", description: "Please enter email and password.", variant: "destructive" });
         return;
@@ -63,8 +63,6 @@ export default function LoginPage() {
         let description = "Failed to login. Please check your credentials.";
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
           description = "Invalid email or password.";
-        } else if (error.message) {
-            description = error.message;
         }
         toast({ title: "Login Error", description, variant: "destructive" });
       } finally {
@@ -87,25 +85,38 @@ export default function LoginPage() {
       }
   }
 
-
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] py-12">
-      <Card className="w-full max-w-sm mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
+      <Card className="w-full max-w-sm mx-auto bg-card border-border shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account.
+            Enter your credentials to access your account.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
+            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+              <GoogleLogo className="mr-2 h-4 w-4" />
+              {loading ? 'Processing...' : 'Sign in with Google'}
+            </Button>
+            
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
            <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading}/>
           </div>
           <div className="grid gap-2">
-            <div className="flex items-center">
-              <Label htmlFor="password">Password</Label>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -114,6 +125,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pr-10"
+                disabled={loading}
               />
               <Button
                 type="button"
@@ -122,34 +134,18 @@ export default function LoginPage() {
                 className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground"
                 onClick={() => setShowPassword((prev) => !prev)}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                {showPassword ? <EyeOff /> : <Eye />}
               </Button>
             </div>
           </div>
           
-          <Button onClick={handleLogin} className="w-full" disabled={loading}>
-            {loading ? 'Processing...' : 'Login'}
+          <Button onClick={handleEmailLogin} className="w-full mt-2" disabled={loading}>
+            {loading ? 'Signing In...' : 'Sign In'}
           </Button>
-
-            <>
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                    </div>
-                </div>
-                <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-                    <GoogleLogo className="mr-2 h-4 w-4" />
-                    {loading ? 'Processing...' : 'Login with Google'}
-                </Button>
-            </>
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="underline">
+            <Link href="/register" className="underline text-primary/90 hover:text-primary">
               Sign up
             </Link>
           </div>
