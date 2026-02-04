@@ -3,7 +3,20 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LogIn, Menu, User, UserPlus, Wallet, Shield, Flame, LogOut } from "lucide-react";
+import {
+  LogIn,
+  Menu,
+  User,
+  UserPlus,
+  Wallet,
+  Shield,
+  Flame,
+  LogOut,
+  ClipboardList,
+  Coins,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -13,18 +26,15 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -32,6 +42,8 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 
 type WalletData = {
@@ -41,43 +53,11 @@ type WalletData = {
 }
 
 type UserProfile = {
+    inGameName: string;
     wallet: WalletData;
     isAdmin?: boolean;
     suspended?: boolean;
 }
-
-function AdminConfirmationDialog({ children, isMobile = false }: { children: React.ReactNode, isMobile?: boolean }) {
-    const router = useRouter();
-    const [open, setOpen] = useState(false);
-
-    const handleContinue = () => {
-        router.push('/admin');
-        if (isMobile) {
-            setOpen(false); // Close sheet if on mobile
-        }
-    };
-
-    return (
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                {children}
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Enter Admin Panel?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You are about to enter the admin dashboard. This area contains sensitive controls. Please proceed with caution.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleContinue}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
-
 
 export function Header() {
   const pathname = usePathname();
@@ -86,8 +66,9 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
-
+  
   useEffect(() => {
+    setLoading(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
@@ -97,6 +78,8 @@ export function Header() {
                 if (doc.exists()) {
                     setProfile(doc.data() as UserProfile);
                 } else {
+                    // This case can happen if a user is in auth but not in firestore.
+                    // If not on a public page, sign them out.
                     if (pathname !== '/login' && pathname !== '/register') {
                          auth.signOut();
                     }
@@ -138,6 +121,103 @@ export function Header() {
       return <SuspendedUserPopup onLogout={handleLogout} />;
   }
 
+  const userMenuItems = (
+    <>
+        <DropdownMenuItem asChild>
+            <Link href="/profile" className="cursor-pointer"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled className="cursor-not-allowed">
+            <ClipboardList className="mr-2 h-4 w-4" />
+            <span>Orders</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+                <Link href="/wallet" className="cursor-pointer">
+                <Coins className="mr-2 h-4 w-4" />
+                <span>Coins</span>
+                <span className="ml-auto">{wallet.bonus.toFixed(0)}</span>
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+            <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled className="cursor-not-allowed">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            <span>Chat Support</span>
+            <span className="ml-auto text-xs">Soon</span>
+        </DropdownMenuItem>
+        
+        {profile?.isAdmin && <DropdownMenuSeparator />}
+        {profile?.isAdmin && (
+                <DropdownMenuItem asChild>
+                <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
+            </DropdownMenuItem>
+        )}
+        <DropdownMenuItem asChild>
+            <Link href="/profile" className="cursor-pointer"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+        </DropdownMenuItem>
+    </>
+  )
+
+  const mobileUserMenuItems = (
+    <div className="space-y-1">
+        <div className="p-2">
+            <p className="text-sm font-semibold">{profile?.inGameName || user?.displayName}</p>
+            <p className="text-xs text-muted-foreground">{user?.email}</p>
+        </div>
+        <Separator className="my-2"/>
+        <SheetClose asChild>
+            <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link></Button>
+        </SheetClose>
+        <Button variant="ghost" className="w-full justify-start text-base" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
+        
+        <Separator className="my-2"/>
+        
+        <SheetClose asChild>
+            <Button variant="ghost" asChild className="w-full justify-start text-base">
+                <Link href="/wallet">
+                    <Coins className="mr-2 h-4 w-4" />Coins
+                    <span className="ml-auto">{wallet.bonus.toFixed(0)}</span>
+                </Link>
+            </Button>
+        </SheetClose>
+        <SheetClose asChild>
+            <Button variant="ghost" asChild className="w-full justify-start text-base">
+                <Link href="/wallet"><Wallet className="mr-2 h-4 w-4" />Wallet</Link>
+            </Button>
+        </SheetClose>
+        <Button variant="ghost" className="w-full justify-start text-base" disabled>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            <span>Chat Support</span>
+            <span className="ml-auto text-xs">Soon</span>
+        </Button>
+
+        {profile?.isAdmin && <Separator className="my-2"/>}
+
+        {profile?.isAdmin && (
+            <SheetClose asChild>
+                <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
+            </SheetClose>
+        )}
+
+        <SheetClose asChild>
+            <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/profile"><Settings className="mr-2 h-4 w-4" />Settings</Link></Button>
+        </SheetClose>
+        
+        <Separator className="my-2"/>
+
+        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-base">
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
+        </Button>
+    </div>
+  );
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-4">
@@ -174,28 +254,35 @@ export function Header() {
                 </div>
             ) : user ? (
               <>
-                {profile?.isAdmin && (
-                  <AdminConfirmationDialog>
-                    <Button variant="outline" size="sm">
-                       <Shield className="mr-2 h-4 w-4" />
-                       Admin Panel
-                     </Button>
-                   </AdminConfirmationDialog>
-                )}
                 <Button variant="ghost" size="sm" asChild>
                     <Link href="/wallet">
                     <Wallet className="mr-2 h-4 w-4 text-primary" />
                     ₹{totalBalance.toFixed(2)}
                     </Link>
                 </Button>
-                <Button variant="ghost" size="icon" asChild>
-                    <Link href="/profile">
-                        <User className="h-5 w-5" />
-                    </Link>
-                </Button>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? ''} />
+                                <AvatarFallback>{profile?.inGameName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56" align="end">
+                        <DropdownMenuLabel className="font-normal">
+                        <div className="flex flex-col space-y-1">
+                            <p className="text-sm font-medium leading-none">{profile?.inGameName || user.displayName}</p>
+                            <p className="text-xs leading-none text-muted-foreground">
+                            {user.email}
+                            </p>
+                        </div>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {userMenuItems}
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
@@ -248,36 +335,7 @@ export function Header() {
                             <Skeleton className="h-10 w-full" />
                         </div>
                     ) : user ? (
-                       <div className="space-y-2">
-                         {profile?.isAdmin && (
-                            <AdminConfirmationDialog isMobile={true}>
-                                <Button variant="ghost" className="w-full justify-start">
-                                    <Shield className="mr-2 h-4 w-4" />
-                                    Admin Panel
-                                </Button>
-                            </AdminConfirmationDialog>
-                         )}
-                         <SheetClose asChild>
-                             <Button variant="outline" asChild className="w-full justify-start">
-                                  <Link href="/wallet">
-                                    <Wallet className="mr-2 h-4 w-4 text-primary" />
-                                    Wallet: ₹{totalBalance.toFixed(2)}
-                                  </Link>
-                              </Button>
-                          </SheetClose>
-                         <SheetClose asChild>
-                            <Button variant="ghost" asChild className="w-full justify-start">
-                                 <Link href="/profile">
-                                    <User className="mr-2 h-4 w-4" />
-                                    My Profile
-                                </Link>
-                            </Button>
-                         </SheetClose>
-                         <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
-                             <LogOut className="mr-2 h-4 w-4" />
-                             Logout
-                         </Button>
-                      </div>
+                       mobileUserMenuItems
                     ) : (
                       <>
                         <SheetClose asChild>
