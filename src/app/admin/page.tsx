@@ -75,6 +75,7 @@ function CreateTournamentDialog() {
     const [status, setStatus] = useState<TournamentType['status']>('Upcoming');
     const [prizeDistribution, setPrizeDistribution] = useState([{ place: '1st', prize: '' }]);
     const [prizePerKill, setPrizePerKill] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
     
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -107,13 +108,14 @@ function CreateTournamentDialog() {
         setStatus('Upcoming');
         setPrizeDistribution([{ place: '1st', prize: '' }]);
         setPrizePerKill('');
+        setImageUrl('');
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        const imageUrl = 'https://picsum.photos/600/400';
+        const finalImageUrl = imageUrl.trim() || `https://picsum.photos/seed/${Math.random()}/600/400`;
         const dataAiHint = 'gaming abstract';
         
         const rules = category === 'Classic Full Map' ? FULL_MAP_RULES : [];
@@ -138,7 +140,7 @@ function CreateTournamentDialog() {
                 category,
                 teamType,
                 status,
-                image: imageUrl,
+                image: finalImageUrl,
                 slotsFilled: 0,
                 registeredPlayers: [],
                 dataAiHint,
@@ -185,6 +187,11 @@ function CreateTournamentDialog() {
                      <div className="grid gap-2">
                         <Label htmlFor="create-name">Tournament Name</Label>
                         <Input id="create-name" value={name} onChange={e => setName(e.target.value)} required />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="create-image-url">Image URL</Label>
+                        <Input id="create-image-url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://example.com/image.png (optional)" />
+                        <p className="text-xs text-muted-foreground">If left blank, a default placeholder image will be used.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -905,6 +912,8 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
 
     
 
