@@ -68,41 +68,29 @@ export async function setAdminStatus(
 }
 
 
-export async function uploadSlider(
-  base64Data: string,
-  contentType: string,
-  fileName: string,
+export async function addSliderByUrl(
+  imageUrl: string,
   idToken: string
 ): Promise<{ success: boolean; message: string }> {
-   const adminCheck = await verifyAdmin(idToken);
-    if (!adminCheck.isAdmin) {
-        return { success: false, message: adminCheck.message };
-    }
+  const adminCheck = await verifyAdmin(idToken);
+  if (!adminCheck.isAdmin) {
+    return { success: false, message: adminCheck.message };
+  }
   try {
-    const fileBuffer = Buffer.from(base64Data.split(',')[1], 'base64');
-    const storagePath = `sliders/${Date.now()}-${fileName}`;
-    const file = storage.bucket().file(storagePath);
-
-    await file.save(fileBuffer, {
-      metadata: {
-        contentType: contentType,
-      },
-    });
-    
-    const [url] = await file.getSignedUrl({
-        action: 'read',
-        expires: '03-09-2491' // Far-future expiration date
-    });
+    // Basic URL validation
+    new URL(imageUrl);
 
     await db.collection('sliders').add({
-      url: url,
-      storagePath: storagePath,
+      url: imageUrl,
       createdAt: Timestamp.now(),
     });
 
-    return { success: true, message: 'Slider uploaded successfully.' };
+    return { success: true, message: 'Slider added successfully.' };
   } catch (error: any) {
-    console.error('Server-side upload failed:', error);
+    console.error('Server-side add slider by URL failed:', error);
+    if (error instanceof TypeError) {
+      return { success: false, message: 'Invalid URL provided.' };
+    }
     return { success: false, message: error.message || 'An unknown server error occurred.' };
   }
 }
@@ -118,15 +106,22 @@ export async function deleteSlider(
     }
 
     try {
-        // Delete from Storage
-        await storage.bucket().file(storagePath).delete();
+        // Delete from Storage only if a storage path is provided
+        if (storagePath) {
+            await storage.bucket().file(storagePath).delete();
+        }
 
-        // Delete from Firestore
+        // Always delete from Firestore
         await db.collection('sliders').doc(sliderId).delete();
 
         return { success: true, message: "Slider deleted" };
-
     } catch (error: any) {
+        // This handles cases where file doesn't exist in storage but we want to clean up the DB entry.
+        if (error.code === 404) {
+            console.warn(`File not found at ${storagePath}. Deleting from Firestore only.`);
+            await db.collection('sliders').doc(sliderId).delete();
+            return { success: true, message: "Slider record deleted (file not in storage)." };
+        }
         console.error("Error deleting slider on server:", error);
         return { success: false, message: error.message || "Failed to delete slider on server."};
     }
