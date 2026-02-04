@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -31,7 +32,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { isUserRegisteredForTournament, registerSoloPlayer } from '@/app/actions';
+import { registerSoloPlayer } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -252,16 +253,12 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     }, []);
     
     useEffect(() => {
-        const checkCredentials = async () => {
-            if (user && isRegistered && tournament?.roomId) {
-                const result = await isUserRegisteredForTournament(tournamentId);
-                setShowCredentials(result);
-            } else {
-                setShowCredentials(false);
-            }
-        };
-        checkCredentials();
-    }, [isRegistered, tournament, user, tournamentId]);
+        if (user && isRegistered && tournament?.roomId) {
+            setShowCredentials(true);
+        } else {
+            setShowCredentials(false);
+        }
+    }, [isRegistered, tournament, user]);
 
 
     useEffect(() => {
@@ -271,7 +268,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 const data = { id: doc.id, ...doc.data() } as Tournament;
                 setTournament(data);
                 if (user) {
-                     isUserRegisteredForTournament(tournamentId).then(setIsRegistered);
+                    setIsRegistered(data.registeredPlayers?.includes(user.uid) || false);
                 } else {
                     setIsRegistered(false);
                 }
