@@ -7,7 +7,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { UploadCloud, Trash2, Link as LinkIcon } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
@@ -24,7 +24,7 @@ type Slider = {
 };
 
 export default function SliderAdmin() {
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageUrls, setImageUrls] = useState<string>('');
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -64,10 +64,12 @@ export default function SliderAdmin() {
   }, [toast]);
 
   const handleUpload = async () => {
-    if (!imageUrl) {
-      toast({ title: 'No image URL provided', variant: 'destructive' });
-      return;
+    const urls = imageUrls.split('\n').map(url => url.trim()).filter(url => url);
+    if (urls.length === 0) {
+        toast({ title: 'No image URLs provided', description: 'Please enter at least one URL.', variant: 'destructive' });
+        return;
     }
+
     if (!user) {
       toast({ title: 'Authentication Error', description: 'You must be logged in and an admin.', variant: 'destructive' });
       return;
@@ -76,14 +78,21 @@ export default function SliderAdmin() {
     setUploading(true);
     try {
       const idToken = await user.getIdToken(true);
-      const result = await addSliderByUrl(imageUrl, idToken);
+      const results = await Promise.all(urls.map(url => addSliderByUrl(url, idToken)));
+      
+      const successfulUploads = results.filter(r => r.success).length;
+      const failedUploads = results.length - successfulUploads;
 
-      if (result.success) {
-        toast({ title: 'Success!', description: 'Slider added successfully.' });
-        setImageUrl('');
-      } else {
-        throw new Error(result.message);
+      if (successfulUploads > 0) {
+        toast({ title: 'Success!', description: `${successfulUploads} slider(s) added successfully.` });
+        setImageUrls('');
       }
+
+      if (failedUploads > 0) {
+          const errorMessages = results.filter(r => !r.success).map(r => r.message).join(', ');
+          toast({ title: `${failedUploads} Upload(s) Failed`, description: `Some URLs were invalid or could not be added. Errors: ${errorMessages}`, variant: 'destructive' });
+      }
+
     } catch (err: any) {
       console.error('Upload process failed:', err);
       toast({ title: 'Upload Failed', description: err.message || 'An unknown error occurred.', variant: 'destructive' });
@@ -121,30 +130,30 @@ export default function SliderAdmin() {
       <CardHeader>
         <CardTitle>Manage Sliders</CardTitle>
         <CardDescription>
-          Add new images for the homepage carousel by providing an image URL.
+          Add new images for the homepage carousel. You can add multiple by entering one image URL per line.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border rounded-lg">
           <div className="relative flex-grow w-full">
-            <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
+            <LinkIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+             <Textarea
               id="slider-url-input"
-              type="url"
-              placeholder="https://example.com/image.png"
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
+              placeholder="Enter one image URL per line..."
+              value={imageUrls}
+              onChange={e => setImageUrls(e.target.value)}
               className="w-full pl-9"
+              rows={3}
               disabled={authLoading || uploading}
             />
           </div>
           <Button
             onClick={handleUpload}
-            disabled={uploading || !imageUrl || authLoading}
-            className="w-full sm:w-auto"
+            disabled={uploading || !imageUrls || authLoading}
+            className="w-full sm:w-auto self-end"
           >
             <UploadCloud className="mr-2 h-4 w-4" />
-            {uploading ? `Adding...` : 'Add Slider'}
+            {uploading ? `Adding...` : 'Add Sliders'}
           </Button>
         </div>
 
