@@ -176,9 +176,9 @@ export function Header() {
               <>
                 {profile?.isAdmin && (
                   <AdminConfirmationDialog>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="outline" size="sm">
                        <Shield className="mr-2 h-4 w-4" />
-                       Admin
+                       Admin Panel
                      </Button>
                    </AdminConfirmationDialog>
                 )}
