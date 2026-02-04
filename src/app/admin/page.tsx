@@ -26,6 +26,7 @@ import { updateTransaction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type UserData = {
     id: string;
@@ -479,11 +480,16 @@ export default function AdminPage() {
     const [totalUsers, setTotalUsers] = useState(0);
     const [totalTournaments, setTotalTournaments] = useState(0);
 
+    const [activeTab, setActiveTab] = useState('transactions');
+    const [isMounted, setIsMounted] = useState(false);
+    const isMobile = useIsMobile();
+
     const router = useRouter();
     const { toast } = useToast();
     
 
     useEffect(() => {
+        setIsMounted(true);
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
@@ -658,13 +664,31 @@ export default function AdminPage() {
                 </div>
             </section>
 
-             <Tabs defaultValue="transactions" className="w-full">
-                <TabsList>
-                    <TabsTrigger value="transactions">Transactions</TabsTrigger>
-                    <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
-                    <TabsTrigger value="users">Users</TabsTrigger>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                </TabsList>
+             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                {!isMounted ? (
+                     <Skeleton className="h-10 w-full max-w-md mb-6" />
+                 ) : isMobile ? (
+                     <div className="mb-6">
+                        <Select value={activeTab} onValueChange={setActiveTab}>
+                             <SelectTrigger>
+                                 <SelectValue placeholder="Select a section" />
+                             </SelectTrigger>
+                             <SelectContent>
+                                 <SelectItem value="transactions">Transactions</SelectItem>
+                                 <SelectItem value="tournaments">Tournaments</SelectItem>
+                                 <SelectItem value="users">Users</SelectItem>
+                                 <SelectItem value="settings">Settings</SelectItem>
+                             </SelectContent>
+                         </Select>
+                     </div>
+                 ) : (
+                    <TabsList>
+                        <TabsTrigger value="transactions">Transactions</TabsTrigger>
+                        <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+                        <TabsTrigger value="users">Users</TabsTrigger>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
+                    </TabsList>
+                 )}
                 <TabsContent value="transactions" className="mt-6">
                     <Card>
                         <CardHeader>
@@ -881,5 +905,7 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
 
     
