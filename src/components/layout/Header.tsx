@@ -131,13 +131,6 @@ export function Header() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-                <Link href="/wallet" className="cursor-pointer">
-                <Coins className="mr-2 h-4 w-4" />
-                <span>Coins</span>
-                <span className="ml-auto">{wallet.bonus.toFixed(0)}</span>
-            </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
             <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
         </DropdownMenuItem>
         <DropdownMenuItem disabled className="cursor-not-allowed">
@@ -146,8 +139,8 @@ export function Header() {
             <span className="ml-auto text-xs">Soon</span>
         </DropdownMenuItem>
         
-        {profile?.isAdmin && <DropdownMenuSeparator />}
-        {profile?.isAdmin && (
+        {profile && profile.isAdmin && <DropdownMenuSeparator />}
+        {profile && profile.isAdmin && (
             <DropdownMenuItem asChild>
                 <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
             </DropdownMenuItem>
@@ -176,14 +169,6 @@ export function Header() {
         
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start text-base">
-                <Link href="/wallet">
-                    <Coins className="mr-2 h-4 w-4" />Coins
-                    <span className="ml-auto">{wallet.bonus.toFixed(0)}</span>
-                </Link>
-            </Button>
-        </SheetClose>
-        <SheetClose asChild>
-            <Button variant="ghost" asChild className="w-full justify-start text-base">
                 <Link href="/wallet"><Wallet className="mr-2 h-4 w-4" />Wallet</Link>
             </Button>
         </SheetClose>
@@ -193,8 +178,8 @@ export function Header() {
             <span className="ml-auto text-xs">Soon</span>
         </Button>
 
-        {profile?.isAdmin && <Separator className="my-2"/>}
-        {profile?.isAdmin && (
+        {profile && profile.isAdmin && <Separator className="my-2"/>}
+        {profile && profile.isAdmin && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
             </SheetClose>
