@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
-import { User, KeySquare, Pencil, Fingerprint, Users, PlusCircle, Trash2, Mail } from 'lucide-react';
+import { User, KeySquare, Pencil, Users, PlusCircle, Trash2, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -22,8 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UserProfile = {
     inGameName: string;
-    inGameUid: string;
-    phone: string;
+    inGameUid?: string;
+    phone?: string;
     email: string;
     duoTeam?: Team;
     squadTeam?: Team;
@@ -145,13 +145,6 @@ export default function ProfilePage() {
                             <Input id="in-game-name" value={profile.inGameName} disabled />
                         </div>
                         <p className="text-xs text-muted-foreground pt-1">To change your in-game name, please contact player support.</p>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>In-Game UID</Label>
-                        <div className="flex items-center gap-2 text-muted-foreground border p-2 rounded-md bg-secondary/50">
-                           <Fingerprint className="h-4 w-4" />
-                           <p>{profile.inGameUid || 'Not set'}</p>
-                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label>Email</Label>

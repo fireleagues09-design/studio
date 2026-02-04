@@ -45,21 +45,22 @@ export default function RegisterPage() {
     }
     
     const finalInGameName = inGameName || user.displayName || 'New Player';
-    const nullValue = 'N/A';
     
     try {
-        await setDoc(userDocRef, {
+        const userData: any = {
             inGameName: finalInGameName,
-            inGameUid: nullValue,
-            phone: user.phoneNumber || nullValue,
             email: user.email,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
-            duoTeam: { name: nullValue, type: 'Duo', members: Array(1).fill({ inGameName: nullValue, inGameUid: nullValue }) },
-            squadTeam: { name: nullValue, type: 'Squad', members: Array(3).fill({ inGameName: nullValue, inGameUid: nullValue }) },
             registeredOn: serverTimestamp(),
             isAdmin: false,
             suspended: false,
-        });
+        };
+
+        if (user.phoneNumber) {
+            userData.phone = user.phoneNumber;
+        }
+
+        await setDoc(userDocRef, userData);
 
         toast({
             title: "Welcome!",
