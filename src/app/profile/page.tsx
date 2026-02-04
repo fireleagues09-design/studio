@@ -88,47 +88,9 @@ export default function ProfilePage() {
                          <Skeleton className="h-10 w-24" />
                     </CardFooter>
                 </Card>
-                 <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-32" />
-                        <Skeleton className="h-5 w-48" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-24 w-full" />
-                    </CardContent>
-                </Card>
             </div>
         )
     }
-    
-    const renderTeamDetails = (team: Team | undefined, teamType: 'Duo' | 'Squad') => {
-        const hasTeam = team && team.members && team.members.length > 0;
-
-        if (!hasTeam) {
-            return (
-                <div className="text-center py-8 text-muted-foreground">
-                    <Users className="mx-auto h-8 w-8 mb-2" />
-                    <p>You haven't registered a {teamType} team yet.</p>
-                </div>
-            );
-        }
-
-        return (
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg">{team?.name !== 'N/A' ? team?.name : `${teamType} Team`}</h3>
-                </div>
-                <ul className="space-y-3">
-                    {team?.members.map((member, index) => (
-                        <li key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                            <div className="font-medium">{member.inGameName}</div>
-                            <div className="text-sm text-muted-foreground">UID: {member.inGameUid}</div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        );
-    };
 
 
     return (
@@ -158,31 +120,6 @@ export default function ProfilePage() {
                     <Button variant="ghost" onClick={handleLogout}>Logout</Button>
                 </CardFooter>
             </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>My Teams</CardTitle>
-                    <CardDescription>Your registered Duo & Squad teammates.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="duo" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="duo">Duo</TabsTrigger>
-                            <TabsTrigger value="squad">Squad</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="duo" className="mt-4">
-                            {renderTeamDetails(profile.duoTeam, 'Duo')}
-                        </TabsContent>
-                        <TabsContent value="squad" className="mt-4">
-                            {renderTeamDetails(profile.squadTeam, 'Squad')}
-                        </TabsContent>
-                    </Tabs>
-                </CardContent>
-                 <CardFooter className="bg-secondary/50 p-4 rounded-b-lg mt-6">
-                    <p className="text-xs text-muted-foreground text-center w-full">To change team members please contact players support</p>
-                </CardFooter>
-            </Card>
-
         </div>
     );
 }
