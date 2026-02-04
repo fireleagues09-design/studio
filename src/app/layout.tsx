@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { FloatingHomeButton } from "@/components/FloatingHomeButton";
+import { LoadingProvider } from "@/context/LoadingContext";
+import { FullScreenLoader } from "@/components/FullScreenLoader";
+import { NavigationEvents } from "@/components/NavigationEvents";
 
 export const metadata: Metadata = {
   title: "FireLeagues - Free Fire Tournaments",
@@ -32,13 +36,19 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("font-body antialiased")}>
-        <div className="relative flex min-h-screen flex-col bg-background">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <FloatingHomeButton />
-        <Toaster />
+        <Suspense fallback={null}>
+          <LoadingProvider>
+            <div className="relative flex min-h-screen flex-col bg-background">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <FloatingHomeButton />
+            <Toaster />
+            <FullScreenLoader />
+            <NavigationEvents />
+          </LoadingProvider>
+        </Suspense>
       </body>
     </html>
   );
