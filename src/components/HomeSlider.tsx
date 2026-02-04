@@ -30,7 +30,8 @@ export function HomeSlider({ isAuthenticated }: HomeSliderProps) {
 
   useEffect(() => {
     setLoading(true);
-    const q = query(collection(db, 'sliders'), orderBy('createdAt', 'desc'));
+    const collectionName = isAuthenticated ? 'homeSliders' : 'landingSliders';
+    const q = query(collection(db, collectionName), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(
       q,
       snapshot => {
@@ -42,13 +43,13 @@ export function HomeSlider({ isAuthenticated }: HomeSliderProps) {
         setLoading(false);
       },
       error => {
-        console.error('Error fetching sliders: ', error);
+        console.error(`Error fetching ${collectionName}: `, error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [isAuthenticated]);
 
 
   if (loading) {

@@ -70,6 +70,7 @@ export async function setAdminStatus(
 
 export async function addSliderByUrl(
   imageUrl: string,
+  collectionName: 'homeSliders' | 'landingSliders',
   idToken: string
 ): Promise<{ success: boolean; message: string }> {
   const adminCheck = await verifyAdmin(idToken);
@@ -80,14 +81,14 @@ export async function addSliderByUrl(
     // Basic URL validation
     new URL(imageUrl);
 
-    await db.collection('sliders').add({
+    await db.collection(collectionName).add({
       url: imageUrl,
       createdAt: Timestamp.now(),
     });
 
     return { success: true, message: 'Slider added successfully.' };
   } catch (error: any) {
-    console.error('Server-side add slider by URL failed:', error);
+    console.error(`Server-side add slider to ${collectionName} failed:`, error);
     if (error instanceof TypeError) {
       return { success: false, message: 'Invalid URL provided.' };
     }
@@ -97,7 +98,8 @@ export async function addSliderByUrl(
 
 export async function deleteSlider(
     sliderId: string, 
-    storagePath: string,
+    storagePath: string | null,
+    collectionName: 'homeSliders' | 'landingSliders',
     idToken: string
 ): Promise<{ success: boolean, message: string}> {
     const adminCheck = await verifyAdmin(idToken);
@@ -112,18 +114,18 @@ export async function deleteSlider(
         }
 
         // Always delete from Firestore
-        await db.collection('sliders').doc(sliderId).delete();
+        await db.collection(collectionName).doc(sliderId).delete();
 
         return { success: true, message: "Slider deleted" };
     } catch (error: any) {
         // This handles cases where file doesn't exist in storage but we want to clean up the DB entry.
         if (error.code === 404) {
             console.warn(`File not found at ${storagePath}. Deleting from Firestore only.`);
-            await db.collection('sliders').doc(sliderId).delete();
+            await db.collection(collectionName).doc(sliderId).delete();
             return { success: true, message: "Slider record deleted (file not in storage)." };
         }
-        console.error("Error deleting slider on server:", error);
-        return { success: false, message: error.message || "Failed to delete slider on server."};
+        console.error(`Error deleting slider from ${collectionName} on server:`, error);
+        return { success: false, message: error.message || `Failed to delete slider from ${collectionName} on server.`};
     }
 }
 
