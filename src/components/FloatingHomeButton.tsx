@@ -5,10 +5,12 @@ import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent 
 import { usePathname, useRouter } from 'next/navigation';
 import { Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLoading } from '@/context/LoadingContext';
 
 export function FloatingHomeButton() {
   const pathname = usePathname();
   const router = useRouter();
+  const { showLoader } = useLoading();
   
   const buttonRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -92,7 +94,10 @@ export function FloatingHomeButton() {
 
   const handleDragEnd = () => {
     if (!hasMovedRef.current) {
-        router.push('/');
+        if (pathname !== '/') {
+            showLoader();
+            router.push('/');
+        }
     }
     isDraggingRef.current = false;
     if (buttonRef.current) {
