@@ -15,7 +15,6 @@ import {
   ClipboardList,
   Coins,
   MessageSquare,
-  Settings,
 } from "lucide-react";
 import {
   Sheet,
@@ -149,13 +148,10 @@ export function Header() {
         
         {profile?.isAdmin && <DropdownMenuSeparator />}
         {profile?.isAdmin && (
-                <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild>
                 <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
             </DropdownMenuItem>
         )}
-        <DropdownMenuItem asChild>
-            <Link href="/profile" className="cursor-pointer"><Settings className="mr-2 h-4 w-4" /><span>Settings</span></Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
@@ -198,16 +194,11 @@ export function Header() {
         </Button>
 
         {profile?.isAdmin && <Separator className="my-2"/>}
-
         {profile?.isAdmin && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
             </SheetClose>
         )}
-
-        <SheetClose asChild>
-            <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/profile"><Settings className="mr-2 h-4 w-4" />Settings</Link></Button>
-        </SheetClose>
         
         <Separator className="my-2"/>
 
