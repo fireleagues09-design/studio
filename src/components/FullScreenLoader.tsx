@@ -11,11 +11,16 @@ export function FullScreenLoader() {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity duration-300',
+        'fire-loader',
+        'transition-opacity duration-500',
         isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
     >
-      <Flame className="h-16 w-16 animate-pulse-fire text-primary" />
+      <div className="flame flame1"></div>
+      <div className="flame flame2"></div>
+      <div className="flame flame3"></div>
+      {/* The Flame icon from lucide-react is used as the logo */}
+      <Flame className="fire-loader-logo" />
     </div>
   );
 }
