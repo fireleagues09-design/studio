@@ -18,30 +18,14 @@ export function FullScreenLoader() {
         isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
     >
-      <svg viewBox="0 0 24 24" className="fire-svg" style={{ width: '250px', height: '250px' }}>
-        <defs>
-          <mask id="logoMask">
-            <path d={flamePath} fill="white" />
-          </mask>
-          <linearGradient id="fireGrad" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#ff0000" />
-            <stop offset="40%" stopColor="#ff6a00" />
-            <stop offset="70%" stopColor="#ffd000" />
-            <stop offset="100%" stopColor="#ffffff" />
-          </linearGradient>
-        </defs>
-
-        {/* FIRE INSIDE SHAPE */}
-        <rect x="0" y="-24" width="24" height="48"
-              fill="url(#fireGrad)"
-              mask="url(#logoMask)"
-              className="fire-fill"/>
-
-        {/* GLOW EDGE */}
-        <path d={flamePath}
-              fill="none"
-              className="glow"/>
-      </svg>
+      <div className="line-loader">
+        <div className="line left"></div>
+        <div className="line right"></div>
+        <div className="spark"></div>
+        <svg viewBox="0 0 24 24" className="logo">
+          <path d={flamePath} fill="currentColor" />
+        </svg>
+      </div>
     </div>
   );
 }
