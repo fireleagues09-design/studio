@@ -50,8 +50,11 @@ export default function ProfilePage() {
                         setProfile(profileData);
                     } else {
                         console.error("User profile not found in Firestore.");
-                        router.push('/login');
+                        auth.signOut();
                     }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error fetching profile:", error);
                     setLoading(false);
                 });
 
@@ -60,6 +63,7 @@ export default function ProfilePage() {
                 };
             } else {
                 router.push('/login');
+                setLoading(false);
             }
         });
 
@@ -78,7 +82,12 @@ export default function ProfilePage() {
         window.location.href = '/';
     };
 
-    if (loading || !user || !profile) {
+    if (loading || !user) {
+        return null;
+    }
+    
+    if (!profile) {
+        // This can happen briefly during logout or if the doc doesn't exist
         return null;
     }
 

@@ -36,7 +36,8 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [isAdmin, setIsAdmin] = useState(false);
     const [tournament, setTournament] = useState<TournamentType | null>(null);
     const [registrations, setRegistrations] = useState<Registration[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [dataLoading, setDataLoading] = useState(true);
     const router = useRouter();
     const { hideLoader } = useLoading();
 
@@ -54,20 +55,26 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             } else {
                 router.push('/login');
             }
+            setAuthLoading(false);
         });
         return () => unsubscribeAuth();
     }, [router]);
 
     useEffect(() => {
-        if (!loading && isAdmin) {
+        if (!authLoading && !dataLoading) {
             hideLoader();
         }
-    }, [loading, isAdmin, hideLoader]);
+    }, [authLoading, dataLoading, hideLoader]);
 
     useEffect(() => {
-        if (!isAdmin || !tournamentId) return;
+        if (authLoading || !isAdmin || !tournamentId) {
+             if (!authLoading) {
+                setDataLoading(false);
+            }
+            return;
+        };
 
-        setLoading(true);
+        setDataLoading(true);
 
         // Fetch tournament details
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -77,12 +84,21 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             } else {
                 console.error("Tournament not found!");
                 setTournament(null);
+                 setDataLoading(false);
             }
+        }, (error) => {
+            console.error("Error fetching tournament:", error);
+            setDataLoading(false);
         });
         
         // Fetch registrations
         const registrationsQuery = query(collection(db, `tournaments/${tournamentId}/registrations`), orderBy("registeredAt", "asc"));
         const unsubscribeRegistrations = onSnapshot(registrationsQuery, async (snapshot) => {
+            if (snapshot.empty) {
+                setRegistrations([]);
+                setDataLoading(false);
+                return;
+            }
             const registrationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Registration));
             
             // Fetch phone numbers for each registered user
@@ -96,17 +112,17 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             );
 
             setRegistrations(registrationsWithPhones);
-            setLoading(false);
+            setDataLoading(false);
         }, (error) => {
             console.error("Error fetching registrations:", error)
-            setLoading(false);
+            setDataLoading(false);
         });
 
         return () => {
             unsubscribeTournament();
             unsubscribeRegistrations();
         };
-    }, [isAdmin, tournamentId]);
+    }, [isAdmin, tournamentId, authLoading]);
 
      const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
@@ -114,7 +130,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         return format(date, 'PPp');
     };
 
-    if (loading || !isAdmin) {
+    if (authLoading || dataLoading) {
         return null;
     }
 
