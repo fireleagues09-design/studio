@@ -52,8 +52,6 @@ export default function RegisterPage() {
             email: user.email,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
-            isAdmin: false,
-            suspended: false,
         };
 
         if (user.phoneNumber) {
