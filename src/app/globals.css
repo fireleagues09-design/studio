@@ -141,19 +141,40 @@
   position:absolute;
   left:50%;
   top:50%;
-  width:75px;
+
+  width:55px; /* smaller base size */
   color: white;
-  transform:translate(-50%,-50%) scale(0);
+
+  transform:translate(-50%,-50%) scale(0.85);
   opacity:0;
 
-  filter:drop-shadow(0 0 22px #ff6a00);
+  filter:drop-shadow(0 0 18px #ff6a00);
 
-  animation:logoLoop 3s infinite;
+  animation:logoLoop 3s cubic-bezier(.4,0,.2,1) infinite;
 }
 
 @keyframes logoLoop{
-  0%,35%{opacity:0;transform:translate(-50%,-50%) scale(0)}
-  45%{opacity:1;transform:translate(-50%,-50%) scale(1)}
-  70%{opacity:1}
-  100%{opacity:0;transform:translate(-50%,-50%) scale(0)}
+  /* hidden */
+  0%,35%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(0.85);
+  }
+
+  /* smooth zoom in */
+  45%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+  }
+
+  /* hold while lines connected */
+  70%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+  }
+
+  /* fade out + slight shrink */
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(0.9);
+  }
 }
