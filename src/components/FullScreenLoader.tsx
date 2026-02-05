@@ -18,7 +18,7 @@ export function FullScreenLoader() {
         isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
     >
-      <div className="line-loader">
+      <div className="loader">
         <div className="line left"></div>
         <div className="line right"></div>
         <div className="spark"></div>
