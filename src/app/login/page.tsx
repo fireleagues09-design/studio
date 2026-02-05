@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -20,6 +20,7 @@ import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from "fir
 import { doc, getDoc } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,6 +29,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { hideLoader } = useLoading();
+
+  useEffect(() => {
+    hideLoader();
+  }, [hideLoader]);
 
   const handleAuthSuccess = async (userCredential: UserCredential) => {
     const user = userCredential.user;

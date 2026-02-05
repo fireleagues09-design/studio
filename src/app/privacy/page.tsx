@@ -1,7 +1,17 @@
 
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLoading } from "@/context/LoadingContext";
+import { useEffect } from "react";
 
 export default function PrivacyPage() {
+  const { hideLoader } = useLoading();
+
+  useEffect(() => {
+    hideLoader();
+  }, [hideLoader]);
+
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
       <Card>

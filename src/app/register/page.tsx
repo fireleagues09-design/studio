@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -31,6 +32,11 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { hideLoader } = useLoading();
+
+  useEffect(() => {
+    hideLoader();
+  }, [hideLoader]);
 
   const handleAuthSuccess = async (userCredential: UserCredential) => {
     const user = userCredential.user;

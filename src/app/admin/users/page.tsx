@@ -27,6 +27,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { setAdminStatus } from "../actions";
+import { useLoading } from "@/context/LoadingContext";
 
 // ---------------------- TYPES ----------------------
 type UserDoc = {
@@ -75,6 +76,13 @@ export default function AdminUsersPage() {
 
   const [adjustAmount, setAdjustAmount] = useState<string>("");
   const [logsLoading, setLogsLoading] = useState(false);
+  const { hideLoader } = useLoading();
+
+  useEffect(() => {
+    if (!loadingAuth) {
+      hideLoader();
+    }
+  }, [loadingAuth, hideLoader]);
 
   // Auth and admin check
   useEffect(() => {
@@ -362,7 +370,7 @@ export default function AdminUsersPage() {
   };
 
   // UI
-  if (loadingAuth) return <div className="p-8 text-white">Loading auth...</div>;
+  if (loadingAuth) return null;
   if (!currentUser) return <div className="p-8 text-white">Please sign in.</div>;
   if (!isAdminUser)
     return <div className="p-8 text-white">You must be an admin to view this page.</div>;
