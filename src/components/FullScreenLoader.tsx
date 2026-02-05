@@ -31,12 +31,16 @@ export function FullScreenLoader() {
           </linearGradient>
         </defs>
 
-        <rect x="0" y="0" width="24" height="48"
+        {/* FIRE INSIDE SHAPE */}
+        <rect x="0" y="-24" width="24" height="48"
               fill="url(#fireGrad)"
               mask="url(#logoMask)"
-              className="fire-fill" />
+              className="fire-fill"/>
 
-        <path d={flamePath} fill="none" className="glow" />
+        {/* GLOW EDGE */}
+        <path d={flamePath}
+              fill="none"
+              className="glow"/>
       </svg>
     </div>
   );
