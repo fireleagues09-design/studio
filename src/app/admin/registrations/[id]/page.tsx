@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useLoading } from '@/context/LoadingContext';
 
 type Registration = {
     id: string;
@@ -37,6 +38,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const { hideLoader } = useLoading();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -55,6 +57,12 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         });
         return () => unsubscribeAuth();
     }, [router]);
+
+    useEffect(() => {
+        if (!loading && isAdmin) {
+            hideLoader();
+        }
+    }, [loading, isAdmin, hideLoader]);
 
     useEffect(() => {
         if (!isAdmin || !tournamentId) return;
@@ -107,25 +115,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     };
 
     if (loading || !isAdmin) {
-        return (
-             <div className="container mx-auto px-4 py-8 md:py-12">
-                <Skeleton className="h-8 w-48 mb-4" />
-                <Skeleton className="h-6 w-64 mb-8" />
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-1/2" />
-                        <Skeleton className="h-5 w-1/3" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-full" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
+        return null;
     }
 
     if (!tournament) {

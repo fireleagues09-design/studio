@@ -27,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useLoading } from '@/context/LoadingContext';
 
 type UserData = {
     id: string;
@@ -493,6 +494,7 @@ export default function AdminPage() {
 
     const router = useRouter();
     const { toast } = useToast();
+    const { hideLoader } = useLoading();
     
 
     useEffect(() => {
@@ -515,6 +517,12 @@ export default function AdminPage() {
         return () => unsubscribeAuth();
     }, [router]);
     
+    useEffect(() => {
+        if (!loading && !dataLoading) {
+            hideLoader();
+        }
+    }, [loading, dataLoading, hideLoader]);
+
     const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
@@ -612,14 +620,8 @@ export default function AdminPage() {
     const pendingDeposits = pendingTransactions.filter(t => t.type === 'deposit');
     const pendingWithdrawals = pendingTransactions.filter(t => t.type === 'withdrawal');
 
-    if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
-                <div className="flex items-center justify-center h-64">
-                    <p>Loading Admin Panel...</p>
-                </div>
-            </div>
-        )
+    if (loading || dataLoading) {
+        return null;
     }
 
     if (!isAdmin) {
@@ -715,111 +717,103 @@ export default function AdminPage() {
                                     </TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="deposits" className="mt-4">
-                                    {dataLoading ? (
-                                        <Skeleton className="h-24 w-full" />
-                                    ) : (
-                                        <div className="border rounded-md">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>User</TableHead>
-                                                        <TableHead>Amount</TableHead>
-                                                        <TableHead>Transaction ID</TableHead>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
+                                    <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Transaction ID</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {pendingDeposits.length > 0 ? (
+                                                    pendingDeposits.map(deposit => (
+                                                    <TableRow key={deposit.id}>
+                                                        <TableCell className="font-medium">{deposit.userName}</TableCell>
+                                                        <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
+                                                        <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
+                                                        <TableCell>{formatDate(deposit.date)}</TableCell>
+                                                        <TableCell className="text-right space-x-2">
+                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(deposit, 'Completed')} disabled={actionLoading[deposit.id]}>
+                                                                <CheckCircle className="h-5 w-5" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(deposit, 'Failed')} disabled={actionLoading[deposit.id]}>
+                                                                <XCircle className="h-5 w-5" />
+                                                            </Button>
+                                                        </TableCell>
                                                     </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {pendingDeposits.length > 0 ? (
-                                                        pendingDeposits.map(deposit => (
-                                                        <TableRow key={deposit.id}>
-                                                            <TableCell className="font-medium">{deposit.userName}</TableCell>
-                                                            <TableCell>₹{deposit.amount.toFixed(2)}</TableCell>
-                                                            <TableCell className="font-mono text-xs">{deposit.transactionId}</TableCell>
-                                                            <TableCell>{formatDate(deposit.date)}</TableCell>
-                                                            <TableCell className="text-right space-x-2">
-                                                                <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(deposit, 'Completed')} disabled={actionLoading[deposit.id]}>
-                                                                    <CheckCircle className="h-5 w-5" />
-                                                                </Button>
-                                                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(deposit, 'Failed')} disabled={actionLoading[deposit.id]}>
-                                                                    <XCircle className="h-5 w-5" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        ))
-                                                    ) : (
-                                                        <TableRow>
-                                                            <TableCell colSpan={5} className="h-24 text-center">No pending deposit requests.</TableCell>
-                                                        </TableRow>
-                                                    )}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="h-24 text-center">No pending deposit requests.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 </TabsContent>
                                 <TabsContent value="withdrawals" className="mt-4">
-                                {dataLoading ? (
-                                        <Skeleton className="h-24 w-full" />
-                                    ) : (
-                                        <div className="border rounded-md">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>User</TableHead>
-                                                        <TableHead>Amount</TableHead>
-                                                        <TableHead>Details</TableHead>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
+                                    <div className="border rounded-md">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Amount</TableHead>
+                                                    <TableHead>Details</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {pendingWithdrawals.length > 0 ? (
+                                                    pendingWithdrawals.map(withdrawal => (
+                                                    <TableRow key={withdrawal.id}>
+                                                        <TableCell className="font-medium">{withdrawal.userName}</TableCell>
+                                                        <TableCell>₹{withdrawal.amount.toFixed(2)}</TableCell>
+                                                        <TableCell>
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild><Button variant="link" size="sm">View</Button></TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <div className="text-sm p-2 space-y-2">
+                                                                            <h4 className="font-bold">{withdrawal.details.method === 'upi' ? 'UPI Details' : 'Bank Details'}</h4>
+                                                                            <p><strong>Name:</strong> {withdrawal.details.name}</p>
+                                                                            {withdrawal.details.method === 'upi' ? (
+                                                                                <p><strong>UPI ID:</strong> {withdrawal.details.upiId}</p>
+                                                                            ) : (
+                                                                                <>
+                                                                                    <p><strong>Bank:</strong> {withdrawal.details.bankName}</p>
+                                                                                    <p><strong>Account:</strong> {withdrawal.details.accountNumber}</p>
+                                                                                    <p><strong>IFSC:</strong> {withdrawal.details.ifscCode}</p>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        </TableCell>
+                                                        <TableCell>{formatDate(withdrawal.date)}</TableCell>
+                                                        <TableCell className="text-right space-x-2">
+                                                            <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')} disabled={actionLoading[withdrawal.id]}>
+                                                                <CheckCircle className="h-5 w-5" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')} disabled={actionLoading[withdrawal.id]}>
+                                                                <XCircle className="h-5 w-5" />
+                                                            </Button>
+                                                        </TableCell>
                                                     </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {pendingWithdrawals.length > 0 ? (
-                                                        pendingWithdrawals.map(withdrawal => (
-                                                        <TableRow key={withdrawal.id}>
-                                                            <TableCell className="font-medium">{withdrawal.userName}</TableCell>
-                                                            <TableCell>₹{withdrawal.amount.toFixed(2)}</TableCell>
-                                                            <TableCell>
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger asChild><Button variant="link" size="sm">View</Button></TooltipTrigger>
-                                                                        <TooltipContent>
-                                                                            <div className="text-sm p-2 space-y-2">
-                                                                                <h4 className="font-bold">{withdrawal.details.method === 'upi' ? 'UPI Details' : 'Bank Details'}</h4>
-                                                                                <p><strong>Name:</strong> {withdrawal.details.name}</p>
-                                                                                {withdrawal.details.method === 'upi' ? (
-                                                                                    <p><strong>UPI ID:</strong> {withdrawal.details.upiId}</p>
-                                                                                ) : (
-                                                                                    <>
-                                                                                        <p><strong>Bank:</strong> {withdrawal.details.bankName}</p>
-                                                                                        <p><strong>Account:</strong> {withdrawal.details.accountNumber}</p>
-                                                                                        <p><strong>IFSC:</strong> {withdrawal.details.ifscCode}</p>
-                                                                                    </>
-                                                                                )}
-                                                                            </div>
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
-                                                            </TableCell>
-                                                            <TableCell>{formatDate(withdrawal.date)}</TableCell>
-                                                            <TableCell className="text-right space-x-2">
-                                                                <Button variant="ghost" size="icon" className="text-green-500 hover:text-green-600" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')} disabled={actionLoading[withdrawal.id]}>
-                                                                    <CheckCircle className="h-5 w-5" />
-                                                                </Button>
-                                                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')} disabled={actionLoading[withdrawal.id]}>
-                                                                    <XCircle className="h-5 w-5" />
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                        ))
-                                                    ) : (
-                                                        <TableRow>
-                                                            <TableCell colSpan={5} className="h-24 text-center">No pending withdrawal requests.</TableCell>
-                                                        </TableRow>
-                                                    )}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="h-24 text-center">No pending withdrawal requests.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 </TabsContent>
                             </Tabs>
                         </CardContent>
@@ -835,56 +829,48 @@ export default function AdminPage() {
                             <CreateTournamentDialog />
                         </CardHeader>
                         <CardContent>
-                            {dataLoading ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                </div>
-                            ) : (
-                                <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Name</TableHead>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Slots</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead className="text-right">Prize</TableHead>
-                                                <TableHead className="text-center">Actions</TableHead>
+                            <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Slots</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Prize</TableHead>
+                                            <TableHead className="text-center">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {tournaments.map(tournament => (
+                                            <TableRow key={tournament.id}>
+                                                <TableCell className="font-medium">{tournament.name}</TableCell>
+                                                <TableCell>{tournament.date} @ {tournament.time}</TableCell>
+                                                <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={
+                                                        tournament.status === 'Finished' ? 'destructive' :
+                                                        tournament.status === 'Ongoing' ? 'default' :
+                                                        'secondary'
+                                                    }>
+                                                        {tournament.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">₹{tournament.prize}</TableCell>
+                                                <TableCell className="text-center flex items-center justify-center gap-1">
+                                                    <Button variant="ghost" size="icon" asChild>
+                                                        <Link href={`/admin/registrations/${tournament.id}`}>
+                                                            <UsersRound className="h-4 w-4" />
+                                                        </Link>
+                                                    </Button>
+                                                    <EditTournamentDialog tournament={tournament} />
+                                                    <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
+                                                </TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {tournaments.map(tournament => (
-                                                <TableRow key={tournament.id}>
-                                                    <TableCell className="font-medium">{tournament.name}</TableCell>
-                                                    <TableCell>{tournament.date} @ {tournament.time}</TableCell>
-                                                    <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={
-                                                            tournament.status === 'Finished' ? 'destructive' :
-                                                            tournament.status === 'Ongoing' ? 'default' :
-                                                            'secondary'
-                                                        }>
-                                                            {tournament.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">₹{tournament.prize}</TableCell>
-                                                    <TableCell className="text-center flex items-center justify-center gap-1">
-                                                        <Button variant="ghost" size="icon" asChild>
-                                                            <Link href={`/admin/registrations/${tournament.id}`}>
-                                                                <UsersRound className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        <EditTournamentDialog tournament={tournament} />
-                                                        <DeleteTournamentDialog tournamentId={tournament.id} tournamentName={tournament.name} />
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            )}
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

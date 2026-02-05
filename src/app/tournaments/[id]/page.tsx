@@ -36,6 +36,7 @@ import { registerSoloPlayer } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLoading } from '@/context/LoadingContext';
 
 
 type SoloRegistrationDialogProps = {
@@ -243,6 +244,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     
     const { toast } = useToast();
     const router = useRouter();
+    const { hideLoader } = useLoading();
     
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -251,6 +253,12 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         });
         return () => unsubscribeAuth();
     }, []);
+
+    useEffect(() => {
+        if (!loading && !loadingAuth) {
+            hideLoader();
+        }
+    }, [loading, loadingAuth, hideLoader]);
     
     useEffect(() => {
         if (user && isRegistered && tournament?.roomId) {
@@ -287,17 +295,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
 
     if (loading || loadingAuth) {
-      return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-                <Skeleton className="h-96 w-full" />
-                <Skeleton className="h-64 w-full" />
-            </div>
-            <div className="lg:col-span-1 space-y-8">
-                <Skeleton className="h-[500px] w-full" />
-            </div>
-        </div>
-      )
+      return null;
     }
 
     if (!tournament) {

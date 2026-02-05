@@ -12,12 +12,14 @@ import { collection, query, limit, onSnapshot, orderBy, where } from 'firebase/f
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeSlider } from "@/components/HomeSlider";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function Home() {
   const [upcomingTournaments, setUpcomingTournaments] = useState<Tournament[]>([]);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const { hideLoader } = useLoading();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -47,7 +49,17 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loadingTournaments && !loadingAuth) {
+      hideLoader();
+    }
+  }, [loadingTournaments, loadingAuth, hideLoader]);
+
   const viewAllLink = !loadingAuth && user ? "/tournaments" : "/register";
+
+  if (loadingAuth || loadingTournaments) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-8 md:gap-12">
@@ -91,16 +103,7 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          {loadingTournaments || loadingAuth ? (
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-2">
-                        <Skeleton className="aspect-square w-full rounded-lg" />
-                        <Skeleton className="h-5 w-3/4 rounded-md" />
-                    </div>
-                ))}
-            </div>
-            ) : upcomingTournaments.length > 0 ? (
+          {upcomingTournaments.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {upcomingTournaments.map((tournament) => (
                     <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />

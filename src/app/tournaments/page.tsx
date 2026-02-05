@@ -12,6 +12,7 @@ import type { Tournament } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { Button } from "@/components/ui/button";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function TournamentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,6 +20,7 @@ export default function TournamentsPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const { hideLoader } = useLoading();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -42,6 +44,12 @@ export default function TournamentsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading && !loadingAuth) {
+      hideLoader();
+    }
+  }, [loading, loadingAuth, hideLoader]);
+
   const filteredTournaments = tournaments.filter((t) =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -56,19 +64,6 @@ export default function TournamentsPage() {
     (t) => t.status === "Finished"
   );
 
-  const renderSkeletons = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="space-y-4">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-        ))}
-    </div>
-  );
-  
   const renderTournamentList = (tournaments: Tournament[]) => {
       if (tournaments.length === 0) {
         return (
@@ -86,6 +81,10 @@ export default function TournamentsPage() {
             ))}
         </>
       )
+  }
+
+  if (loading || loadingAuth) {
+    return null;
   }
 
   return (
@@ -119,17 +118,17 @@ export default function TournamentsPage() {
         </TabsList>
         <TabsContent value="upcoming" className="mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {loading || loadingAuth ? renderSkeletons() : renderTournamentList(upcomingTournaments)}
+                {renderTournamentList(upcomingTournaments)}
             </div>
         </TabsContent>
         <TabsContent value="ongoing" className="mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                 {loading || loadingAuth ? renderSkeletons() : renderTournamentList(ongoingTournaments)}
+                 {renderTournamentList(ongoingTournaments)}
             </div>
         </TabsContent>
         <TabsContent value="finished" className="mt-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                 {loading || loadingAuth ? renderSkeletons() : renderTournamentList(finishedTournaments)}
+                 {renderTournamentList(finishedTournaments)}
             </div>
         </TabsContent>
       </Tabs>

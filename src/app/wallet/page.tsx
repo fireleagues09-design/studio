@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requestWithdrawal } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useLoading } from '@/context/LoadingContext';
 
 
 type UserProfile = {
@@ -363,6 +364,7 @@ export default function WalletPage() {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const router = useRouter();
     const { toast } = useToast();
+    const { hideLoader } = useLoading();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -397,6 +399,12 @@ export default function WalletPage() {
             setLoadingTransactions(false);
         }
      }, [user, dateRange, loading]);
+
+    useEffect(() => {
+        if (!loading && !loadingTransactions) {
+            hideLoader();
+        }
+    }, [loading, loadingTransactions, hideLoader]);
 
 
     const fetchTransactions = async () => {
@@ -446,20 +454,7 @@ export default function WalletPage() {
     const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
     if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-48" />
-                        <Skeleton className="h-5 w-64" />
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-40 w-full" />
-                    </CardContent>
-                </Card>
-            </div>
-        )
+        return null;
     }
 
     if (!profile) {

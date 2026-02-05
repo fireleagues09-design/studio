@@ -18,6 +18,7 @@ import type { Team, TeamMember } from '@/lib/mock-data';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLoading } from '@/context/LoadingContext';
 
 
 type UserProfile = {
@@ -36,6 +37,7 @@ export default function ProfilePage() {
 
     const router = useRouter();
     const { toast } = useToast();
+    const { hideLoader } = useLoading();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -64,6 +66,12 @@ export default function ProfilePage() {
         return () => unsubscribe();
     }, [router]);
     
+    useEffect(() => {
+        if (!loading) {
+            hideLoader();
+        }
+    }, [loading, hideLoader]);
+
     const handleLogout = async () => {
         await auth.signOut();
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
@@ -71,25 +79,7 @@ export default function ProfilePage() {
     };
 
     if (loading || !user || !profile) {
-        return (
-            <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-48" />
-                        <Skeleton className="h-5 w-64" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                         <Skeleton className="h-10 w-24" />
-                         <Skeleton className="h-10 w-24" />
-                    </CardFooter>
-                </Card>
-            </div>
-        )
+        return null;
     }
 
 
