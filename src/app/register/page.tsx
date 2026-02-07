@@ -17,7 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -39,17 +39,24 @@ export default function RegisterPage() {
   }, [hideLoader]);
 
   const handleAuthSuccess = async (userCredential: UserCredential) => {
+    const additionalInfo = getAdditionalUserInfo(userCredential);
     const user = userCredential.user;
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
-        toast({ title: "Registration Error", description: "This account is already registered. Please log in.", variant: "destructive" });
+    // If it's not a new user, the email was already registered.
+    if (!additionalInfo?.isNewUser) {
+        toast({
+            title: "Registration Error",
+            description: "An account with this email already exists. Please log in.",
+            variant: "destructive",
+        });
         await auth.signOut();
         router.push('/login');
         return;
     }
     
+    // It is a new user, so proceed with creating their Firestore document.
+    const userDocRef = doc(db, "users", user.uid);
+
     try {
         const userData: any = {
             inGameName: inGameName,
@@ -71,7 +78,7 @@ export default function RegisterPage() {
         router.push("/");
     } catch(error: any) {
         console.error("Error saving user:", error);
-        toast({ title: "Registration Error", description: error.message, variant: 'destructive' });
+        toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
     }
   };
 
