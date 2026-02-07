@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
@@ -50,11 +50,9 @@ export default function RegisterPage() {
         return;
     }
     
-    const finalInGameName = inGameName || user.displayName || 'New Player';
-    
     try {
         const userData: any = {
-            inGameName: finalInGameName,
+            inGameName: inGameName,
             email: user.email,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
@@ -77,26 +75,60 @@ export default function RegisterPage() {
     }
   };
 
-  const validateFields = () => {
+  const validateUsername = async (username: string) => {
+    if (username.length !== 12) {
+      toast({ title: "Invalid Username", description: "Username must be exactly 12 characters long.", variant: "destructive" });
+      return false;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+      toast({ title: "Invalid Username", description: "Username can only contain letters and numbers.", variant: "destructive" });
+      return false;
+    }
+
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("inGameName", "==", username));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Registration Error",
+          description: "This username is already taken. Please choose another one.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Username validation error:", error);
+      toast({ title: "Error", description: "Could not validate username. Please try again.", variant: "destructive"});
+      return false;
+    }
+
+    return true;
+  };
+
+
+  const handleEmailRegister = async () => {
     if (!email || !password || !inGameName || !confirmPassword) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
-      return false;
+      return;
     }
     if (password.length < 6) {
       toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
-      return false;
+      return;
     }
     if (password !== confirmPassword) {
       toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
-      return false;
+      return;
     }
-    return true;
-  }
-
-  const handleEmailRegister = async () => {
-    if (!validateFields()) return;
 
     setLoading(true);
+    const isUsernameValid = await validateUsername(inGameName);
+    if (!isUsernameValid) {
+        setLoading(false);
+        return;
+    }
+    
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await handleAuthSuccess(userCredential);
@@ -113,7 +145,18 @@ export default function RegisterPage() {
   };
 
   const startGoogleSignUp = async () => {
+    if (!inGameName) {
+      toast({ title: "Username Required", description: "Please enter a username before signing up with Google.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
+    const isUsernameValid = await validateUsername(inGameName);
+    if (!isUsernameValid) {
+        setLoading(false);
+        return;
+    }
+
     try {
         const result = await signInWithPopup(auth, googleProvider);
         await handleAuthSuccess(result);
@@ -154,6 +197,19 @@ export default function RegisterPage() {
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="in-game-name">Username</Label>
+              <Input
+                id="in-game-name"
+                placeholder="12 character alphanumeric name"
+                required
+                value={inGameName}
+                onChange={(e) => setInGameName(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">Must be 12 characters, letters and numbers only.</p>
+            </div>
+            
+            <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -162,18 +218,6 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="in-game-name">Username</Label>
-              <Input
-                id="in-game-name"
-                placeholder="YourUsername"
-                required
-                value={inGameName}
-                onChange={(e) => setInGameName(e.target.value)}
                 disabled={loading}
               />
             </div>
