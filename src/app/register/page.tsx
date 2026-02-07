@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo, sendSignInLinkToEmail, fetchSignInMethodsForEmail } from "firebase/auth";
+import { signInWithPopup, UserCredential, getAdditionalUserInfo, sendSignInLinkToEmail, fetchSignInMethodsForEmail } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -74,6 +74,9 @@ export default function RegisterPage() {
         router.push("/");
     } catch(error: any) {
         console.error("Error saving user:", error);
+        // Important: If doc creation fails, we must delete the auth user to allow a retry.
+        await userCredential.user.delete().catch(e => console.error("Failed to delete auth user on error:", e));
+        await auth.signOut(); // And sign out
         toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
     }
   };
