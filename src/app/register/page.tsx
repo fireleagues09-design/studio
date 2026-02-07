@@ -17,7 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo, signInWithEmailAndPassword } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -42,43 +42,39 @@ export default function RegisterPage() {
     const additionalInfo = getAdditionalUserInfo(userCredential);
     const user = userCredential.user;
 
-    // If it's not a new user, the email was already registered.
-    if (!additionalInfo?.isNewUser) {
-        toast({
-            title: "Registration Error",
-            description: "An account with this email already exists. Please log in.",
-            variant: "destructive",
-        });
-        await auth.signOut();
-        router.push('/login');
-        return;
-    }
-    
-    // It is a new user, so proceed with creating their Firestore document.
-    const userDocRef = doc(db, "users", user.uid);
+    if (additionalInfo?.isNewUser) {
+        // This is a genuinely new user, create their document.
+        try {
+            const userData: any = {
+                inGameName: inGameName, // This is required for new users
+                email: user.email,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            };
 
-    try {
-        const userData: any = {
-            inGameName: inGameName,
-            email: user.email,
-            wallet: { deposit: 0, winning: 0, bonus: 0 },
-            registeredOn: serverTimestamp(),
-        };
+            if (user.phoneNumber) {
+                userData.phone = user.phoneNumber;
+            }
 
-        if (user.phoneNumber) {
-            userData.phone = user.phoneNumber;
+            await setDoc(doc(db, "users", user.uid), userData);
+
+            toast({
+                title: "Welcome!",
+                description: "Account created successfully!",
+            });
+            router.push("/");
+        } catch(error: any) {
+            console.error("Error saving user:", error);
+            toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
         }
-
-        await setDoc(userDocRef, userData);
-
+    } else {
+        // This is an existing user. The user is already logged in.
+        // We just need to welcome them back and redirect.
         toast({
-            title: "Welcome!",
-            description: "Account created successfully!",
+            title: "Welcome Back!",
+            description: "Logged in successfully.",
         });
         router.push("/");
-    } catch(error: any) {
-        console.error("Error saving user:", error);
-        toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
     }
   };
 
@@ -130,25 +126,37 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const isUsernameValid = await validateUsername(inGameName);
-    if (!isUsernameValid) {
-        setLoading(false);
-        return;
-    }
     
     try {
+        const isUsernameValid = await validateUsername(inGameName);
+        if (!isUsernameValid) {
+            setLoading(false);
+            return;
+        }
+
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await handleAuthSuccess(userCredential);
-      } catch (error: any) {
-        console.error("Error creating account:", error);
-        let description = "Failed to create account. Please try again.";
+    } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            description = "This email is already registered. Please login instead.";
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                await handleAuthSuccess(userCredential);
+            } catch (signInError: any) {
+                console.error("Sign-in attempt failed after registration error:", signInError);
+                let description = "An account with this email already exists, but the password you entered is incorrect.";
+                if (signInError.code !== 'auth/wrong-password' && signInError.code !== 'auth/invalid-credential') {
+                    description = "An unexpected error occurred during login. Please try again.";
+                }
+                toast({ title: "Login Failed", description, variant: "destructive" });
+            }
+        } else {
+            console.error("Error creating account:", error);
+            const description = "Failed to create account. Please try again.";
+            toast({ title: "Registration Error", description, variant: "destructive" });
         }
-        toast({ title: "Registration Error", description, variant: "destructive" });
-      } finally {
+    } finally {
         setLoading(false);
-      }
+    }
   };
 
   const startGoogleSignUp = async () => {
@@ -158,15 +166,24 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    const isUsernameValid = await validateUsername(inGameName);
-    if (!isUsernameValid) {
-        setLoading(false);
-        return;
-    }
-
+    
     try {
         const result = await signInWithPopup(auth, googleProvider);
+        const additionalInfo = getAdditionalUserInfo(result);
+        
+        if (!additionalInfo?.isNewUser) {
+             await handleAuthSuccess(result);
+             return;
+        }
+
+        const isUsernameValid = await validateUsername(inGameName);
+        if (!isUsernameValid) {
+            await auth.signOut();
+            return;
+        }
+
         await handleAuthSuccess(result);
+
     } catch (error: any) {
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
