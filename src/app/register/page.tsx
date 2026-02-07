@@ -162,9 +162,13 @@ export default function RegisterPage() {
 
     } catch (error: any) {
         console.error("Error during registration initiation:", error);
+        let errorMessage = "Could not start the registration process. Please try again.";
+        if (error.code === 'auth/quota-exceeded') {
+            errorMessage = 'Our email service is temporarily at its limit. Please try again later or sign up with Google.';
+        }
         toast({
             title: "Registration Error",
-            description: "Could not start the registration process. Please try again.",
+            description: errorMessage,
             variant: "destructive",
         });
         setLoading(false);
