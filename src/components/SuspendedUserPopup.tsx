@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Ban, LogOut } from 'lucide-react';
@@ -26,7 +25,8 @@ export function SuspendedUserPopup({ onLogout }: SuspendedUserPopupProps) {
             your account have been suspended. please contact our customer support for more info. thank you
           </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-4 gap-2">
+          <Button variant="outline" disabled>Cancel</Button>
           <Button variant="destructive" onClick={onLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
