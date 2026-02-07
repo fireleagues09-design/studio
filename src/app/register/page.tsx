@@ -19,8 +19,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { signInWithPopup, UserCredential, getAdditionalUserInfo, sendSignInLinkToEmail, fetchSignInMethodsForEmail } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [inGameName, setInGameName] = useState(""); // This is "Username" in the UI
   const [loading, setLoading] = useState(false);
+  const [isEmailServiceDown, setIsEmailServiceDown] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const { hideLoader } = useLoading();
@@ -164,7 +166,8 @@ export default function RegisterPage() {
         console.error("Error during registration initiation:", error);
         let errorMessage = "Could not start the registration process. Please try again.";
         if (error.code === 'auth/quota-exceeded') {
-            errorMessage = 'Our email service is temporarily at its limit. Please try again later or sign up with Google.';
+            errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
+            setIsEmailServiceDown(true);
         }
         toast({
             title: "Registration Error",
@@ -218,6 +221,16 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {isEmailServiceDown && (
+                <Alert variant="destructive">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Email Registration Unavailable</AlertTitle>
+                    <AlertDescription>
+                        Our email service is temporarily down. Please use Google Sign-Up above or try again later.
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="in-game-name">Username</Label>
               <Input
@@ -226,7 +239,7 @@ export default function RegisterPage() {
                 required
                 value={inGameName}
                 onChange={(e) => setInGameName(e.target.value)}
-                disabled={loading}
+                disabled={loading || isEmailServiceDown}
               />
               <p className="text-xs text-muted-foreground">Must be 6-12 characters, letters and numbers only.</p>
             </div>
@@ -240,7 +253,7 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
+                disabled={loading || isEmailServiceDown}
               />
             </div>
             
@@ -255,7 +268,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pr-10"
-                  disabled={loading}
+                  disabled={loading || isEmailServiceDown}
                 />
                 <Button
                   type="button"
@@ -280,7 +293,7 @@ export default function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pr-10"
-                  disabled={loading}
+                  disabled={loading || isEmailServiceDown}
                 />
                 <Button
                   type="button"
@@ -294,7 +307,7 @@ export default function RegisterPage() {
               </div>
             </div>
             
-            <Button onClick={handleEmailRegister} className="w-full mt-2" disabled={loading}>
+            <Button onClick={handleEmailRegister} className="w-full mt-2" disabled={loading || isEmailServiceDown}>
                 {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
           
