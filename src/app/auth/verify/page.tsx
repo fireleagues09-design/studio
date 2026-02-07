@@ -115,6 +115,11 @@ export default function VerifyPage() {
         verifyAndRegister();
     }, [router, toast, hideLoader, showLoader]);
 
+    const handleCancel = () => {
+        window.localStorage.removeItem('registrationDetails');
+        router.push('/register');
+    };
+
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
@@ -133,6 +138,9 @@ export default function VerifyPage() {
                             <p className="text-sm text-muted-foreground">Time Remaining</p>
                         </div>
                         <p className="text-xs text-center text-muted-foreground">Please click the link in your email. This page will automatically verify you once the link is opened.</p>
+                         <Button variant="outline" className="w-full mt-6" onClick={handleCancel}>
+                            Cancel
+                        </Button>
                     </>
                 );
             case 'verifying':
