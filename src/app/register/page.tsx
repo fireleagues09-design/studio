@@ -52,13 +52,13 @@ export default function RegisterPage() {
         return;
     }
 
-    // Handle new users
+    // Handle new users from Google sign-up
     try {
         const userData: any = {
-            inGameName: inGameName, // This is required for new users
             email: user.email,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
+            isRegistered: false, // This flag will trigger the username prompt
         };
 
         if (user.phoneNumber) {
@@ -68,12 +68,12 @@ export default function RegisterPage() {
         await setDoc(doc(db, "users", user.uid), userData);
 
         toast({
-            title: "Welcome!",
-            description: "Account created successfully!",
+            title: "Account Created!",
+            description: "Let's set up your username.",
         });
-        router.push("/");
+        router.push("/"); // Redirect to home, where the modal will appear
     } catch(error: any) {
-        console.error("Error saving user:", error);
+        console.error("Error saving partial user profile:", error);
         // Important: If doc creation fails, we must delete the auth user to allow a retry.
         await userCredential.user.delete().catch(e => console.error("Failed to delete auth user on error:", e));
         await auth.signOut(); // And sign out
@@ -176,30 +176,12 @@ export default function RegisterPage() {
   };
 
   const startGoogleSignUp = async () => {
-    if (!inGameName) {
-      toast({ title: "Username Required", description: "Please enter a username before signing up with Google.", variant: "destructive" });
-      return;
-    }
-
     setLoading(true);
-    
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        const additionalInfo = getAdditionalUserInfo(result);
-        
-        if (!additionalInfo?.isNewUser) {
-             await handleAuthSuccess(result);
-             return;
-        }
-
-        const isUsernameValid = await validateUsername(inGameName);
-        if (!isUsernameValid) {
-            await auth.signOut();
-            return;
-        }
-
+        // handleAuthSuccess will now manage new vs existing users
+        // and create a partial profile for new users.
         await handleAuthSuccess(result);
-
     } catch (error: any) {
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
