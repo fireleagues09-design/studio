@@ -42,39 +42,39 @@ export default function RegisterPage() {
     const additionalInfo = getAdditionalUserInfo(userCredential);
     const user = userCredential.user;
 
-    if (additionalInfo?.isNewUser) {
-        // This is a genuinely new user, create their document.
-        try {
-            const userData: any = {
-                inGameName: inGameName, // This is required for new users
-                email: user.email,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            };
-
-            if (user.phoneNumber) {
-                userData.phone = user.phoneNumber;
-            }
-
-            await setDoc(doc(db, "users", user.uid), userData);
-
-            toast({
-                title: "Welcome!",
-                description: "Account created successfully!",
-            });
-            router.push("/");
-        } catch(error: any) {
-            console.error("Error saving user:", error);
-            toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
-        }
-    } else {
-        // This is an existing user. The user is already logged in.
-        // We just need to welcome them back and redirect.
+    // Handle existing users first
+    if (!additionalInfo?.isNewUser) {
         toast({
             title: "Welcome Back!",
             description: "Logged in successfully.",
         });
         router.push("/");
+        return;
+    }
+
+    // Handle new users
+    try {
+        const userData: any = {
+            inGameName: inGameName, // This is required for new users
+            email: user.email,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+        };
+
+        if (user.phoneNumber) {
+            userData.phone = user.phoneNumber;
+        }
+
+        await setDoc(doc(db, "users", user.uid), userData);
+
+        toast({
+            title: "Welcome!",
+            description: "Account created successfully!",
+        });
+        router.push("/");
+    } catch(error: any) {
+        console.error("Error saving user:", error);
+        toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
     }
   };
 
