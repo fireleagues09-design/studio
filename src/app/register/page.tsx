@@ -17,7 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithPopup, UserCredential, getAdditionalUserInfo, sendSignInLinkToEmail, fetchSignInMethodsForEmail } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -134,27 +134,36 @@ export default function RegisterPage() {
             return;
         }
 
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await handleAuthSuccess(userCredential);
-    } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                await handleAuthSuccess(userCredential);
-            } catch (signInError: any) {
-                console.error("Sign-in attempt failed after registration error:", signInError);
-                let description = "An account with this email already exists, but the password you entered is incorrect.";
-                if (signInError.code !== 'auth/wrong-password' && signInError.code !== 'auth/invalid-credential') {
-                    description = "An unexpected error occurred during login. Please try again.";
-                }
-                toast({ title: "Login Failed", description, variant: "destructive" });
-            }
-        } else {
-            console.error("Error creating account:", error);
-            const description = "Failed to create account. Please try again.";
-            toast({ title: "Registration Error", description, variant: "destructive" });
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length > 0) {
+            toast({
+                title: "Registration Error",
+                description: "This email is already registered. Please log in.",
+                variant: "destructive",
+            });
+            setLoading(false);
+            return;
         }
-    } finally {
+
+        const actionCodeSettings = {
+            url: `${window.location.origin}/auth/verify`,
+            handleCodeInApp: true,
+        };
+
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+
+        const registrationDetails = { email, password, inGameName };
+        window.localStorage.setItem('registrationDetails', JSON.stringify(registrationDetails));
+
+        router.push('/auth/verify');
+
+    } catch (error: any) {
+        console.error("Error during registration initiation:", error);
+        toast({
+            title: "Registration Error",
+            description: "Could not start the registration process. Please try again.",
+            variant: "destructive",
+        });
         setLoading(false);
     }
   };
