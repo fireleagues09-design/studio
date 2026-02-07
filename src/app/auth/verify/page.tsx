@@ -65,8 +65,19 @@ export default function VerifyPage() {
                 hideLoader();
                 return;
             }
+            
+            let registrationData;
+            try {
+              registrationData = JSON.parse(registrationDetailsString);
+            } catch (e) {
+              setErrorMessage('Your registration session data is corrupted. Please try signing up again.');
+              setStatus('error');
+              hideLoader();
+              window.localStorage.removeItem('registrationDetails');
+              return;
+            }
 
-            const { email, password, inGameName } = JSON.parse(registrationDetailsString);
+            const { email, password, inGameName } = registrationData;
 
             if (!email || !password || !inGameName) {
                 setErrorMessage('Incomplete registration data. Please start over.');
