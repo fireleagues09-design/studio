@@ -5,7 +5,7 @@ import type { ServiceAccount } from 'firebase-admin';
 // Check for the environment variable first and throw if it's missing.
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
   throw new Error(
-    "🔥 FATAL ERROR: The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for all server-side Firebase functionality. Please add your service account key to your .env.local file and restart the server."
+    "🔥 FATAL ERROR: The FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. This is required for server-side functionality. If running locally, add it to .env.local. If deploying to Vercel, add it in your project's 'Environment Variables' settings."
   );
 }
 
