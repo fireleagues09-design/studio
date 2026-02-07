@@ -83,8 +83,8 @@ export default function RegisterPage() {
   };
 
   const validateUsername = async (username: string) => {
-    if (username.length !== 12) {
-      toast({ title: "Invalid Username", description: "Username must be exactly 12 characters long.", variant: "destructive" });
+    if (username.length < 6 || username.length > 12) {
+      toast({ title: "Invalid Username", description: "Username must be between 6 and 12 characters long.", variant: "destructive" });
       return false;
     }
     if (!/^[a-zA-Z0-9]+$/.test(username)) {
@@ -207,13 +207,13 @@ export default function RegisterPage() {
               <Label htmlFor="in-game-name">Username</Label>
               <Input
                 id="in-game-name"
-                placeholder="12 character alphanumeric name"
+                placeholder="6-12 character username"
                 required
                 value={inGameName}
                 onChange={(e) => setInGameName(e.target.value)}
                 disabled={loading}
               />
-              <p className="text-xs text-muted-foreground">Must be 12 characters, letters and numbers only.</p>
+              <p className="text-xs text-muted-foreground">Must be 6-12 characters, letters and numbers only.</p>
             </div>
             
             <div className="grid gap-2">
