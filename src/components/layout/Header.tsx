@@ -169,11 +169,10 @@ export function Header() {
                         setShowSetUsernameDialog(false);
                     }
                 } else {
-                    // This can happen if a user is in auth but not in firestore (e.g., failed registration).
-                    // Allow them to proceed to registration pages.
-                    if (pathname !== '/login' && pathname !== '/register' && !pathname.startsWith('/auth')) {
-                         auth.signOut();
-                    }
+                    // The document doesn't exist. This could be a temporary state during registration
+                    // or a failed registration. We won't log the user out to avoid race conditions.
+                    // The user will remain authenticated but without a profile, and the popup won't show
+                    // until the document is created and the listener fires again.
                     setProfile(null);
                     setShowSetUsernameDialog(false);
                 }
