@@ -49,8 +49,10 @@ export default function ProfilePage() {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
                     } else {
-                        console.error("User profile not found in Firestore.");
-                        auth.signOut();
+                        // Doc might not be created yet during registration race condition.
+                        // Don't sign out. The user will have a null profile temporarily.
+                        console.warn("User profile document not found. This may be a temporary state during registration.");
+                        setProfile(null);
                     }
                     setLoading(false);
                 }, (error) => {
