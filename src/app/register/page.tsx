@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -75,55 +76,57 @@ export default function RegisterPage() {
 
         await updateProfile(user, { displayName: username });
         
-        try {
-            await sendEmailVerification(user);
-            toast({
-                title: 'Almost there!',
-                description: "We've sent a verification link to your email.",
-            });
-            showLoader();
-            router.push('/auth/verify');
-        } catch (emailError: any) {
-             console.error("Failed to send verification email:", emailError);
-             toast({
-                title: "Could Not Send Email",
-                description: "Your account was created, but we failed to send a verification email. Please try logging in to trigger a new link.",
-                variant: "destructive",
-            });
-            router.push('/login');
-        }
+        await sendEmailVerification(user);
+        toast({
+            title: 'Almost there!',
+            description: "We've sent a verification link to your email.",
+        });
+        showLoader();
+        router.push('/auth/verify');
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
+            setLoading(true); // Keep loading indicator on for the recovery flow
              try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 if (!userCredential.user.emailVerified) {
                     await sendEmailVerification(userCredential.user);
-                    toast({
-                        title: 'Verification Required',
-                        description: "Your account isn't verified yet. We've sent a new link to your email.",
+                     toast({
+                        title: 'Almost there!',
+                        description: "We've sent a new verification link to your email.",
                     });
                     showLoader();
                     router.push('/auth/verify');
                 } else {
-                    toast({
-                        title: 'Already Registered',
-                        description: "This email is already registered and verified. Please log in.",
-                        variant: 'destructive'
-                    });
-                    showLoader();
-                    router.push('/login');
+                     const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+                     if (userDoc.exists()) {
+                        toast({
+                            title: 'Already Registered',
+                            description: "This email is already registered and verified. Please log in.",
+                        });
+                        showLoader();
+                        router.push('/login');
+                     } else {
+                         // This case is unlikely but handles if Firestore doc is missing for a verified user
+                        await sendEmailVerification(userCredential.user);
+                        toast({
+                            title: 'Almost there!',
+                            description: "Your account needs final setup. We've sent a new verification link.",
+                        });
+                        showLoader();
+                        router.push('/auth/verify');
+                     }
                 }
              } catch (signInError: any) {
+                setLoading(false); // Stop loading if sign-in fails (e.g. wrong password)
                 toast({
                     title: 'Account Exists',
-                    description: 'An account with this email already exists. Please try logging in.',
+                    description: 'An account with this email already exists, but the password was incorrect. Please try logging in.',
                     variant: 'destructive',
                 });
-                showLoader();
-                router.push('/login');
              }
         } else if (error.code === 'auth/quota-exceeded') {
+            setLoading(false);
             toast({
                 title: "Registration Error",
                 description: 'Our email service is temporarily at its limit. Please sign up with Google or try again later.',
@@ -131,6 +134,7 @@ export default function RegisterPage() {
             });
             setIsEmailServiceDown(true);
         } else {
+            setLoading(false);
             console.error("Error during registration:", error);
             toast({
                 title: "Registration Error",
@@ -138,25 +142,23 @@ export default function RegisterPage() {
                 variant: "destructive",
             });
         }
-    } finally {
-        setLoading(false);
     }
   };
 
   const startGoogleSignUp = async () => {
     setLoading(true);
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        toast({ title: "Signing in...", description: "Please wait while we set up your account." });
+        await signInWithPopup(auth, googleProvider);
+        toast({ title: "Signing in...", description: "Please wait while we check your account." });
         showLoader();
-        router.push('/login');
+        // Redirect to login which will handle new vs returning user
+        router.push('/login'); 
     } catch (error: any) {
+        setLoading(false);
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
         }
-    } finally {
-        setLoading(false);
     }
   };
 
@@ -274,7 +276,7 @@ export default function RegisterPage() {
             </div>
             
             <Button onClick={handleEmailRegister} className="w-full mt-2" disabled={loading || isEmailServiceDown}>
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? 'Processing...' : 'Create Account'}
             </Button>
           
           <div className="mt-4 text-center text-sm">

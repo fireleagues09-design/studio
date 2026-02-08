@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification, signOut } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function VerifyPage() {
     const router = useRouter();
@@ -38,12 +40,10 @@ export default function VerifyPage() {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
 
-        try {
-            await deleteUser(targetUser);
-        } catch (error) {
-             console.error("Failed to delete auth user during cleanup:", error);
-        }
-        
+        // The `auth/requires-recent-login` error prevents us from deleting the user here on the client-side
+        // without forcing the user to re-authenticate, which is a poor UX.
+        // Instead, we will just sign them out. The robust login/registration flow is designed to handle
+        // this "unverified" user account if they try to sign in or register again later.
         await signOut(auth);
 
     }, []);
@@ -54,6 +54,11 @@ export default function VerifyPage() {
 
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
+                // If a user lands here but is already verified, send them to the homepage.
+                if (currentUser.emailVerified) {
+                    router.replace('/');
+                    return;
+                }
                 setUser(currentUser);
             } else {
                 router.replace('/login');
@@ -79,9 +84,30 @@ export default function VerifyPage() {
                         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
                         toast({
                             title: "Verification Successful!",
-                            description: "Welcome! Redirecting you now...",
+                            description: "Welcome! Creating your profile now...",
                         });
-                        router.replace('/');
+                        
+                        const userDocRef = doc(db, 'users', currentUser.uid);
+                        try {
+                             await setDoc(userDocRef, {
+                                username: currentUser.displayName,
+                                email: currentUser.email,
+                                isRegistered: true,
+                                emailVerified: true,
+                                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                                registeredOn: new Date(),
+                            });
+                            router.replace('/');
+                        } catch (dbError) {
+                             console.error("Failed to create user document after verification:", dbError);
+                             toast({
+                                title: "Profile Creation Failed",
+                                description: "Your email is verified, but we couldn't create your profile. Please contact support.",
+                                variant: "destructive"
+                             });
+                             await signOut(auth);
+                             router.replace('/login');
+                        }
                     }
                 }
             }, 3000); 
@@ -191,7 +217,7 @@ export default function VerifyPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will cancel your registration process. Your account details will be deleted and you will need to sign up again.
+                                    This will cancel your registration process. You can always sign up again later.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
