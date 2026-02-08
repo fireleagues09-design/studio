@@ -3,40 +3,45 @@
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
 
-const EMOJIS = ['🎁', '💖', '✨', '💝', '🎉', '💌'];
+const EMOJIS = ['🎁', '💖'];
 
 const BestiePage = () => {
-  const [emojis, setEmojis] = useState<{ id: number; emoji: string; x: number; delay: number; duration: number; }[]>([]);
+  const [particles, setParticles] = useState<{ id: number; content: string | null; x: number; delay: number; duration: number; type: 'emoji' | 'snow' }[]>([]);
 
   useEffect(() => {
-    const generateEmojis = () => {
-      const newEmojis = Array.from({ length: 30 }).map((_, i) => ({
-        id: i,
-        emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-        x: Math.random() * 100, // percentage
-        delay: Math.random() * 10, // seconds
-        duration: Math.random() * 5 + 5, // seconds (5 to 10s)
-      }));
-      setEmojis(newEmojis);
+    const generateParticles = () => {
+      // Generate 20 particles total (a mix of emojis and snow)
+      const newParticles = Array.from({ length: 20 }).map((_, i) => {
+        const isEmoji = Math.random() > 0.5;
+        return {
+          id: i,
+          content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
+          type: isEmoji ? 'emoji' : 'snow',
+          x: Math.random() * 100, // percentage
+          delay: Math.random() * 10, // seconds
+          duration: Math.random() * 5 + 8, // seconds (8 to 13s)
+        };
+      });
+      setParticles(newParticles);
     };
 
-    generateEmojis();
+    generateParticles();
   }, []);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950/30 overflow-hidden">
       <div className="falling-emojis">
-        {emojis.map(({ id, emoji, x, delay, duration }) => (
+        {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
             key={id}
-            className="emoji"
+            className={type === 'emoji' ? 'emoji' : 'snowflake'}
             style={{
               left: `${x}vw`,
               animationDelay: `${delay}s`,
               animationDuration: `${duration}s`,
             }}
           >
-            {emoji}
+            {content}
           </span>
         ))}
       </div>
