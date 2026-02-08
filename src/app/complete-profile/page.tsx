@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { setUsername } from '@/app/profile/actions';
+import { LogOut } from 'lucide-react';
 
 export default function CompleteProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -64,6 +65,22 @@ export default function CompleteProfilePage() {
         }
     };
 
+    const handleLogout = async () => {
+        setLoading(true);
+        try {
+            await auth.signOut();
+            toast({ title: "Logged Out", description: "You have been successfully logged out." });
+            router.push('/login');
+        } catch (error: any) {
+             toast({
+                title: 'Error',
+                description: error.message || 'Could not log out.',
+                variant: 'destructive',
+            });
+            setLoading(false);
+        }
+    };
+
     if (authLoading) {
         return null;
     }
@@ -90,9 +107,15 @@ export default function CompleteProfilePage() {
                             />
                             <p className="text-xs text-muted-foreground">Must be 6-12 characters long, letters and numbers only.</p>
                         </div>
-                        <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? 'Saving...' : 'Save and Continue'}
-                        </Button>
+                        <div className="flex flex-col gap-2 pt-2">
+                            <Button type="submit" disabled={loading} className="w-full">
+                                {loading ? 'Saving...' : 'Save and Continue'}
+                            </Button>
+                            <Button type="button" variant="outline" onClick={handleLogout} disabled={loading} className="w-full">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Logout
+                            </Button>
+                        </div>
                     </form>
                 </CardContent>
             </Card>
