@@ -203,7 +203,7 @@ const BestiePage = () => {
         if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
         clearTimeout(startChaseTimeout);
         setStep('caught');
-    }, 20000);
+    }, 10000);
 
     return () => {
       if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
@@ -924,6 +924,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
