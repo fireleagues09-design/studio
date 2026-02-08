@@ -67,36 +67,3 @@ export async function setUsername(
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
-
-
-export async function updateInGameDetails(
-    idToken: string,
-    details: { inGameName: string; inGameUid: string }
-): Promise<{ success: boolean; message: string }> {
-    if (!idToken) {
-        return { success: false, message: 'Authorization required.' };
-    }
-
-    const { inGameName, inGameUid } = details;
-
-    if (!inGameName || !inGameUid) {
-        return { success: false, message: 'In-Game Name and UID are required.' };
-    }
-
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const userId = decodedToken.uid;
-        const userRef = db.collection('users').doc(userId);
-
-        await userRef.update({
-            inGameName,
-            inGameUid
-        });
-
-        return { success: true, message: 'In-Game details updated successfully!' };
-
-    } catch (error: any) {
-        console.error('Error updating in-game details:', error);
-        return { success: false, message: error.message || 'An unknown error occurred.' };
-    }
-}
