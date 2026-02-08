@@ -163,6 +163,10 @@ export function Header() {
             </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+            <Palette className="mr-2 h-4 w-4" />
+            <span>Change Theme</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
@@ -242,9 +246,6 @@ export function Header() {
 
           <div className="flex items-center justify-end space-x-2">
             <div className="hidden md:flex items-center space-x-2">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-                  <Palette className="h-5 w-5" />
-              </Button>
               {loading ? (
                   <div className="flex items-center space-x-2">
                       <Skeleton className="h-9 w-24" />
@@ -284,6 +285,9 @@ export function Header() {
                 </>
               ) : (
                 <>
+                  <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+                      <Palette className="h-5 w-5" />
+                  </Button>
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/login">
                       Login
