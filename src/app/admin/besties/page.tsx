@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,11 +12,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
-import { setBestiePageStatus, setIndividualBestiePageStatus } from '../actions';
+import { setIndividualBestiePageStatus } from '../actions';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
 
 type BestieUser = {
     id: string;
@@ -34,8 +31,6 @@ export default function BestiesPage() {
     const [bestieUsers, setBestieUsers] = useState<BestieUser[]>([]);
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
-    const [isBestiePageEnabled, setIsBestiePageEnabled] = useState(false);
-    const [settingsLoading, setSettingsLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<{ [key: string]: boolean }>({});
     
     const router = useRouter();
@@ -62,16 +57,15 @@ export default function BestiesPage() {
     }, [router]);
 
     useEffect(() => {
-        if (!authLoading && !dataLoading && !settingsLoading) {
+        if (!authLoading && !dataLoading) {
             hideLoader();
         }
-    }, [authLoading, dataLoading, settingsLoading, hideLoader]);
+    }, [authLoading, dataLoading, hideLoader]);
 
     useEffect(() => {
         if (!isAdmin) {
             if (!authLoading) {
                 setDataLoading(false);
-                setSettingsLoading(false);
             }
             return;
         };
@@ -87,44 +81,11 @@ export default function BestiesPage() {
             setDataLoading(false);
         });
 
-        setSettingsLoading(true);
-        const settingsDocRef = doc(db, 'settings', 'featureControls');
-        const unsubscribeSettings = onSnapshot(settingsDocRef, (doc) => {
-            if (doc.exists()) {
-                setIsBestiePageEnabled(doc.data().isBestiePageEnabled || false);
-            } else {
-                setIsBestiePageEnabled(false);
-            }
-            setSettingsLoading(false);
-        }, (error) => {
-            console.error("Error fetching settings:", error);
-            setSettingsLoading(false);
-        });
-
 
         return () => {
             unsubscribeBesties();
-            unsubscribeSettings();
         };
     }, [isAdmin, authLoading]);
-
-    const handleGlobalBestiePageToggle = async (enabled: boolean) => {
-        if (!auth.currentUser) return;
-        setActionLoading(prev => ({ ...prev, bestiePageToggle: true }));
-        try {
-            const idToken = await auth.currentUser.getIdToken();
-            const result = await setBestiePageStatus(enabled, idToken);
-            if (result.success) {
-                toast({ title: 'Success', description: `Global bestie page has been ${enabled ? 'activated' : 'deactivated'}.` });
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        } finally {
-            setActionLoading(prev => ({ ...prev, bestiePageToggle: false }));
-        }
-    };
 
     const handleIndividualBestiePageToggle = async (userId: string, enabled: boolean) => {
         if (!auth.currentUser) return;
@@ -153,7 +114,7 @@ export default function BestiesPage() {
         return format(date, 'PPp');
     };
 
-    if (authLoading || dataLoading || settingsLoading) {
+    if (authLoading || dataLoading) {
         return null;
     }
 
@@ -166,38 +127,13 @@ export default function BestiesPage() {
                 </Link>
             </Button>
             <h1 className="text-4xl font-bold tracking-tight">Bestie Users</h1>
-            <p className="text-muted-foreground mt-1">Manage global and individual settings for the 'isBestie' role.</p>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Global Feature Control</CardTitle>
-                    <CardDescription>
-                        This is a master switch. Enable or disable the special Bestie page for ALL eligible users at once.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="bestie-page-switch" className="text-base font-medium">Special Bestie Page</Label>
-                            <p className="text-sm text-muted-foreground">
-                                Activate the animated special page for all users with the 'isBestie' role.
-                            </p>
-                        </div>
-                        <Switch
-                            id="bestie-page-switch"
-                            checked={isBestiePageEnabled}
-                            onCheckedChange={handleGlobalBestiePageToggle}
-                            disabled={actionLoading['bestiePageToggle']}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <p className="text-muted-foreground mt-1">Manage settings for the 'isBestie' role.</p>
 
              <Card>
                     <CardHeader>
                         <CardTitle>Individual Bestie Controls ({bestieUsers.length})</CardTitle>
                         <CardDescription>
-                            Enable or disable the special page for individual besties. The global switch above must be ON for these to take effect.
+                            Enable or disable the special animated page for individual besties.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -223,7 +159,7 @@ export default function BestiesPage() {
                                                  <Switch
                                                     checked={bu.bestiePageActive === true}
                                                     onCheckedChange={(checked) => handleIndividualBestiePageToggle(bu.id, checked)}
-                                                    disabled={!isBestiePageEnabled || actionLoading[bu.id]}
+                                                    disabled={actionLoading[bu.id]}
                                                 />
                                             </TableCell>
                                         </TableRow>

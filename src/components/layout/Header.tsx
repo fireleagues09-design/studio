@@ -110,15 +110,9 @@ export function Header() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const { showLoader } = useLoading();
   const [showIncompleteProfilePopup, setShowIncompleteProfilePopup] = useState(false);
-  const [isBestiePageEnabled, setIsBestiePageEnabled] = useState(false);
   
   useEffect(() => {
     setLoading(true);
-
-    const settingsDocRef = doc(db, 'settings', 'featureControls');
-    const unsubscribeSettings = onSnapshot(settingsDocRef, (doc) => {
-        setIsBestiePageEnabled(doc.exists() && doc.data().isBestiePageEnabled === true);
-    });
     
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
@@ -162,9 +156,8 @@ export function Header() {
 
     return () => {
         unsubscribeAuth();
-        unsubscribeSettings();
     };
-  }, [pathname, router, setTheme]);
+  }, [pathname, router]);
 
   // Secondary effect to enforce the verification guard after initial load.
   useEffect(() => {
@@ -365,10 +358,8 @@ export function Header() {
     </div>
   );
 
-  const shouldShowBestiePage = 
-    profile?.isBestie === true &&
-    isBestiePageEnabled === true &&
-    profile.bestiePageActive === true;
+  const shouldShowBestiePage =
+    profile?.isBestie === true && profile.bestiePageActive === true;
 
   return (
     <>
