@@ -241,7 +241,7 @@ const BestiePage = () => {
 
     switch (step) {
       case 'initial':
-        title = 'Hey wanna play a game';
+        title = 'Hey wanna play a game ??';
         buttons = (
           <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
             <Button size="lg">Yes</Button>
