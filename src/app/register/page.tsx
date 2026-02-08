@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -116,6 +115,17 @@ export default function RegisterPage() {
 
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
+                const profileData = userDocSnap.data();
+                
+                // If user has a username, they are fully registered.
+                if (userDocSnap.exists() && profileData?.isRegistered) {
+                    toast({
+                        title: "Already Registered",
+                        description: "This account is fully registered. Please log in.",
+                    });
+                    router.push('/login');
+                    return;
+                }
 
                 // 3. Firestore doc missing -> incomplete registration (repair it)
                 if (!userDocSnap.exists()) {
@@ -140,8 +150,9 @@ export default function RegisterPage() {
                     return;
                 }
 
-                // 5. If user is already verified, the main auth listener will redirect them correctly.
-                router.push('/');
+                // 5. If user is already verified but hasn't completed profile
+                 router.push('/complete-profile');
+
 
             } catch (signInError: any) {
                 // This catch handles if signInWithEmailAndPassword fails (e.g., wrong password)

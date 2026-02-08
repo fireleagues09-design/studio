@@ -50,8 +50,8 @@ export default function LoginPage() {
             });
             // Re-create the placeholder doc to fix the orphan account
             await setDoc(userDocRef, {
-                email: user.email,
                 username: user.displayName || '',
+                email: user.email,
                 isRegistered: false,
                 emailVerified: user.emailVerified,
                 wallet: { deposit: 0, winning: 0, bonus: 0 },
