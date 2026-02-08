@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
@@ -17,6 +16,7 @@ export function FloatingHomeButton() {
   const hasMovedRef = useRef(false);
   const positionRef = useRef({ x: 0, y: 0 });
   const offsetRef = useRef({ x: 0, y: 0 });
+  const startDragPosRef = useRef({ x: 0, y: 0 }); // To correctly calculate movement
 
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -29,7 +29,8 @@ export function FloatingHomeButton() {
     if (!isMounted) return;
 
     if (buttonRef.current) {
-        const initialX = window.innerWidth - buttonRef.current.offsetWidth - 20;
+        // Adjust initial X position to be further from the edge
+        const initialX = window.innerWidth - buttonRef.current.offsetWidth - 40;
         const initialY = window.innerHeight - buttonRef.current.offsetHeight - 80;
         positionRef.current = { x: initialX, y: initialY };
         buttonRef.current.style.transform = `translate(${initialX}px, ${initialY}px)`;
@@ -57,6 +58,8 @@ export function FloatingHomeButton() {
     hasMovedRef.current = false;
     buttonRef.current.classList.add('grabbing');
     
+    startDragPosRef.current = { x: clientX, y: clientY };
+
     const rect = buttonRef.current.getBoundingClientRect();
     offsetRef.current = {
       x: clientX - rect.left,
@@ -72,12 +75,14 @@ export function FloatingHomeButton() {
   const handleDragMove = (clientX: number, clientY: number) => {
     if (!isDraggingRef.current || !buttonRef.current) return;
     
+    // Make drag follow instantly and reliably differentiate from a click.
     if (!hasMovedRef.current) {
-        const dx = clientX - (positionRef.current.x + offsetRef.current.x);
-        const dy = clientY - (positionRef.current.y + offsetRef.current.y);
-        if (Math.sqrt(dx*dx + dy*dy) > 5) {
-            hasMovedRef.current = true;
-        }
+      const dx = clientX - startDragPosRef.current.x;
+      const dy = clientY - startDragPosRef.current.y;
+      // Use a very small threshold to distinguish a click from an intentional drag.
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          hasMovedRef.current = true;
+      }
     }
 
     const { offsetWidth, offsetHeight } = buttonRef.current;
@@ -93,6 +98,7 @@ export function FloatingHomeButton() {
   };
 
   const handleDragEnd = () => {
+    // If there was no significant movement, treat it as a click.
     if (!hasMovedRef.current) {
         if (pathname !== '/') {
             showLoader();
@@ -110,12 +116,17 @@ export function FloatingHomeButton() {
     document.removeEventListener('touchend', handleTouchUp);
   };
 
-  const handleMouseDown = (e: ReactMouseEvent) => handleDragStart(e.clientX, e.clientY);
-  const handleTouchStart = (e: ReactTouchEvent) => {
+  const handleMouseDown = (e: ReactMouseEvent) => {
     e.preventDefault();
-    handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
+    handleDragStart(e.clientX, e.clientY);
   };
-  const handleMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+
+  const handleTouchStart = (e: ReactTouchEvent) => {
+    handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  };
+  const handleMouseMove = (e: MouseEvent) => {
+    handleDragMove(e.clientX, e.clientY);
+  };
   const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
       handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
