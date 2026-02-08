@@ -16,13 +16,14 @@ import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser } from "firebase/auth";
+import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser, updateProfile } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RegisterPage() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,9 +40,17 @@ export default function RegisterPage() {
   }, [hideLoader]);
 
   const handleEmailRegister = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
+    }
+    if (username.length < 6 || username.length > 12) {
+        toast({ title: "Error", description: "Username must be between 6 and 12 characters long.", variant: "destructive" });
+        return;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+        toast({ title: "Error", description: "Username can only contain letters and numbers.", variant: "destructive" });
+        return;
     }
     if (password.length < 6) {
       toast({ title: "Error", description: "Password must be at least 6 characters.", variant: "destructive" });
@@ -63,6 +72,9 @@ export default function RegisterPage() {
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         user = userCredential.user;
+
+        // Save username to auth profile; will be used on complete-profile page
+        await updateProfile(user, { displayName: username });
         
         await sendEmailVerification(user);
 
@@ -171,6 +183,20 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading || isEmailServiceDown}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="6-12 characters"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading || isEmailServiceDown}
+              />
+              <p className="text-xs text-muted-foreground">Must be 6-12 characters long, letters and numbers only.</p>
             </div>
             
             <div className="grid gap-2">

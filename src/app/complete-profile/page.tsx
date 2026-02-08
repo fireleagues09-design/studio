@@ -29,6 +29,10 @@ export default function CompleteProfilePage() {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                // Pre-fill username from Auth profile if it exists (from email signup)
+                if (currentUser.displayName) {
+                    setUsernameState(currentUser.displayName);
+                }
             } else {
                 // If not logged in, they shouldn't be here.
                 router.push('/login');
