@@ -18,7 +18,8 @@ export default function CompleteProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [username, setUsernameState] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     
     const router = useRouter();
     const { hideLoader } = useLoading();
@@ -41,7 +42,7 @@ export default function CompleteProfilePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
-        setLoading(true);
+        setIsSaving(true);
         try {
             const idToken = await user.getIdToken();
             const result = await setUsername(idToken, username);
@@ -61,12 +62,12 @@ export default function CompleteProfilePage() {
                 description: error.message || 'Could not set username.',
                 variant: 'destructive',
             });
-             setLoading(false);
+             setIsSaving(false);
         }
     };
 
     const handleLogout = async () => {
-        setLoading(true);
+        setIsLoggingOut(true);
         try {
             await auth.signOut();
             toast({ title: "Logged Out", description: "You have been successfully logged out." });
@@ -77,9 +78,11 @@ export default function CompleteProfilePage() {
                 description: error.message || 'Could not log out.',
                 variant: 'destructive',
             });
-            setLoading(false);
+            setIsLoggingOut(false);
         }
     };
+
+    const anyLoading = isSaving || isLoggingOut;
 
     if (authLoading) {
         return null;
@@ -104,16 +107,16 @@ export default function CompleteProfilePage() {
                                 onChange={(e) => setUsernameState(e.target.value)}
                                 placeholder="6-12 characters"
                                 required
-                                disabled={loading}
+                                disabled={anyLoading}
                             />
                             <p className="text-xs text-muted-foreground">Must be 6-12 characters long, letters and numbers only.</p>
                         </div>
                         <div className="flex flex-col gap-2 pt-2">
-                            <Button type="submit" disabled={loading} className="w-full">
-                                {loading ? 'Saving...' : 'Save and Continue'}
+                            <Button type="submit" disabled={anyLoading} className="w-full">
+                                {isSaving ? 'Saving...' : 'Save and Continue'}
                             </Button>
-                            <Button type="button" variant="outline" onClick={handleLogout} disabled={loading} className="w-full">
-                                {loading ? 'Logging out...' : (
+                            <Button type="button" variant="outline" onClick={handleLogout} disabled={anyLoading} className="w-full">
+                                {isLoggingOut ? 'Logging out...' : (
                                     <>
                                         <LogOut className="mr-2 h-4 w-4" />
                                         Logout
