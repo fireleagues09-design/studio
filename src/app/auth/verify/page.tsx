@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { doc, setDoc } from 'firebase/firestore';
 
 export default function VerifyPage() {
     const router = useRouter();
-    const { hideLoader } = useLoading();
+    const { showLoader, hideLoader } = useLoading();
     const { toast } = useToast();
 
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -82,6 +81,9 @@ export default function VerifyPage() {
                     if (currentUser.emailVerified) {
                         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
                         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+                        
+                        showLoader();
+
                         toast({
                             title: "Verification Successful!",
                             description: "Welcome! Creating your profile now...",
@@ -105,6 +107,7 @@ export default function VerifyPage() {
                                 description: "Your email is verified, but we couldn't create your profile. Please contact support.",
                                 variant: "destructive"
                              });
+                             hideLoader();
                              await signOut(auth);
                              router.replace('/login');
                         }
@@ -122,30 +125,36 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         }
 
-    }, [user, router, toast]);
+    }, [user, router, toast, showLoader, hideLoader]);
     
 
     useEffect(() => {
         if (timeLeft <= 0) {
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-            if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
-            
-            toast({
-                title: "Time Out",
-                description: "Verification time expired. Please register again.",
-                variant: 'destructive'
-            });
+            const handleTimeout = async () => {
+                if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+                if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
+                
+                toast({
+                    title: "Time Out",
+                    description: "Verification time expired. Please register again.",
+                    variant: 'destructive'
+                });
 
-            const currentUser = auth.currentUser;
-            if (currentUser && !currentUser.emailVerified) {
-                 cleanupUser(currentUser).then(() => {
-                     router.replace('/register');
-                 });
-            } else {
-                 router.replace('/register');
-            }
+                showLoader();
+                try {
+                    const currentUser = auth.currentUser;
+                    if (currentUser && !currentUser.emailVerified) {
+                        await signOut(auth);
+                    }
+                    router.replace('/register');
+                } catch (error) {
+                    console.error("Error during timeout cleanup:", error);
+                    hideLoader();
+                }
+            };
+            handleTimeout();
         }
-    }, [timeLeft, router, toast, cleanupUser]);
+    }, [timeLeft, router, toast, showLoader, hideLoader]);
 
     const handleResend = async () => {
         if (!user) return;
@@ -173,11 +182,16 @@ export default function VerifyPage() {
     
     const handleCancel = async () => {
         setIsCancelling(true);
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-            await cleanupUser(currentUser);
+        showLoader();
+        try {
+            await signOut(auth);
+            router.replace('/');
+        } catch (error) {
+            console.error("Error on cancel sign out:", error);
+            hideLoader();
+            setIsCancelling(false);
+            toast({ title: "Error", description: "Could not cancel registration. Please try again.", variant: "destructive"});
         }
-        router.replace('/');
     }
 
     const minutes = Math.floor(timeLeft / 60);
