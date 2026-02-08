@@ -270,6 +270,32 @@ export default function AdminUsersPage() {
     }
   };
 
+  const toggleBestie = async (id: string, currentlyBestie?: boolean) => {
+    if (!requireAdmin() || !currentUser) return;
+    const confirmMsg = currentlyBestie
+      ? "Revoke bestie status from this user?"
+      : "Grant bestie status to this user?";
+    if (!confirm(confirmMsg)) return;
+    try {
+      await updateDoc(doc(db, "users", id), { isBestie: !currentlyBestie });
+      await addDoc(collection(db, "adminLogs"), {
+        type: "bestie-toggle",
+        target: id,
+        actor: currentUser?.uid,
+        value: !currentlyBestie,
+        createdAt: serverTimestamp(),
+      });
+      alert("Done.");
+      // refresh selected user to show new state
+      if (selectedUser) {
+        selectUser(selectedUser.id);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update bestie state.");
+    }
+  };
+
   const adjustBalance = async (id: string, amount: number) => {
     if (!requireAdmin()) return;
     if (!confirm(`Apply balance change of ${amount} to user ${id} ?`)) return;
@@ -468,6 +494,12 @@ export default function AdminUsersPage() {
                     onClick={() => toggleSuspend(selectedUser.id, !!selectedUser.data.suspended)}
                   >
                     {selectedUser.data.suspended ? "Unsuspend User" : "Suspend User"}
+                  </button>
+                  <button
+                    className={`px-3 py-2 border rounded ${selectedUser.data.isBestie ? 'bg-pink-600 hover:bg-pink-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                    onClick={() => toggleBestie(selectedUser.id, !!selectedUser.data.isBestie)}
+                  >
+                    {selectedUser.data.isBestie ? "Revoke Bestie" : "Make Bestie"}
                   </button>
 
                   <div className="flex gap-2 items-center mt-2">

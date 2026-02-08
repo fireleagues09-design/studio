@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -686,6 +685,7 @@ export default function AdminPage() {
                                  <SelectItem value="transactions">Transactions</SelectItem>
                                  <SelectItem value="tournaments">Tournaments</SelectItem>
                                  <SelectItem value="users">Users</SelectItem>
+                                 <SelectItem value="besties">Besties</SelectItem>
                                  <SelectItem value="settings">Settings</SelectItem>
                              </SelectContent>
                          </Select>
@@ -695,6 +695,7 @@ export default function AdminPage() {
                         <TabsTrigger value="transactions">Transactions</TabsTrigger>
                         <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
                         <TabsTrigger value="users">Users</TabsTrigger>
+                        <TabsTrigger value="besties">Besties</TabsTrigger>
                         <TabsTrigger value="settings">Settings</TabsTrigger>
                     </TabsList>
                  )}
@@ -886,6 +887,26 @@ export default function AdminPage() {
                       <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
                         <Button asChild>
                             <Link href="/admin/users">Go to User Management Page</Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                 <TabsContent value="besties" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Gift className="h-5 w-5 text-pink-500" />
+                        Bestie Management
+                      </CardTitle>
+                      <CardDescription>
+                        View all users who have the special 'isBestie' role.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
+                        <Button asChild>
+                            <Link href="/admin/besties">View Bestie List</Link>
                         </Button>
                       </div>
                     </CardContent>
