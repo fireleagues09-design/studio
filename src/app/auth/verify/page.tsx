@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MailCheck } from 'lucide-react';
+import { MailCheck, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -29,6 +29,8 @@ export default function VerifyPage() {
 
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
+    const [isResending, setIsResending] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
     
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -36,11 +38,6 @@ export default function VerifyPage() {
     const cleanupUser = useCallback(async (targetUser: FirebaseUser) => {
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
-
-        // The `auth/requires-recent-login` error prevents us from deleting the user here on the client-side
-        // without forcing the user to re-authenticate, which is a poor UX.
-        // Instead, we will just sign them out. The robust login/registration flow is designed to handle
-        // this "unverified" user account if they try to sign in or register again later.
         await signOut(auth);
 
     }, []);
@@ -155,8 +152,11 @@ export default function VerifyPage() {
     }, [timeLeft, router, toast, showLoader, hideLoader]);
 
     const handleResend = async () => {
-        if (!user) return;
+        if (!user || isResending) return;
+        
+        setIsResending(true);
         showLoader();
+
         try {
             await sendEmailVerification(user);
             toast({
@@ -175,17 +175,23 @@ export default function VerifyPage() {
             });
         } finally {
             hideLoader();
+            setIsResending(false);
         }
     }
     
     const handleCancel = async () => {
+        if (isCanceling) return;
+
+        setIsCanceling(true);
         showLoader();
+
         try {
             await signOut(auth);
             router.replace('/');
         } catch (error) {
             console.error("Error on cancel sign out:", error);
             hideLoader();
+            setIsCanceling(false);
             toast({ title: "Error", description: "Could not cancel registration. Please try again.", variant: "destructive"});
         }
     }
@@ -215,12 +221,16 @@ export default function VerifyPage() {
                     </p>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-2">
-                    <Button onClick={handleResend} className="w-full">
-                        Resend Verification Link
+                    <Button onClick={handleResend} className="w-full" disabled={isResending}>
+                        {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isResending ? 'Sending...' : 'Resend Verification Link'}
                     </Button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="w-full">Cancel Registration</Button>
+                            <Button variant="outline" className="w-full" disabled={isCanceling}>
+                                {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Cancel Registration
+                            </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -230,8 +240,9 @@ export default function VerifyPage() {
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Go Back</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCancel} className="bg-destructive hover:bg-destructive/90">
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCancel} className="bg-destructive hover:bg-destructive/90" disabled={isCanceling}>
+                                    {isCanceling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Yes, Cancel
                                 </AlertDialogAction>
                             </AlertDialogFooter>
