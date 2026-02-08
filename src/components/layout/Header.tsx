@@ -127,6 +127,8 @@ const BestiePage = () => {
   const chaseIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const catchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const chasePathIndexRef = useRef(0);
+  const noButtonRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const generateParticles = () => {
@@ -191,6 +193,7 @@ const BestiePage = () => {
                 ...currentPos,
                 top: nextPos.top,
                 left: nextPos.left,
+                transition: 'top 1.2s ease-in-out, left 1.2s ease-in-out',
             }));
         }, 1500);
     }, 500);
@@ -215,9 +218,12 @@ const BestiePage = () => {
      if (step === 'chase' || step === 'caught') {
         const top = runawayPos.top as string;
         const left = runawayPos.left as string;
+        
+        const handsTransition = step === 'chase' ? 'top 1s ease-out 0.3s, left 1s ease-out 0.3s' : 'top 0.3s ease-out, left 0.3s ease-out';
+
         setHandsPos({
-            left: { top: top, left: `calc(${left} - 4rem)` },
-            right: { top: top, left: `calc(${left} + 4rem)` }
+            left: { top: top, left: `calc(${left} - 4rem)`, transition: handsTransition },
+            right: { top: top, left: `calc(${left} + 4rem)`, transition: handsTransition }
         });
      }
   }, [runawayPos, step]);
@@ -251,22 +257,26 @@ const BestiePage = () => {
       const nextSide = noButtonLastSide.current === 'left' ? 'right' : 'left';
       noButtonLastSide.current = nextSide;
       
-      const top = Math.random() * 80 + 10; // 10% to 90%
+      if (!cardRef.current || !noButtonRef.current) return;
+
+      const cardRect = cardRef.current.getBoundingClientRect();
+      const buttonRect = noButtonRef.current.getBoundingClientRect();
+
+      const top = Math.random() * (cardRect.height - buttonRect.height);
       
       const newPos: React.CSSProperties = {
           position: 'absolute',
-          top: `${top}%`,
-          transform: `translateY(-50%)`,
+          top: `${top}px`,
           transition: 'top 0.3s ease-out, left 0.3s ease-out, right 0.3s ease-out',
       };
 
       if (nextSide === 'left') {
-          const left = Math.random() * 20 + 5; // 5% to 25% from left edge
-          newPos.left = `${left}%`;
+          const left = Math.random() * (cardRect.width * 0.2) + (cardRect.width * 0.05);
+          newPos.left = `${left}px`;
           newPos.right = 'auto';
       } else { // right
-          const right = Math.random() * 20 + 5; // 5% to 25% from right edge
-          newPos.right = `${right}%`;
+          const right = Math.random() * (cardRect.width * 0.2) + (cardRect.width * 0.05);
+          newPos.right = `${right}px`;
           newPos.left = 'auto';
       }
       
@@ -325,9 +335,10 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center">
+          <div className="relative flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
+              ref={noButtonRef}
               size="lg"
               variant="outline"
               onClick={handleNoClick}
@@ -353,11 +364,11 @@ const BestiePage = () => {
       case 'caught':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-            <div className="absolute inset-0 overflow-hidden">
-                <Button size="lg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
+            <div className="relative inset-0 overflow-hidden">
+                <Button size="lg" style={{ position: 'absolute', top: '60%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
-                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.8s ease-out, left 0.8s ease-out'}} />
-                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.8s ease-out, left 0.8s ease-out'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)'}} />
 
                 <Button
                     id="runaway-no-button"
@@ -388,7 +399,7 @@ const BestiePage = () => {
     }
 
     return (
-      <div className="relative text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between">
+      <div ref={cardRef} className="relative text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] w-full max-w-md flex flex-col justify-between">
         {title && <h1 key={step} className="text-xl md:text-2xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
           {title}
         </h1>}
@@ -913,6 +924,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
