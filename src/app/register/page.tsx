@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -16,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser, updateProfile } from "firebase/auth";
+import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, User as FirebaseUser, updateProfile } from "firebase/auth";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -65,8 +65,12 @@ export default function RegisterPage() {
     let user: FirebaseUser | null = null;
     
     try {
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-        if (methods.length > 0) {
+        // Check if a user document with this email already exists in Firestore.
+        const usersQuery = query(collection(db, "users"), where("email", "==", email), limit(1));
+        const userDocSnapshot = await getDocs(usersQuery);
+
+        if (!userDocSnapshot.empty) {
+            // A user document exists, so they are fully registered.
             throw new Error("This email is already registered. Please log in.");
         }
 
@@ -92,11 +96,14 @@ export default function RegisterPage() {
         
         console.error("Error during registration:", error);
         let errorMessage = error.message || "Could not create your account. Please try again.";
-        if (error.code === 'auth/quota-exceeded') {
+        
+        if (error.code === 'auth/email-already-in-use') {
+            // This error is now more likely to mean an orphan auth account exists,
+            // but for the user, the message is the same as if they were fully registered.
+            errorMessage = 'This email is already registered. Please log in.';
+        } else if (error.code === 'auth/quota-exceeded') {
             errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
             setIsEmailServiceDown(true);
-        } else if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'This email is already registered. Please log in.';
         } else if (error.code === 'auth/operation-not-allowed') {
             errorMessage = 'Email/Password sign-up is not enabled. Please enable it in your Firebase project authentication settings.';
         }
