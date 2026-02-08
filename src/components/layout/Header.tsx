@@ -32,8 +32,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -69,6 +67,21 @@ type UserProfile = {
     suspended?: boolean;
     isRegistered?: boolean;
 }
+
+const themes: { name: Theme; color: string }[] = [
+  { name: 'orange', color: 'hsl(24.6 95% 53.1%)' },
+  { name: 'violet', color: 'hsl(262.1 83.3% 57.8%)' },
+  { name: 'green', color: 'hsl(142.1 70.6% 45.3%)' },
+  { name: 'pink', color: 'hsl(340.9 95.8% 60.6%)' },
+  { name: 'blue', color: 'hsl(217.2 91.2% 59.8%)' },
+  { name: 'yellow', color: 'hsl(47.9 95.8% 53.1%)' },
+  { name: 'red', color: 'hsl(355.7 89.7% 61.2%)' },
+  { name: 'teal', color: 'hsl(175.9 74.4% 39.8%)' },
+  { name: 'lime', color: 'hsl(74.9 83.1% 54.1%)' },
+  { name: 'cyan', color: 'hsl(198.8 93.4% 52.4%)' },
+  { name: 'indigo', color: 'hsl(236.9 81.3% 63.3%)' },
+  { name: 'grape', color: 'hsl(288.1 72.8% 57.5%)' },
+];
 
 export function Header() {
   const pathname = usePathname();
@@ -178,17 +191,19 @@ export function Header() {
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
                 <DropdownMenuSubContent>
-                    <div className="flex w-full justify-start gap-2 p-1">
-                        <button onClick={() => setTheme('orange')} aria-label="Set orange theme" className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover">
-                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === 'orange' ? 'border-primary' : 'border-transparent')}>
-                                <div className="w-full h-full rounded-full" style={{ backgroundColor: 'hsl(24.6 95% 53.1%)' }} />
+                    <div className="flex w-48 flex-wrap justify-start gap-2 p-1">
+                        {themes.map((t) => (
+                        <button
+                            key={t.name}
+                            onClick={() => setTheme(t.name)}
+                            aria-label={`Set ${t.name} theme`}
+                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                        >
+                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
+                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
                             </div>
                         </button>
-                        <button onClick={() => setTheme('violet')} aria-label="Set violet theme" className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover">
-                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === 'violet' ? 'border-primary' : 'border-transparent')}>
-                                <div className="w-full h-full rounded-full" style={{ backgroundColor: 'hsl(262.1 83.3% 57.8%)' }} />
-                            </div>
-                        </button>
+                        ))}
                     </div>
                 </DropdownMenuSubContent>
             </DropdownMenuPortal>
@@ -237,19 +252,15 @@ export function Header() {
         
         <div className="space-y-3 px-2 py-2">
             <Label className="text-muted-foreground">Theme</Label>
-            <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex gap-4 pt-1 pl-1">
-                <div>
-                    <RadioGroupItem value="orange" id="m-theme-orange" className="peer sr-only" />
-                    <Label htmlFor="m-theme-orange" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent peer-data-[state=checked]:border-primary">
-                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(24.6 95% 53.1%)' }}/>
+            <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex flex-wrap gap-4 pt-1 pl-1">
+                {themes.map((t) => (
+                    <div key={`m-${t.name}`}>
+                    <RadioGroupItem value={t.name} id={`m-theme-${t.name}`} className="peer sr-only" />
+                    <Label htmlFor={`m-theme-${t.name}`} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent p-0 peer-data-[state=checked]:border-primary">
+                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.color }}/>
                     </Label>
-                </div>
-                <div>
-                    <RadioGroupItem value="violet" id="m-theme-violet" className="peer sr-only" />
-                    <Label htmlFor="m-theme-violet" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent peer-data-[state=checked]:border-primary">
-                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(262.1 83.3% 57.8%)' }}/>
-                    </Label>
-                </div>
+                    </div>
+                ))}
             </RadioGroup>
         </div>
         
@@ -338,17 +349,19 @@ export function Header() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                             <div className="flex w-full justify-start gap-2 p-1">
-                                <button onClick={() => setTheme('orange')} aria-label="Set orange theme" className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover">
-                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === 'orange' ? 'border-primary' : 'border-transparent')}>
-                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: 'hsl(24.6 95% 53.1%)' }} />
+                            <div className="flex w-48 flex-wrap justify-start gap-2 p-1">
+                                {themes.map((t) => (
+                                <button
+                                    key={t.name}
+                                    onClick={() => setTheme(t.name)}
+                                    aria-label={`Set ${t.name} theme`}
+                                    className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                                >
+                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
+                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
                                     </div>
                                 </button>
-                                <button onClick={() => setTheme('violet')} aria-label="Set violet theme" className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover">
-                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === 'violet' ? 'border-primary' : 'border-transparent')}>
-                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: 'hsl(262.1 83.3% 57.8%)' }} />
-                                    </div>
-                                </button>
+                                ))}
                             </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -407,19 +420,15 @@ export function Header() {
                         <>
                            <div className="space-y-3 px-2 py-2">
                                 <Label className="text-muted-foreground">Theme</Label>
-                                <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex gap-4 pt-1 pl-1">
-                                    <div>
-                                        <RadioGroupItem value="orange" id="m-theme-orange" className="peer sr-only" />
-                                        <Label htmlFor="m-theme-orange" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent peer-data-[state=checked]:border-primary">
-                                            <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(24.6 95% 53.1%)' }}/>
+                                <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex flex-wrap gap-4 pt-1 pl-1">
+                                    {themes.map((t) => (
+                                        <div key={`m-${t.name}`}>
+                                        <RadioGroupItem value={t.name} id={`m-theme-${t.name}`} className="peer sr-only" />
+                                        <Label htmlFor={`m-theme-${t.name}`} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent p-0 peer-data-[state=checked]:border-primary">
+                                            <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.color }}/>
                                         </Label>
-                                    </div>
-                                    <div>
-                                        <RadioGroupItem value="violet" id="m-theme-violet" className="peer sr-only" />
-                                        <Label htmlFor="m-theme-violet" className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent peer-data-[state=checked]:border-primary">
-                                            <div className="h-6 w-6 rounded-full" style={{ backgroundColor: 'hsl(262.1 83.3% 57.8%)' }}/>
-                                        </Label>
-                                    </div>
+                                        </div>
+                                    ))}
                                 </RadioGroup>
                             </div>
                             <Separator />

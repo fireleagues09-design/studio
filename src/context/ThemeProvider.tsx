@@ -2,7 +2,34 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-export type Theme = 'orange' | 'violet'
+export type Theme =
+  | 'orange'
+  | 'violet'
+  | 'green'
+  | 'pink'
+  | 'blue'
+  | 'yellow'
+  | 'red'
+  | 'teal'
+  | 'lime'
+  | 'cyan'
+  | 'indigo'
+  | 'grape'
+
+export const THEME_NAMES: Theme[] = [
+  'orange',
+  'violet',
+  'green',
+  'pink',
+  'blue',
+  'yellow',
+  'red',
+  'teal',
+  'lime',
+  'cyan',
+  'indigo',
+  'grape',
+]
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -28,22 +55,30 @@ export function ThemeProvider({
   storageKey = 'fireleagues-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme)
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+        const storedTheme = localStorage.getItem(storageKey) as Theme | null;
+        if (storedTheme && THEME_NAMES.includes(storedTheme)) {
+            return storedTheme;
+        }
+    }
+    return defaultTheme;
+  });
   
   useEffect(() => {
-    const storedTheme = localStorage.getItem(storageKey) as Theme | null;
-    if (storedTheme) {
-        setThemeState(storedTheme)
-    }
-  }, [storageKey])
-
-  useEffect(() => {
     const root = window.document.documentElement
-    root.classList.remove('theme-violet') // only violet for now, but scalable
-    if (theme === 'violet') {
-      root.classList.add('theme-violet')
+    
+    // Remove all theme classes
+    THEME_NAMES.forEach(themeName => {
+        if (themeName !== 'orange') { // 'orange' is the default and doesn't have a class
+            root.classList.remove(`theme-${themeName}`);
+        }
+    });
+
+    // Add the current theme class if it's not the default
+    if (theme !== 'orange') {
+      root.classList.add(`theme-${theme}`)
     }
-    // 'orange' theme is the default, no class needed
   }, [theme])
 
   const setTheme = (newTheme: Theme) => {
