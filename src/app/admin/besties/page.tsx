@@ -223,7 +223,7 @@ export default function BestiesPage() {
                                                  <Switch
                                                     checked={bu.bestiePageActive === true}
                                                     onCheckedChange={(checked) => handleIndividualBestiePageToggle(bu.id, checked)}
-                                                    disabled={actionLoading[bu.id]}
+                                                    disabled={!isBestiePageEnabled || actionLoading[bu.id]}
                                                 />
                                             </TableCell>
                                         </TableRow>

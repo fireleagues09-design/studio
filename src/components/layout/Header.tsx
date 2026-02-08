@@ -365,9 +365,14 @@ export function Header() {
     </div>
   );
 
+  const shouldShowBestiePage = 
+    profile?.isBestie === true &&
+    isBestiePageEnabled === true &&
+    profile.bestiePageActive === true;
+
   return (
     <>
-      {profile?.isBestie && isBestiePageEnabled && profile.bestiePageActive && <BestiePage />}
+      {shouldShowBestiePage && <BestiePage />}
       
       {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
 
