@@ -40,7 +40,7 @@ export default function RegisterPage() {
   const [isEmailServiceDown, setIsEmailServiceDown] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { hideLoader } = useLoading();
+  const { hideLoader, showLoader } = useLoading();
 
   useEffect(() => {
     hideLoader();
@@ -87,6 +87,7 @@ export default function RegisterPage() {
             title: 'Almost there!',
             description: "We've sent a verification link to your email.",
         });
+        showLoader();
         router.push('/auth/verify');
 
     } catch (error: any) {
@@ -102,6 +103,7 @@ export default function RegisterPage() {
                         title: 'Verification Required',
                         description: "Your account isn't verified yet. We've sent a new link to your email.",
                     });
+                    showLoader();
                     router.push('/auth/verify');
                 } else {
                     // If they are already verified, they should just log in.
@@ -110,6 +112,7 @@ export default function RegisterPage() {
                         description: "This email is already registered and verified. Please log in.",
                         variant: 'destructive'
                     });
+                    showLoader();
                     router.push('/login');
                 }
              } catch (signInError: any) {
@@ -119,6 +122,7 @@ export default function RegisterPage() {
                     description: 'An account with this email already exists. Please try logging in.',
                     variant: 'destructive',
                 });
+                showLoader();
                 router.push('/login');
              }
         } else if (error.code === 'auth/quota-exceeded') {
@@ -149,6 +153,7 @@ export default function RegisterPage() {
         // The login page will now handle creating the Firestore doc on first login.
         // So we just need to redirect.
         toast({ title: "Signing in...", description: "Please wait while we set up your account." });
+        showLoader();
         router.push('/login'); // Redirect to login to trigger the success handler
     } catch (error: any) {
         console.error("Google sign up error:", error);
