@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { deleteDoc, doc } from 'firebase/firestore';
 
 
 export default function VerifyPage() {
@@ -34,6 +35,29 @@ export default function VerifyPage() {
     // Using refs for intervals to easily clear them from anywhere
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    
+    const cleanupUser = useCallback(async (targetUser: FirebaseUser) => {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
+
+        try {
+            // Delete Firestore doc first
+            await deleteDoc(doc(db, "users", targetUser.uid));
+        } catch (error) {
+             console.error("Failed to delete user document during cleanup:", error);
+        }
+
+        try {
+            // Then delete auth user
+            await deleteUser(targetUser);
+        } catch (error) {
+             console.error("Failed to delete auth user during cleanup:", error);
+        }
+        
+        await signOut(auth);
+
+    }, []);
+
 
     useEffect(() => {
         hideLoader();
@@ -80,6 +104,12 @@ export default function VerifyPage() {
                 setTimeLeft(prevTime => prevTime - 1);
             }, 1000);
         }
+        
+        return () => {
+            if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        }
+
     }, [user, router, toast]);
     
 
@@ -97,18 +127,14 @@ export default function VerifyPage() {
             // Clean up the unverified user before redirecting
             const currentUser = auth.currentUser;
             if (currentUser && !currentUser.emailVerified) {
-                 deleteUser(currentUser).then(() => {
+                 cleanupUser(currentUser).then(() => {
                      router.replace('/register');
-                 }).catch(error => {
-                     console.error("Failed to delete timed-out user:", error);
-                     // Still sign out and redirect
-                     signOut(auth).then(() => router.replace('/register'));
                  });
             } else {
                  router.replace('/register');
             }
         }
-    }, [timeLeft, router, toast]);
+    }, [timeLeft, router, toast, cleanupUser]);
 
     const handleResend = async () => {
         if (!user) return;
@@ -131,13 +157,10 @@ export default function VerifyPage() {
     }
     
     const handleCancel = async () => {
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         const currentUser = auth.currentUser;
         if (currentUser) {
-            await deleteUser(currentUser);
+            await cleanupUser(currentUser);
         }
-        await signOut(auth);
         router.replace('/');
     }
 
@@ -152,7 +175,7 @@ export default function VerifyPage() {
                     <CardTitle className="text-2xl">Check Your Email</CardTitle>
                     <CardDescription>
                         We've sent a verification link to your email address. Please click the link to activate your account.
-                         <span className="block pt-2">
+                         <span className="block pt-2 font-medium">
                             If you don't see it, please check your spam folder.
                         </span>
                     </CardDescription>

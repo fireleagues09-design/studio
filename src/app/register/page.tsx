@@ -16,7 +16,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, UserCredential, getAdditionalUserInfo, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail } from "firebase/auth";
+import { signInWithPopup, UserCredential, getAdditionalUserInfo, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -130,27 +130,21 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
+    let user: FirebaseUser | null = null;
     
     try {
         const isUsernameValid = await validateUsername(username);
         if (!isUsernameValid) {
-            setLoading(false);
-            return;
+            throw new Error("Username validation failed.");
         }
 
         const methods = await fetchSignInMethodsForEmail(auth, email);
         if (methods.length > 0) {
-            toast({
-                title: "Registration Error",
-                description: "This email is already registered. Please log in.",
-                variant: "destructive",
-            });
-            setLoading(false);
-            return;
+            throw new Error("This email is already registered. Please log in.");
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        user = userCredential.user;
 
         await setDoc(doc(db, "users", user.uid), {
             username: username,
@@ -175,8 +169,12 @@ export default function RegisterPage() {
         router.push('/auth/verify');
 
     } catch (error: any) {
+        if (user) {
+            await user.delete().catch(e => console.error("Critical: Failed to delete orphaned user:", e));
+        }
+        
         console.error("Error during registration:", error);
-        let errorMessage = "Could not create your account. Please try again.";
+        let errorMessage = error.message || "Could not create your account. Please try again.";
         if (error.code === 'auth/quota-exceeded') {
             errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
             setIsEmailServiceDown(true);
@@ -190,6 +188,7 @@ export default function RegisterPage() {
             description: errorMessage,
             variant: "destructive",
         });
+    } finally {
         setLoading(false);
     }
   };
