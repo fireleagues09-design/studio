@@ -10,16 +10,16 @@ const BestiePage = () => {
 
   useEffect(() => {
     const generateParticles = () => {
-      // Generate 20 particles total (a mix of emojis and snow)
-      const newParticles = Array.from({ length: 20 }).map((_, i) => {
-        const isEmoji = Math.random() > 0.5;
+      // Generate 50 particles total, with a higher chance of being snow
+      const newParticles = Array.from({ length: 50 }).map((_, i) => {
+        const isEmoji = Math.random() > 0.8; // ~20% chance of being an emoji
         return {
           id: i,
           content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
           type: isEmoji ? 'emoji' : 'snow',
           x: Math.random() * 100, // percentage
-          delay: Math.random() * 10, // seconds
-          duration: Math.random() * 5 + 8, // seconds (8 to 13s)
+          delay: Math.random() * 15, // seconds
+          duration: Math.random() * 7 + 8, // seconds (8 to 15s)
         };
       });
       setParticles(newParticles);
