@@ -21,19 +21,13 @@ import {
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
     updateProfile, 
-    getAdditionalUserInfo,
     signInWithEmailAndPassword
 } from "firebase/auth";
-import { 
-    doc, 
-    setDoc, 
-    serverTimestamp,
-    getDoc
-} from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -77,24 +71,18 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-        // 1. Try normal registration
+        // Step 1: Attempt to create the user in Firebase Auth.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // Step 2: Save the chosen username to the Auth user's profile.
         await updateProfile(user, { displayName: username });
 
-        // Create the Firestore doc
-        await setDoc(doc(db, "users", user.uid), {
-            username: username,
-            email: user.email,
-            isRegistered: true,
-            emailVerified: false,
-            wallet: { deposit: 0, winning: 0, bonus: 0 },
-            registeredOn: serverTimestamp(),
-        });
-
-        // Send verification and redirect
+        // Step 3: Send the verification email.
         await sendEmailVerification(user);
+        
+        // DO NOT create the Firestore document here. This happens on first login.
+
         toast({
             title: 'Almost there!',
             description: "We've sent a verification link to your email.",
@@ -102,67 +90,37 @@ export default function RegisterPage() {
         router.push('/auth/verify');
 
     } catch (error: any) {
-        // IMPORTANT PART: Handle existing email
+        // Step 4: Handle the case where the email is already in Firebase Auth.
         if (error.code === 'auth/email-already-in-use') {
-            try {
-                // 2. User already exists in Auth -> sign them in
+             try {
+                // Attempt to sign in to see if they just need to verify.
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                const userDocRef = doc(db, "users", user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                
-                // If user has a username, they are fully registered.
-                if (userDocSnap.exists() && userDocSnap.data()?.isRegistered) {
+                if (!userCredential.user.emailVerified) {
+                    // If they are not verified, send a new link and redirect them.
+                    await sendEmailVerification(userCredential.user);
                     toast({
-                        title: "Already Registered",
-                        description: "This account is fully registered. Please log in.",
-                    });
-                    router.push('/login');
-                    return;
-                }
-
-                // 3. Firestore doc missing -> incomplete registration (repair it)
-                if (!userDocSnap.exists()) {
-                    await setDoc(userDocRef, {
-                        username: user.displayName || username, // Use existing or new username
-                        email: user.email,
-                        isRegistered: true,
-                        emailVerified: user.emailVerified,
-                        wallet: { deposit: 0, winning: 0, bonus: 0 },
-                        registeredOn: serverTimestamp(),
-                    });
-                }
-                
-                // 4. Send verification and redirect (covers both repaired and existing-but-unverified users)
-                if (!user.emailVerified) {
-                    await sendEmailVerification(user);
-                    toast({
-                        title: 'Almost there!',
-                        description: "We've sent a verification link to your email.",
+                        title: 'Verification Required',
+                        description: "Your account isn't verified yet. We've sent a new link to your email.",
                     });
                     router.push('/auth/verify');
-                    return;
+                } else {
+                    // If they are already verified, they should just log in.
+                    toast({
+                        title: 'Already Registered',
+                        description: "This email is already registered and verified. Please log in.",
+                        variant: 'destructive'
+                    });
+                    router.push('/login');
                 }
-
-                // 5. If user is already verified but somehow not marked as registered.
-                 router.push('/');
-
-
-            } catch (signInError: any) {
-                // This catch handles if signInWithEmailAndPassword fails (e.g., wrong password)
-                console.error("Sign-in attempt failed during registration recovery:", signInError);
-                let errorMessage = "We found an account with that email, but the password was incorrect. Please try logging in directly.";
-                if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
-                   errorMessage = "The password you entered is incorrect for this account. Please try logging in instead."
-                }
+             } catch (signInError: any) {
+                 // This catches if the password was wrong for the existing account.
                 toast({
-                    title: "Login Failed",
-                    description: errorMessage,
-                    variant: "destructive",
+                    title: 'Account Exists',
+                    description: 'An account with this email already exists. Please try logging in.',
+                    variant: 'destructive',
                 });
-            }
-        
+                router.push('/login');
+             }
         } else if (error.code === 'auth/quota-exceeded') {
             toast({
                 title: "Registration Error",
@@ -171,7 +129,7 @@ export default function RegisterPage() {
             });
             setIsEmailServiceDown(true);
         } else {
-            // Handle other registration errors
+            // Handle other registration errors (e.g., weak password)
             console.error("Error during registration:", error);
             toast({
                 title: "Registration Error",
@@ -188,40 +146,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        const additionalInfo = getAdditionalUserInfo(result);
-        
-        if (additionalInfo?.isNewUser) {
-            // Create their Firestore document right away
-            const user = result.user;
-            const userDocRef = doc(db, 'users', user.uid);
-            await setDoc(userDocRef, {
-                username: user.displayName || '',
-                email: user.email,
-                isRegistered: true,
-                emailVerified: user.emailVerified,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-
-            toast({
-                title: "Account Created!",
-                description: "Welcome to FireLeagues!",
-            });
-            
-             if (user.emailVerified) {
-                router.push('/');
-             } else {
-                // This case is rare for Google Auth but good to handle.
-                await sendEmailVerification(user);
-                router.push('/auth/verify');
-             }
-
-        } else {
-             // Existing user logging in
-             toast({ title: "Success", description: "Logged in successfully!" });
-             router.push('/');
-        }
-
+        // The login page will now handle creating the Firestore doc on first login.
+        // So we just need to redirect.
+        toast({ title: "Signing in...", description: "Please wait while we set up your account." });
+        router.push('/login'); // Redirect to login to trigger the success handler
     } catch (error: any) {
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {

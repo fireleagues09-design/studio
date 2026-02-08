@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
@@ -36,37 +36,45 @@ export default function LoginPage() {
   }, [hideLoader]);
 
   const handleLoginSuccess = async (userCredential: UserCredential) => {
+    setLoading(true);
     const user = userCredential.user;
     const userDocRef = doc(db, "users", user.uid);
 
     try {
-        const userDoc = await getDoc(userDocRef);
-
-        // CASE 1: Auth user exists, but Firestore doc is missing.
-        // This means they are not registered in our system.
-        if (!userDoc.exists()) {
-            await signOut(auth);
-            toast({
-                title: "Account Not Found",
-                description: "No account found with this email. Please register first.",
-                variant: "destructive",
-            });
-            router.push('/register');
-            return;
-        }
-        
-        // CASE 2: Firestore doc exists, but email is not verified
+        // Step 1: Handle unverified users FIRST.
         if (!user.emailVerified) {
             toast({
-                title: "Email Not Verified",
-                description: "Redirecting you to the verification page to complete your registration.",
+                title: "Verification Required",
+                description: "Your email is not verified yet. We've sent a new verification link.",
             });
-            await sendEmailVerification(user); // Resend link
+            await sendEmailVerification(user);
             router.push('/auth/verify');
+            return; // Stop execution here.
+        }
+
+        // User is verified, now check Firestore.
+        const userDoc = await getDoc(userDocRef);
+
+        // Step 2: Handle first-time login for a verified user (Firestore doc is missing).
+        if (!userDoc.exists()) {
+            // This is where we create the user document for the first time.
+            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+            
+            await setDoc(userDocRef, {
+                username: username,
+                email: user.email,
+                isRegistered: true,
+                emailVerified: true,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+
+            toast({ title: "Welcome!", description: "Your account is now fully set up." });
+            router.push("/");
             return;
         }
         
-        // CASE 3: User is fully authenticated and verified. Log them in.
+        // Step 3: Handle normal login for a fully registered user.
         toast({ title: "Success", description: "Logged in successfully!" });
         router.push("/");
 
@@ -88,12 +96,9 @@ export default function LoginPage() {
         await handleLoginSuccess(userCredential);
     } catch (error: any) {
         let description: string;
-        // The 'auth/invalid-credential' error code covers wrong password, and often user-not-found in newer SDKs.
-        // We handle it gracefully by showing a toast without logging a console error, as it's an expected user input error.
         if (error.code === 'auth/invalid-credential') {
           description = "Invalid email or password. Please check your credentials and try again.";
         } else {
-          // Log other, unexpected errors to the console for debugging.
           console.error("Error signing in:", error);
           description = "An unexpected error occurred during login. Please try again.";
         }
