@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
@@ -44,26 +44,15 @@ export default function LoginPage() {
 
         // CASE 1: Auth user exists, but Firestore doc is missing (orphan from failed registration)
         if (!userDoc.exists()) {
+            // Per your request, if the user doesn't exist in Firestore, do not log them in.
+            // Sign them out immediately and redirect to the registration page.
+            await signOut(auth);
             toast({
-                title: "Incomplete Registration",
-                description: "Your profile is incomplete. We're guiding you to finish setup.",
+                title: "Account Not Found",
+                description: "No account found with this email. Please register first.",
+                variant: "destructive",
             });
-            // Re-create the placeholder doc to fix the orphan account
-            await setDoc(userDocRef, {
-                username: user.displayName || '',
-                email: user.email,
-                isRegistered: false,
-                emailVerified: user.emailVerified,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-
-            if (!user.emailVerified) {
-                await sendEmailVerification(user);
-                router.push('/auth/verify');
-            } else {
-                router.push('/complete-profile');
-            }
+            router.push('/register');
             return;
         }
         
@@ -112,7 +101,11 @@ export default function LoginPage() {
       } catch (error: any) {
         console.error("Error signing in:", error);
         let description = "Failed to login. Please check your credentials.";
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        // Handle auth/user-not-found specifically to guide user to register page.
+        if (error.code === 'auth/user-not-found') {
+            description = "No account found with this email. Please register first.";
+            router.push('/register');
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
           description = "Invalid email or password.";
         }
         toast({ title: "Login Error", description, variant: "destructive" });
