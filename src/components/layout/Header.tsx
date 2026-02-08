@@ -68,20 +68,20 @@ type UserProfile = {
     isRegistered?: boolean;
 }
 
-const themes: { name: ColorTheme; color: string }[] = [
-  { name: 'orange', color: 'hsl(24.6 95% 53.1%)' },
-  { name: 'violet', color: 'hsl(262.1 83.3% 57.8%)' },
-  { name: 'green', color: 'hsl(142.1 70.6% 45.3%)' },
-  { name: 'pink', color: 'hsl(340.9 95.8% 60.6%)' },
-  { name: 'blue', color: 'hsl(217.2 91.2% 59.8%)' },
-  { name: 'yellow', color: 'hsl(47.9 95.8% 53.1%)' },
-  { name: 'red', color: 'hsl(355.7 89.7% 61.2%)' },
-  { name: 'teal', color: 'hsl(175.9 74.4% 39.8%)' },
-  { name: 'lime', color: 'hsl(74.9 83.1% 54.1%)' },
-  { name: 'cyan', color: 'hsl(198.8 93.4% 52.4%)' },
-  { name: 'indigo', color: 'hsl(236.9 81.3% 63.3%)' },
-  { name: 'grape', color: 'hsl(288.1 72.8% 57.5%)' },
-  { name: 'spring-green', color: 'hsl(145 100% 45%)' },
+const themes: { name: ColorTheme }[] = [
+  { name: 'orange' },
+  { name: 'violet' },
+  { name: 'green' },
+  { name: 'pink' },
+  { name: 'blue' },
+  { name: 'yellow' },
+  { name: 'red' },
+  { name: 'teal' },
+  { name: 'lime' },
+  { name: 'cyan' },
+  { name: 'indigo' },
+  { name: 'grape' },
+  { name: 'spring-green' },
 ];
 
 export function Header() {
@@ -155,6 +155,55 @@ export function Header() {
       return <SuspendedUserPopup onLogout={handleLogout} />;
   }
 
+  const renderThemeSwatches = () => (
+    <div className="flex flex-wrap justify-start gap-1 px-1">
+      {themes.map((t) => (
+        <button
+          key={t.name}
+          onClick={() => setTheme(t.name)}
+          aria-label={`Set ${t.name} theme`}
+          className={cn(
+            'p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover',
+            `theme-${t.name}` // This scopes the CSS variables for the button
+          )}
+        >
+          {/* This inner div now has access to the scoped variables */}
+          <div className={cn(
+            'w-5 h-5 rounded-full border-2 p-0.5',
+            // Check for active theme and apply a ring using the globally set --primary color
+            theme === t.name ? 'border-primary' : 'border-transparent'
+          )}>
+            {/* This div uses the scoped --primary variable for its background */}
+            <div className="w-full h-full rounded-full bg-primary" />
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderMobileThemeSwatches = () => (
+     <div className="flex flex-wrap gap-4 pt-2">
+      {themes.map((t) => (
+        <button
+          key={`m-${t.name}`}
+          onClick={() => setTheme(t.name)}
+          aria-label={`Set ${t.name} theme`}
+          className={cn(
+            'p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover',
+            `theme-${t.name}`
+          )}
+        >
+          <div className={cn(
+            'w-8 h-8 rounded-full border-2 p-0.5',
+             theme === t.name ? 'border-primary' : 'border-muted'
+          )}>
+            <div className="w-full h-full rounded-full bg-primary" />
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+
   const userMenuItems = (
     <>
         <DropdownMenuItem asChild>
@@ -204,20 +253,7 @@ export function Header() {
                         <Separator />
                         <div className="space-y-1">
                             <Label className="px-1 text-xs text-muted-foreground">Accent Colour</Label>
-                            <div className="flex flex-wrap justify-start gap-1 px-1">
-                                {themes.map((t) => (
-                                <button
-                                    key={t.name}
-                                    onClick={() => setTheme(t.name)}
-                                    aria-label={`Set ${t.name} theme`}
-                                    className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                                >
-                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
-                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
-                                    </div>
-                                </button>
-                                ))}
-                            </div>
+                            {renderThemeSwatches()}
                         </div>
                     </div>
                 </DropdownMenuSubContent>
@@ -276,20 +312,7 @@ export function Header() {
             </div>
              <div className="space-y-2">
                 <Label className="text-base">UI Colour</Label>
-                <div className="flex flex-wrap gap-4 pt-2">
-                    {themes.map((t) => (
-                        <button
-                            key={`m-${t.name}`}
-                            onClick={() => setTheme(t.name)}
-                            aria-label={`Set ${t.name} theme`}
-                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                        >
-                            <div className={cn('w-8 h-8 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-muted')}>
-                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
-                            </div>
-                        </button>
-                    ))}
-                </div>
+                {renderMobileThemeSwatches()}
             </div>
         </div>
         
@@ -390,20 +413,7 @@ export function Header() {
                                 <Separator />
                                 <div className="space-y-1">
                                     <Label className="px-1 text-xs text-muted-foreground">Accent Colour</Label>
-                                    <div className="flex flex-wrap justify-start gap-1 px-1">
-                                        {themes.map((t) => (
-                                        <button
-                                            key={t.name}
-                                            onClick={() => setTheme(t.name)}
-                                            aria-label={`Set ${t.name} theme`}
-                                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                                        >
-                                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
-                                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
-                                            </div>
-                                        </button>
-                                        ))}
-                                    </div>
+                                    {renderThemeSwatches()}
                                 </div>
                             </div>
                         </DropdownMenuContent>
@@ -472,20 +482,7 @@ export function Header() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-base">UI Colour</Label>
-                                    <div className="flex flex-wrap gap-4 pt-2">
-                                        {themes.map((t) => (
-                                            <button
-                                                key={`m-g-${t.name}`}
-                                                onClick={() => setTheme(t.name)}
-                                                aria-label={`Set ${t.name} theme`}
-                                                className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                                            >
-                                                <div className={cn('w-8 h-8 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-muted')}>
-                                                    <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {renderMobileThemeSwatches()}
                                 </div>
                             </div>
                             <Separator />
