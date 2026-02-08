@@ -214,7 +214,13 @@ const BestiePage = () => {
   };
 
   const handleNoHover = () => {
-    if (step === 'must_play' && noHoverCount < 6) {
+    if (step === 'must_play') {
+      if (noHoverCount >= 6) {
+        setStep('help');
+        setNoButtonPos({});
+        return;
+      }
+      
       setNoHoverCount(c => c + 1);
 
       const side = Math.random() > 0.5 ? 'left' : 'right';
@@ -234,11 +240,6 @@ const BestiePage = () => {
   const handleNoClick = () => {
     if (step === 'initial') {
       setStep('why');
-    } else if (step === 'must_play') {
-      if (noHoverCount >= 6) {
-        setStep('help');
-        setNoButtonPos({});
-      }
     }
   };
 
@@ -362,7 +363,7 @@ const BestiePage = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-pink-100 dark:bg-pink-950 overflow-hidden">
       <div className="falling-emojis">
         {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
