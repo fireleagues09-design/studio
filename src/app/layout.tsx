@@ -18,6 +18,29 @@ export const metadata: Metadata = {
     "Join the ultimate Free Fire esports tournaments. Compete and win!",
 };
 
+// This script prevents the theme from flickering on page load.
+// It runs before React hydrates, applying the theme from localStorage.
+const antiFlickerScript = `
+(function() {
+  try {
+    const mode = localStorage.getItem('fireleagues-ui-mode') || 'dark';
+    const theme = localStorage.getItem('fireleagues-theme') || 'orange';
+    const root = document.documentElement;
+
+    if (mode === 'dark') {
+      root.classList.add('dark');
+    }
+
+    const allThemes = ['orange', 'violet', 'green', 'pink', 'blue', 'yellow', 'red', 'teal', 'lime', 'cyan', 'indigo', 'grape', 'spring-green'];
+    allThemes.forEach(t => {
+      root.classList.remove('theme-' + t);
+    });
+    root.classList.add('theme-' + theme);
+
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,6 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: antiFlickerScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
