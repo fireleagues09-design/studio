@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MailCheck, Loader2 } from 'lucide-react';
+import { MailCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -29,8 +29,6 @@ export default function VerifyPage() {
 
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
-    const [isResending, setIsResending] = useState(false);
-    const [isCancelling, setIsCancelling] = useState(false);
     
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -158,7 +156,7 @@ export default function VerifyPage() {
 
     const handleResend = async () => {
         if (!user) return;
-        setIsResending(true);
+        showLoader();
         try {
             await sendEmailVerification(user);
             toast({
@@ -176,12 +174,11 @@ export default function VerifyPage() {
                 variant: "destructive"
             });
         } finally {
-            setIsResending(false);
+            hideLoader();
         }
     }
     
     const handleCancel = async () => {
-        setIsCancelling(true);
         showLoader();
         try {
             await signOut(auth);
@@ -189,7 +186,6 @@ export default function VerifyPage() {
         } catch (error) {
             console.error("Error on cancel sign out:", error);
             hideLoader();
-            setIsCancelling(false);
             toast({ title: "Error", description: "Could not cancel registration. Please try again.", variant: "destructive"});
         }
     }
@@ -219,13 +215,12 @@ export default function VerifyPage() {
                     </p>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-2">
-                    <Button onClick={handleResend} className="w-full" disabled={isResending || isCancelling}>
-                        {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isResending ? 'Sending...' : 'Resend Verification Link'}
+                    <Button onClick={handleResend} className="w-full">
+                        Resend Verification Link
                     </Button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="w-full" disabled={isResending || isCancelling}>Cancel Registration</Button>
+                            <Button variant="outline" className="w-full">Cancel Registration</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -235,10 +230,9 @@ export default function VerifyPage() {
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel disabled={isCancelling}>Go Back</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCancel} disabled={isCancelling} className="bg-destructive hover:bg-destructive/90">
-                                    {isCancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+                                <AlertDialogCancel>Go Back</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCancel} className="bg-destructive hover:bg-destructive/90">
+                                    Yes, Cancel
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
