@@ -250,26 +250,34 @@ const BestiePage = () => {
     if (step === 'must_play') {
       if (noHoverCount >= 6) {
         setStep('help');
-        setNoButtonPos({});
+        setNoButtonPos({}); // Reset position
         setNoButtonLastSide(null);
         return;
       }
       
       setNoHoverCount(c => c + 1);
 
+      // Determine the next side to avoid consecutive teleports to the same side
       const nextSide = noButtonLastSide === 'left' ? 'right' : 'left';
       setNoButtonLastSide(nextSide);
+      
+      // Generate coordinates for far left/right of the viewport
+      const top = Math.random() * 80 + 10; // 10vh to 90vh
+      let left;
 
-      const newLeft = nextSide === 'left' 
-        ? `${Math.random() * 25}%` // 0-25% from left edge
-        : `${Math.random() * 25 + 75}%`; // 75-100% from left edge
-
+      if (nextSide === 'left') {
+          left = Math.random() * 25; // 0vw to 25vw
+      } else { // right
+          left = Math.random() * 25 + 75; // 75vw to 100vw
+      }
+      
       setNoButtonPos({
-        position: 'absolute',
-        top: `${Math.random() * 80 + 10}%`, // 10% to 90% from top
-        left: newLeft,
-        transform: `translateX(-${nextSide === 'left' ? 0 : 100}%)`,
-        transition: 'top 0.2s, left 0.2s',
+          position: 'fixed',
+          top: `${top}vh`,
+          left: `${left}vw`,
+          // Adjust transform to ensure the button stays fully on screen
+          transform: `translate(${nextSide === 'left' ? '0' : '-100%'}, -50%)`,
+          transition: 'top 0.3s ease-out, left 0.3s ease-out',
       });
     }
   };
@@ -325,7 +333,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center relative">
+          <div className="flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               size="lg"
@@ -333,7 +341,7 @@ const BestiePage = () => {
               onClick={handleNoClick}
               onMouseEnter={handleNoHover}
               style={noButtonPos}
-              className={cn("animate-in fade-in slide-in-from-bottom-5 duration-500", noButtonPos.position === 'absolute' && 'z-50')}
+              className={cn("animate-in fade-in slide-in-from-bottom-5 duration-500", noButtonPos.position === 'fixed' && 'z-50')}
             >
               No
             </Button>
@@ -913,5 +921,6 @@ export function Header() {
     </>
   );
 }
+
 
 
