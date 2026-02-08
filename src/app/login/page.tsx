@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -16,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
@@ -27,7 +26,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { hideLoader } = useLoading();
@@ -67,41 +65,13 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         
         if (!userCredential.user.emailVerified) {
+            // The user is authenticated but hasn't verified their email.
+            // Redirect them to the verification page to complete the process.
             toast({
                 title: "Email Not Verified",
-                description: "Please check your inbox and verify your email before logging in.",
-                variant: "destructive",
-                duration: 10000,
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={async () => {
-                            setIsResending(true);
-                            try {
-                                await sendEmailVerification(userCredential.user);
-                                toast({
-                                    title: "Link Sent!",
-                                    description: "A new verification link has been sent to your email.",
-                                });
-                            } catch (e) {
-                                toast({
-                                    title: "Error",
-                                    description: "Failed to send new verification link.",
-                                    variant: "destructive"
-                                });
-                            } finally {
-                                setIsResending(false);
-                            }
-                        }}
-                        disabled={isResending}
-                    >
-                        {isResending ? "Sending..." : "Resend Link"}
-                    </Button>
-                )
+                description: "Redirecting you to the verification page to complete your registration.",
             });
-            await auth.signOut();
-            setLoading(false);
+            router.push('/auth/verify');
             return;
         }
 
@@ -113,7 +83,6 @@ export default function LoginPage() {
           description = "Invalid email or password.";
         }
         toast({ title: "Login Error", description, variant: "destructive" });
-      } finally {
         setLoading(false);
       }
   };
@@ -128,7 +97,6 @@ export default function LoginPage() {
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
         }
-      } finally {
         setLoading(false);
       }
   }
