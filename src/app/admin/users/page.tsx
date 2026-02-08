@@ -40,6 +40,7 @@ type UserDoc = {
   };
   isAdmin?: boolean;
   suspended?: boolean;
+  isBestie?: boolean;
   registeredOn?: { seconds?: number } | any;
 };
 
@@ -452,6 +453,7 @@ export default function AdminUsersPage() {
                 <div className="text-sm text-gray-400">Registered: {formatTime(selectedUser.data.registeredOn)}</div>
                 <div className="text-sm text-gray-400">Balance: ₹{totalBalance(selectedUser.data.wallet).toFixed(2)}</div>
                 <div className="text-sm text-gray-400">Admin: {selectedUser.data.isAdmin ? 'Yes' : 'No'}</div>
+                <div className="text-sm text-gray-400">Bestie: {selectedUser.data.isBestie ? 'Yes' : 'No'}</div>
                 <div className="text-sm text-gray-400 mb-3">Status: {selectedUser.data.suspended ? "Suspended" : "Active"}</div>
 
                 <div className="flex flex-col gap-2 mt-4">

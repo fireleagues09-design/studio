@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/accordion";
 import { useLoading } from "@/context/LoadingContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import BestiePage from "../BestiePage";
 
 
 type WalletData = {
@@ -74,6 +75,7 @@ type UserProfile = {
     isAdmin?: boolean;
     suspended?: boolean;
     isRegistered?: boolean;
+    isBestie?: boolean;
 }
 
 const themes: { name: ColorTheme }[] = [
@@ -123,6 +125,9 @@ export function Header() {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
                     setShowIncompleteProfilePopup(false);
+                    if (profileData.isBestie) {
+                      setTheme('pink');
+                    }
                 } else {
                     // CRITICAL: Auth user exists, but no Firestore doc. This is an inconsistent state. Force logout.
                     if (currentUser.emailVerified) {
@@ -147,7 +152,7 @@ export function Header() {
     });
 
     return () => unsubscribeAuth();
-  }, [pathname, router]);
+  }, [pathname, router, setTheme]);
 
   // Secondary effect to enforce the verification guard after initial load.
   useEffect(() => {
@@ -354,6 +359,7 @@ export function Header() {
 
   return (
     <>
+      {profile?.isBestie && <BestiePage />}
        {showIncompleteProfilePopup && (
         <Dialog open={true}>
           <DialogContent

@@ -306,3 +306,31 @@
     transform:translate(-50%,-50%) scale(0.9);
   }
 }
+
+.falling-emojis {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.emoji {
+  position: absolute;
+  top: -10%;
+  font-size: 2rem;
+  user-select: none;
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes fall {
+  0% {
+    transform: translateY(0) rotate(0);
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+  }
+}
