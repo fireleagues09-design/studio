@@ -73,7 +73,7 @@ export default function RegisterPage() {
             title: "Account Created!",
             description: "Let's set up your username.",
         });
-        router.push("/"); // Redirect to home, where the modal will appear
+        router.push("/complete-profile");
     } catch(error: any) {
         console.error("Error saving partial user profile:", error);
         // Important: If doc creation fails, we must delete the auth user to allow a retry.

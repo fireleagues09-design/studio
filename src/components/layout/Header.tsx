@@ -26,14 +26,6 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -42,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -52,9 +44,6 @@ import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { setUsername } from "@/app/profile/actions";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
 
 
 type WalletData = {
@@ -71,85 +60,13 @@ type UserProfile = {
     isRegistered?: boolean;
 }
 
-function SetUsernameDialog({ open, onUsernameSet }: { open: boolean, onUsernameSet: () => void }) {
-    const [username, setUsernameState] = useState('');
-    const [loading, setLoading] = useState(false);
-    const { toast } = useToast();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("Not authenticated.");
-
-            const idToken = await user.getIdToken();
-            const result = await setUsername(idToken, username);
-
-            if (result.success) {
-                toast({
-                    title: 'Success!',
-                    description: 'Your profile is complete. Welcome!',
-                });
-                onUsernameSet(); // This will close the dialog in the parent
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error: any) {
-            toast({
-                title: 'Error',
-                description: error.message || 'Could not set username.',
-                variant: 'destructive',
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <Dialog open={open}>
-            <DialogContent
-                className="sm:max-w-md"
-                onInteractOutside={(e) => e.preventDefault()}
-                hideCloseButton={true}
-            >
-                <DialogHeader>
-                    <DialogTitle className="text-2xl">Set Your Username</DialogTitle>
-                    <DialogDescription>
-                        Choose a unique in-game name to complete your registration. This cannot be changed later.
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="username-dialog">Username</Label>
-                        <Input
-                            id="username-dialog"
-                            value={username}
-                            onChange={(e) => setUsernameState(e.target.value)}
-                            placeholder="6-12 characters, letters & numbers"
-                            required
-                        />
-                         <p className="text-xs text-muted-foreground">Must be 6-12 characters long and contain only letters and numbers.</p>
-                    </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={loading} className="w-full">
-                            {loading ? 'Saving...' : 'Save and Continue'}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
-  const [showSetUsernameDialog, setShowSetUsernameDialog] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -163,18 +80,19 @@ export function Header() {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
-                    if (profileData.isRegistered === false && !profileData.suspended) {
-                        setShowSetUsernameDialog(true);
-                    } else {
-                        setShowSetUsernameDialog(false);
+
+                    // Safety Check: If user is not fully registered, force them to complete their profile.
+                    if (profileData.isRegistered === false && !profileData.suspended && pathname !== '/complete-profile') {
+                        router.push('/complete-profile');
                     }
                 } else {
-                    // The document doesn't exist. This could be a temporary state during registration
-                    // or a failed registration. We won't log the user out to avoid race conditions.
-                    // The user will remain authenticated but without a profile, and the popup won't show
-                    // until the document is created and the listener fires again.
+                    // Document doesn't exist for a logged-in user.
+                    // This can happen for a moment during sign-up.
+                    // Force redirect to be safe and ensure profile completion.
                     setProfile(null);
-                    setShowSetUsernameDialog(false);
+                    if (pathname !== '/complete-profile' && pathname !== '/auth/verify') {
+                      router.push('/complete-profile');
+                    }
                 }
                  setLoading(false);
               }, 
@@ -182,19 +100,17 @@ export function Header() {
                  console.error("Error fetching user profile:", error);
                  setLoading(false);
                  setProfile(null);
-                 setShowSetUsernameDialog(false);
               }
             );
             return () => unsubscribeProfile();
         } else {
             setProfile(null);
             setLoading(false);
-            setShowSetUsernameDialog(false);
         }
     });
 
     return () => unsubscribeAuth();
-  }, [pathname]);
+  }, [pathname, router]);
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
@@ -440,10 +356,6 @@ export function Header() {
           </div>
         </div>
       </header>
-      <SetUsernameDialog
-          open={showSetUsernameDialog}
-          onUsernameSet={() => setShowSetUsernameDialog(false)}
-      />
     </>
   );
 }
