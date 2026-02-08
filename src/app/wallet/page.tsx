@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -376,9 +375,12 @@ export default function WalletPage() {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
                     } else {
-                        console.error("User profile not found in Firestore.");
-                        router.push('/login');
+                        // The global handler in Header.tsx will deal with this.
+                        setProfile(null);
                     }
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error fetching wallet profile:", error);
                     setLoading(false);
                 });
                 return () => unsubProfile();
@@ -453,16 +455,14 @@ export default function WalletPage() {
     const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
     const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
-    if (loading) {
+    if (loading || !user) {
         return null;
     }
 
     if (!profile) {
-        return (
-            <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl text-center">
-                <p>Could not load wallet information.</p>
-            </div>
-        )
+        // Return null or a loading skeleton while the global logout handler in the header kicks in.
+        // This prevents the page from crashing when profile is null.
+        return null;
     }
 
 

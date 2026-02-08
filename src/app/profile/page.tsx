@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -180,7 +179,8 @@ export default function ProfilePage() {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
                     } else {
-                        console.warn("User profile document not found. This may be a temporary state during registration.");
+                        // The global handler in Header.tsx will deal with this.
+                        // Setting profile to null prevents render errors.
                         setProfile(null);
                     }
                     setLoading(false);
@@ -216,6 +216,8 @@ export default function ProfilePage() {
     }
     
     if (!profile) {
+        // Return null or a loading skeleton while the global logout handler in the header kicks in.
+        // This prevents the page from crashing when profile is null.
         return null;
     }
 

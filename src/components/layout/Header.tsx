@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Gift,
   Palette,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Sheet,
@@ -57,6 +58,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useLoading } from "@/context/LoadingContext";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 
 type WalletData = {
@@ -98,6 +101,8 @@ export function Header() {
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
   const { theme, setTheme, mode, setMode } = useTheme();
+  const { showLoader } = useLoading();
+  const [showIncompleteProfilePopup, setShowIncompleteProfilePopup] = useState(false);
   
   useEffect(() => {
     setLoading(true);
@@ -107,6 +112,8 @@ export function Header() {
             // Immediately redirect if user is not verified and not on the verify page.
             if (!currentUser.emailVerified && window.location.pathname !== '/auth/verify') {
                 router.replace('/auth/verify');
+                setLoading(false);
+                return;
             }
 
             const userDocRef = doc(db, "users", currentUser.uid);
@@ -115,7 +122,13 @@ export function Header() {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
+                    setShowIncompleteProfilePopup(false);
                 } else {
+                    // CRITICAL: Auth user exists, but no Firestore doc. This is an inconsistent state. Force logout.
+                    if (currentUser.emailVerified) {
+                        console.error("CRITICAL: Verified user profile not found in Firestore. Forcing logout.");
+                        setShowIncompleteProfilePopup(true);
+                    }
                     setProfile(null);
                 }
                  setLoading(false);
@@ -152,6 +165,7 @@ export function Header() {
   ];
   
   const handleLogout = async () => {
+    showLoader();
     setSheetOpen(false);
     await auth.signOut();
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
@@ -340,6 +354,34 @@ export function Header() {
 
   return (
     <>
+       {showIncompleteProfilePopup && (
+        <Dialog open={true}>
+          <DialogContent
+            className="sm:max-w-md"
+            onInteractOutside={(e) => e.preventDefault()}
+            hideCloseButton={true}
+          >
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl text-destructive">
+                <AlertTriangle className="h-6 w-6" />
+                Account Error
+              </DialogTitle>
+              <DialogDescription className="pt-4 text-base">
+                Your user account data could not be found. This can happen if registration was interrupted. You will be logged out to resolve this issue. Please try logging in again.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end pt-4">
+              <Button variant="destructive" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
+
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4">
           <Link href="/" className="mr-6 flex items-center space-x-2">
@@ -373,7 +415,7 @@ export function Header() {
                       <Skeleton className="h-9 w-24" />
                       <Skeleton className="h-9 w-9 rounded-full" />
                   </div>
-              ) : user && user.emailVerified ? (
+              ) : user && user.emailVerified && profile ? (
                 <>
                   <Button variant="ghost" size="sm" asChild>
                       <Link href="/wallet">
@@ -480,7 +522,7 @@ export function Header() {
                               <Skeleton className="h-10 w-full" />
                               <Skeleton className="h-10 w-full" />
                           </div>
-                      ) : user && user.emailVerified ? (
+                      ) : user && user.emailVerified && profile ? (
                          mobileUserMenuItems
                       ) : (
                         <>
