@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -215,10 +216,16 @@ const BestiePage = () => {
   const handleNoHover = () => {
     if (step === 'must_play' && noHoverCount < 6) {
       setNoHoverCount(c => c + 1);
+
+      const side = Math.random() > 0.5 ? 'left' : 'right';
+      const newLeft = side === 'left' 
+        ? `${Math.random() * 25}%` // 0-25%
+        : `${Math.random() * 25 + 75}%`; // 75-100%
+
       setNoButtonPos({
         position: 'absolute',
         top: `${Math.random() * 80 + 10}%`,
-        left: `${Math.random() * 80 + 10}%`,
+        left: newLeft,
         transition: 'top 0.2s, left 0.2s',
       });
     }
@@ -280,7 +287,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center relative h-11">
+          <div className="flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               size="lg"
@@ -343,7 +350,7 @@ const BestiePage = () => {
     }
 
     return (
-      <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between">
+      <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between relative">
         {title && <h1 key={step} className="text-xl md:text-2xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
           {title}
         </h1>}
