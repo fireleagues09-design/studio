@@ -8,7 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy, Info } from 'lucide-react';
+import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy, Info, Clock, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -578,25 +578,63 @@ export default function WalletPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : transactions.length > 0 ? (
-                                        transactions.map(tx => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    {tx.type === 'deposit' || tx.type === 'prize' ? <ArrowDownLeft className="h-4 w-4 text-green-500"/> : <ArrowUpRight className="h-4 w-4 text-red-500" />}
-                                                    <span className="capitalize font-medium">{tx.type.replace('_', ' ')}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">{format(tx.date.toDate(), 'PP')}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={tx.status === 'Completed' ? 'secondary' : tx.status === 'Failed' ? 'destructive' : 'default'} className={tx.status === 'Pending' ? 'bg-primary/80' : ''}>
-                                                    {tx.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className={`text-right font-semibold ${tx.type === 'deposit' || tx.type === 'prize' ? 'text-green-500' : 'text-red-500'}`}>
-                                                {tx.type === 'deposit' || tx.type === 'prize' ? `+₹${tx.amount.toFixed(2)}` : `-₹${Math.abs(tx.amount).toFixed(2)}`}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
+                                        transactions.map(tx => {
+                                            let icon: React.ReactNode;
+                                            let amountStyle: string = "text-right font-semibold";
+                                            let amountText: string;
+                                            let statusBadge: React.ReactNode;
+
+                                            switch (tx.status) {
+                                                case 'Completed':
+                                                    if (tx.type === 'deposit' || tx.type === 'prize') {
+                                                        icon = <ArrowDownLeft className="h-4 w-4 text-green-500"/>;
+                                                        amountStyle += ' text-green-500';
+                                                        amountText = `+₹${tx.amount.toFixed(2)}`;
+                                                    } else { // withdrawal or entry_fee
+                                                        icon = <ArrowUpRight className="h-4 w-4 text-red-500"/>;
+                                                        amountStyle += ' text-red-500';
+                                                        amountText = `-₹${Math.abs(tx.amount).toFixed(2)}`;
+                                                    }
+                                                    statusBadge = <Badge variant="secondary">{tx.status}</Badge>;
+                                                    break;
+                                                case 'Pending':
+                                                    icon = <Clock className="h-4 w-4 text-amber-500"/>;
+                                                    amountStyle += ' text-muted-foreground';
+                                                    amountText = `₹${tx.amount.toFixed(2)}`;
+                                                    statusBadge = <Badge className="bg-amber-500 border-transparent text-white hover:bg-amber-500/90">{tx.status}</Badge>;
+                                                    break;
+                                                case 'Failed':
+                                                    icon = <XCircle className="h-4 w-4 text-red-500"/>;
+                                                    amountStyle += ' text-red-500';
+                                                    amountText = `₹${tx.amount.toFixed(2)}`;
+                                                    statusBadge = <Badge variant="destructive">{tx.status}</Badge>;
+                                                    break;
+                                                default:
+                                                    icon = <Info className="h-4 w-4 text-muted-foreground"/>;
+                                                    amountStyle += ' text-muted-foreground';
+                                                    amountText = `₹${tx.amount.toFixed(2)}`;
+                                                    statusBadge = <Badge variant="secondary">{tx.status}</Badge>;
+                                                    break;
+                                            }
+
+                                            return (
+                                                <TableRow key={tx.id}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            {icon}
+                                                            <span className="capitalize font-medium">{tx.type.replace('_', ' ')}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-muted-foreground">{format(tx.date.toDate(), 'PP')}</TableCell>
+                                                    <TableCell>
+                                                        {statusBadge}
+                                                    </TableCell>
+                                                    <TableCell className={amountStyle}>
+                                                        {amountText}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center">
