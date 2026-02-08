@@ -86,20 +86,21 @@ export default function LoginPage() {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         await handleLoginSuccess(userCredential);
-      } catch (error: any) {
-        console.error("Error signing in:", error);
-        let description = "Failed to login. Please check your credentials.";
-        // Handle auth/user-not-found specifically to guide user to register page.
-        if (error.code === 'auth/user-not-found') {
-            description = "No account found with this email. Please register first.";
-            router.push('/register');
-        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-          description = "Invalid email or password.";
+    } catch (error: any) {
+        let description: string;
+        // The 'auth/invalid-credential' error code covers wrong password, and often user-not-found in newer SDKs.
+        // We handle it gracefully by showing a toast without logging a console error, as it's an expected user input error.
+        if (error.code === 'auth/invalid-credential') {
+          description = "Invalid email or password. Please check your credentials and try again.";
+        } else {
+          // Log other, unexpected errors to the console for debugging.
+          console.error("Error signing in:", error);
+          description = "An unexpected error occurred during login. Please try again.";
         }
-        toast({ title: "Login Error", description, variant: "destructive" });
-      } finally {
+        toast({ title: "Login Failed", description, variant: "destructive" });
+    } finally {
         setLoading(false);
-      }
+    }
   };
 
   const handleGoogleLogin = async () => {
