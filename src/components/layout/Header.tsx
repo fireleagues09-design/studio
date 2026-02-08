@@ -52,6 +52,12 @@ import { Separator } from "@/components/ui/separator";
 import { useTheme, type ColorTheme } from "@/context/ThemeProvider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 
 type WalletData = {
@@ -146,6 +152,7 @@ export function Header() {
   ];
   
   const handleLogout = async () => {
+    setSheetOpen(false);
     await auth.signOut();
     toast({ title: "Logged Out", description: "You have been successfully logged out." });
     window.location.href = '/';
@@ -182,7 +189,7 @@ export function Header() {
   );
 
   const renderMobileThemeSwatches = () => (
-     <div className="flex flex-wrap gap-4 pt-2">
+     <div className="grid grid-cols-4 gap-3 pt-2">
       {themes.map((t) => (
         <button
           key={`m-${t.name}`}
@@ -194,7 +201,7 @@ export function Header() {
           )}
         >
           <div className={cn(
-            'w-8 h-8 rounded-full border-2 p-0.5',
+            'w-7 h-7 rounded-full border-2 p-0.5',
              theme === t.name ? 'border-primary' : 'border-muted'
           )}>
             <div className="w-full h-full rounded-full bg-primary" />
@@ -274,19 +281,19 @@ export function Header() {
         </div>
         <Separator className="my-2"/>
         <SheetClose asChild>
-            <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link></Button>
+            <Button variant="ghost" asChild className="w-full justify-start"><Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link></Button>
         </SheetClose>
-        <Button variant="ghost" className="w-full justify-start text-base" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
-        <Button variant="ghost" className="w-full justify-start text-base" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
+        <Button variant="ghost" className="w-full justify-start" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
+        <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
         
         <Separator className="my-2"/>
         
         <SheetClose asChild>
-            <Button variant="ghost" asChild className="w-full justify-start text-base">
+            <Button variant="ghost" asChild className="w-full justify-start">
                 <Link href="/wallet"><Wallet className="mr-2 h-4 w-4" />Wallet</Link>
             </Button>
         </SheetClose>
-        <Button variant="ghost" className="w-full justify-start text-base" disabled>
+        <Button variant="ghost" className="w-full justify-start" disabled>
             <MessageSquare className="mr-2 h-4 w-4" />
             <span>Chat Support</span>
             <span className="ml-auto text-xs">Soon</span>
@@ -295,30 +302,36 @@ export function Header() {
         {profile && profile.isAdmin === true && <Separator className="my-2"/>}
         {profile && profile.isAdmin === true && (
             <SheetClose asChild>
-                <Button variant="ghost" asChild className="w-full justify-start text-base"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
+                <Button variant="ghost" asChild className="w-full justify-start"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
             </SheetClose>
         )}
         
         <Separator className="my-2"/>
         
-        <div className="space-y-4 px-2 py-2">
-            <div className="flex items-center justify-between">
-                <Label htmlFor="mobile-dark-mode" className="font-normal text-base">Dark Mode</Label>
+        <div className="px-2 space-y-1">
+            <div className="flex items-center justify-between py-2">
+                <Label className="font-normal">Dark Mode</Label>
                 <Switch 
                     id="mobile-dark-mode"
                     checked={mode === 'dark'}
                     onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
                 />
             </div>
-             <div className="space-y-2">
-                <Label className="text-base">UI Colour</Label>
-                {renderMobileThemeSwatches()}
-            </div>
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="colors" className="border-b-0">
+                    <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline">
+                        UI Colour
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        {renderMobileThemeSwatches()}
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
         </div>
         
         <Separator className="my-2"/>
         
-        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-base">
+        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
         </Button>
@@ -471,20 +484,26 @@ export function Header() {
                          mobileUserMenuItems
                       ) : (
                         <>
-                           <div className="space-y-4 px-2 py-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="mobile-dark-mode-guest" className="font-normal text-base">Dark Mode</Label>
-                                    <Switch 
-                                        id="mobile-dark-mode-guest"
-                                        checked={mode === 'dark'}
-                                        onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-base">UI Colour</Label>
-                                    {renderMobileThemeSwatches()}
-                                </div>
-                            </div>
+                          <div className="px-2 space-y-1">
+                              <div className="flex items-center justify-between py-2">
+                                  <Label className="font-normal">Dark Mode</Label>
+                                  <Switch 
+                                      id="mobile-dark-mode-guest"
+                                      checked={mode === 'dark'}
+                                      onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                                  />
+                              </div>
+                              <Accordion type="single" collapsible className="w-full">
+                                  <AccordionItem value="colors" className="border-b-0">
+                                      <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline">
+                                          UI Colour
+                                      </AccordionTrigger>
+                                      <AccordionContent>
+                                          {renderMobileThemeSwatches()}
+                                      </AccordionContent>
+                                  </AccordionItem>
+                              </Accordion>
+                          </div>
                             <Separator />
                           <SheetClose asChild>
                               <Button variant="outline" asChild className="w-full justify-start">
