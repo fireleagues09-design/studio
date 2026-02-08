@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, sendEmailVerification, signOut } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
@@ -35,56 +35,6 @@ export default function LoginPage() {
     hideLoader();
   }, [hideLoader]);
 
-  const handleLoginSuccess = async (userCredential: UserCredential) => {
-    setLoading(true);
-    const user = userCredential.user;
-    const userDocRef = doc(db, "users", user.uid);
-
-    try {
-        // Step 1: Handle unverified users FIRST.
-        if (!user.emailVerified) {
-            toast({
-                title: "Verification Required",
-                description: "Your email is not verified yet. We've sent a new verification link.",
-            });
-            await sendEmailVerification(user);
-            router.push('/auth/verify');
-            return; // Stop execution here.
-        }
-
-        // User is verified, now check Firestore.
-        const userDoc = await getDoc(userDocRef);
-
-        // Step 2: Handle first-time login for a verified user (Firestore doc is missing).
-        if (!userDoc.exists()) {
-            // This is where we create the user document for the first time.
-            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            
-            await setDoc(userDocRef, {
-                username: username,
-                email: user.email,
-                isRegistered: true,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-
-            toast({ title: "Welcome!", description: "Your account is now fully set up." });
-            router.push("/");
-            return;
-        }
-        
-        // Step 3: Handle normal login for a fully registered user.
-        toast({ title: "Success", description: "Logged in successfully!" });
-        router.push("/");
-
-    } catch (error: any) {
-        console.error("Error during login success handling:", error);
-        toast({ title: "Login Error", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
-        setLoading(false);
-    }
-  };
-  
   const handleEmailLogin = async () => {
     if (!email || !password) {
         toast({ title: "Error", description: "Please enter email and password.", variant: "destructive" });
@@ -93,7 +43,37 @@ export default function LoginPage() {
     setLoading(true);
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        await handleLoginSuccess(userCredential);
+        const user = userCredential.user;
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        // If user document does not exist in Firestore, they are not registered.
+        if (!userDoc.exists()) {
+            toast({
+                title: "Login Failed",
+                description: "Account not found. Please register first.",
+                variant: "destructive",
+            });
+            await signOut(auth); // Sign out the orphaned auth user
+            router.push('/register');
+            return; // Redirecting, so loader on next page will take over.
+        }
+        
+        // If doc exists, but email is not verified, guide them to verification.
+        if (!user.emailVerified) {
+            toast({
+                title: "Verification Required",
+                description: "Your email is not verified yet. We've sent a new verification link.",
+            });
+            await sendEmailVerification(user);
+            router.push('/auth/verify');
+            return; 
+        }
+
+        // Successful login
+        toast({ title: "Success", description: "Logged in successfully!" });
+        router.push("/");
+
     } catch (error: any) {
         let description: string;
         if (error.code === 'auth/invalid-credential') {
@@ -103,8 +83,7 @@ export default function LoginPage() {
           description = "An unexpected error occurred during login. Please try again.";
         }
         toast({ title: "Login Failed", description, variant: "destructive" });
-    } finally {
-        setLoading(false);
+        setLoading(false); // Stop loading indicator on login failure
     }
   };
 
@@ -112,14 +91,34 @@ export default function LoginPage() {
       setLoading(true);
       try {
         const result = await signInWithPopup(auth, googleProvider);
-        await handleLoginSuccess(result);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+            // Returning Google user
+            toast({ title: "Success", description: "Logged in successfully!" });
+        } else {
+            // First-time Google user, create their document
+            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+            await setDoc(userDocRef, {
+                username: username,
+                email: user.email,
+                isRegistered: true,
+                emailVerified: true,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+            toast({ title: "Welcome!", description: "Your account has been created." });
+        }
+        router.push('/');
+
       } catch (error: any) {
         console.error("Google login error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
         }
-      } finally {
-        setLoading(false);
+        setLoading(false); // Stop loading indicator on login failure
       }
   }
 
