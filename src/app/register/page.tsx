@@ -14,10 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, UserCredential, getAdditionalUserInfo, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser } from "firebase/auth";
+import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, User as FirebaseUser } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -38,50 +37,6 @@ export default function RegisterPage() {
   useEffect(() => {
     hideLoader();
   }, [hideLoader]);
-
-  const handleAuthSuccess = async (userCredential: UserCredential) => {
-    const additionalInfo = getAdditionalUserInfo(userCredential);
-    const user = userCredential.user;
-
-    // Handle existing users first
-    if (!additionalInfo?.isNewUser) {
-        toast({
-            title: "Welcome Back!",
-            description: "Logged in successfully.",
-        });
-        router.push("/");
-        return;
-    }
-
-    // Handle new users from Google sign-up
-    try {
-        const userData: any = {
-            email: user.email,
-            wallet: { deposit: 0, winning: 0, bonus: 0 },
-            registeredOn: serverTimestamp(),
-            isRegistered: false, // This flag will trigger the username prompt
-        };
-
-        if (user.phoneNumber) {
-            userData.phone = user.phoneNumber;
-        }
-
-        await setDoc(doc(db, "users", user.uid), userData);
-
-        toast({
-            title: "Account Created!",
-            description: "Let's set up your username.",
-        });
-        router.push("/complete-profile");
-    } catch(error: any) {
-        console.error("Error saving partial user profile:", error);
-        // Important: If doc creation fails, we must delete the auth user to allow a retry.
-        await userCredential.user.delete().catch(e => console.error("Failed to delete auth user on error:", e));
-        await auth.signOut(); // And sign out
-        toast({ title: "Registration Error", description: error.message || 'Failed to create user profile.', variant: 'destructive' });
-    }
-  };
-
 
   const handleEmailRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -146,8 +101,19 @@ export default function RegisterPage() {
   const startGoogleSignUp = async () => {
     setLoading(true);
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        await handleAuthSuccess(result);
+        // Just sign in. The onAuthStateChanged listener in the header
+        // will detect a new user without a profile and redirect to /complete-profile.
+        await signInWithPopup(auth, googleProvider);
+        
+        // The main auth listener in the header will handle redirection.
+        // We push to home, and the listener will intercept if the profile is incomplete.
+        router.push('/');
+
+        toast({
+            title: "Account Created!",
+            description: "Let's set up your profile.",
+        });
+
     } catch (error: any) {
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {

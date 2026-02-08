@@ -28,7 +28,7 @@ export async function setUsername(
         const userRef = db.collection('users').doc(userId);
         const usernameQuery = db.collection('users').where('username', '==', username);
 
-        // Transaction to check uniqueness and update/create user
+        // Transaction to ensure username is unique and then create the new user profile.
         await db.runTransaction(async (transaction) => {
             const usernameSnapshot = await transaction.get(usernameQuery);
             if (!usernameSnapshot.empty) {
@@ -36,28 +36,21 @@ export async function setUsername(
             }
 
             const userDoc = await transaction.get(userRef);
-            
             if (userDoc.exists) {
-                // Document exists, update it.
-                if (userDoc.data()?.isRegistered === true) {
-                     throw new Error("Username has already been set for this account.");
-                }
-                transaction.update(userRef, {
-                    username: username,
-                    isRegistered: true,
-                });
-            } else {
-                // Document does not exist, create it.
-                // This makes the flow robust against client-side creation failures.
-                const newUserProfile = {
-                    username: username,
-                    isRegistered: true,
-                    email: userEmail,
-                    wallet: { deposit: 0, winning: 0, bonus: 0 },
-                    registeredOn: FieldValue.serverTimestamp(),
-                };
-                transaction.set(userRef, newUserProfile);
+                // This case should ideally not be hit if the UI flow is correct,
+                // but as a safeguard, we prevent overwriting an existing profile's username.
+                throw new Error("A profile for this user already exists.");
             }
+            
+            // Create the new user profile document.
+            const newUserProfile = {
+                username: username,
+                email: userEmail,
+                isRegistered: true, // Mark profile as complete
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: FieldValue.serverTimestamp(),
+            };
+            transaction.set(userRef, newUserProfile);
         });
 
         return { success: true, message: 'Username set successfully!' };
