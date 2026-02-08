@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, MouseEvent as ReactMouseEvent, TouchEvent as ReactTouchEvent } from 'react';
@@ -142,8 +143,8 @@ export function FloatingHomeButton() {
     <div
       ref={buttonRef}
       className={cn(
-        'fixed top-0 left-0 z-50 w-12 h-12 rounded-full bg-accent shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
-        'hover:shadow-accent/40 hover:shadow-[0_0_15px_5px_hsl(var(--accent))]',
+        'fixed top-0 left-0 z-50 w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center cursor-grab transition-all duration-300',
+        'hover:shadow-primary/40 hover:shadow-[0_0_15px_5px_hsl(var(--primary))]',
         'active:cursor-grabbing active:scale-105 active:bg-primary active:shadow-primary/40 active:shadow-[0_0_15px_5px_hsl(var(--primary))]',
         'grabbing:cursor-grabbing grabbing:scale-105 grabbing:bg-primary grabbing:shadow-primary/40 grabbing:shadow-[0_0_15px_5px_hsl(var(--primary))]',
         isVisible ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
@@ -153,7 +154,7 @@ export function FloatingHomeButton() {
       onTouchStart={handleTouchStart}
     >
       <div className="w-full h-full flex items-center justify-center">
-        <Home className="h-5 w-5 text-white" />
+        <Home className="h-5 w-5 text-primary-foreground" />
       </div>
     </div>
   );
