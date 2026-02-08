@@ -128,7 +128,7 @@ const BestiePage = () => {
   useEffect(() => {
     const generateParticles = () => {
       const newParticles = Array.from({ length: 150 }).map((_, i) => {
-        const isEmoji = Math.random() > 0.95; 
+        const isEmoji = Math.random() > 0.9; 
         return {
           id: i,
           content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
@@ -167,11 +167,42 @@ const BestiePage = () => {
 
     setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
     
+    // Local variable to track quadrant to avoid stale state issues in setInterval
+    let currentQuadrant = -1;
+
     chaseIntervalRef.current = setInterval(() => {
+       // New quadrant logic to ensure "long distance" runs
+       let nextQuadrant = Math.floor(Math.random() * 4);
+       while (nextQuadrant === currentQuadrant) {
+         nextQuadrant = Math.floor(Math.random() * 4);
+       }
+       currentQuadrant = nextQuadrant;
+
+       let top, left;
+       switch(nextQuadrant) {
+           case 0: // top-left
+               top = `${Math.random() * 25 + 10}%`; // 10-35
+               left = `${Math.random() * 25 + 10}%`; // 10-35
+               break;
+           case 1: // top-right
+               top = `${Math.random() * 25 + 10}%`; // 10-35
+               left = `${Math.random() * 25 + 65}%`; // 65-90
+               break;
+           case 2: // bottom-left
+               top = `${Math.random() * 25 + 65}%`; // 65-90
+               left = `${Math.random() * 25 + 10}%`; // 10-35
+               break;
+           case 3: // bottom-right
+           default:
+               top = `${Math.random() * 25 + 65}%`; // 65-90
+               left = `${Math.random() * 25 + 65}%`; // 65-90
+               break;
+       }
+
        setRunawayPos(currentPos => ({
             ...currentPos,
-            top: `${Math.random() * 70 + 15}%`,
-            left: `${Math.random() * 70 + 15}%`,
+            top: top,
+            left: left,
         }));
     }, 700);
 
@@ -184,6 +215,7 @@ const BestiePage = () => {
       if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
       if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   // Effect to make hands follow the button
@@ -232,6 +264,7 @@ const BestiePage = () => {
         position: 'absolute',
         top: `${Math.random() * 80 + 10}%`,
         left: newLeft,
+        transform: `translateX(-${side === 'left' ? 0 : 100}%)`,
         transition: 'top 0.2s, left 0.2s',
       });
     }
@@ -288,7 +321,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center relative">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               size="lg"
@@ -319,8 +352,8 @@ const BestiePage = () => {
             <div className="absolute inset-0 overflow-hidden">
                 <Button size="lg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
-                <Hand className="hand" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
-                <Hand className="hand" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
 
                 <Button
                     id="runaway-no-button"
@@ -876,3 +909,4 @@ export function Header() {
     </>
   );
 }
+
