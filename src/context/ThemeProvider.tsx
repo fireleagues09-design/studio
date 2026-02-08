@@ -1,8 +1,9 @@
+
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-export type Theme =
+export type ColorTheme =
   | 'orange'
   | 'violet'
   | 'green'
@@ -17,7 +18,7 @@ export type Theme =
   | 'grape'
   | 'spring-green'
 
-export const THEME_NAMES: Theme[] = [
+export const COLOR_THEME_NAMES: ColorTheme[] = [
   'orange',
   'violet',
   'green',
@@ -33,20 +34,28 @@ export const THEME_NAMES: Theme[] = [
   'spring-green',
 ]
 
+export type ThemeMode = 'light' | 'dark'
+
 type ThemeProviderProps = {
   children: React.ReactNode
-  defaultTheme?: Theme
+  defaultTheme?: ColorTheme
+  defaultMode?: ThemeMode
   storageKey?: string
+  modeStorageKey?: string
 }
 
 type ThemeProviderState = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
+  theme: ColorTheme
+  setTheme: (theme: ColorTheme) => void
+  mode: ThemeMode
+  setMode: (mode: ThemeMode) => void
 }
 
 const initialState: ThemeProviderState = {
   theme: 'orange',
   setTheme: () => null,
+  mode: 'dark',
+  setMode: () => null,
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
@@ -54,25 +63,40 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 export function ThemeProvider({
   children,
   defaultTheme = 'orange',
+  defaultMode = 'dark',
   storageKey = 'fireleagues-ui-theme',
+  modeStorageKey = 'fireleagues-ui-mode',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(() => {
+  const [theme, setThemeState] = useState<ColorTheme>(() => {
     if (typeof window !== 'undefined') {
-        const storedTheme = localStorage.getItem(storageKey) as Theme | null;
-        if (storedTheme && THEME_NAMES.includes(storedTheme)) {
+        const storedTheme = localStorage.getItem(storageKey) as ColorTheme | null;
+        if (storedTheme && COLOR_THEME_NAMES.includes(storedTheme)) {
             return storedTheme;
         }
     }
     return defaultTheme;
   });
+
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    if (typeof window !== 'undefined') {
+        const storedMode = localStorage.getItem(modeStorageKey) as ThemeMode | null;
+        if (storedMode && ['light', 'dark'].includes(storedMode)) {
+            return storedMode;
+        }
+    }
+    return defaultMode;
+  });
   
   useEffect(() => {
     const root = window.document.documentElement
     
+    root.classList.remove('light', 'dark')
+    root.classList.add(mode)
+
     // Remove all theme classes
-    THEME_NAMES.forEach(themeName => {
-        if (themeName !== 'orange') { // 'orange' is the default and doesn't have a class
+    COLOR_THEME_NAMES.forEach(themeName => {
+        if (themeName !== 'orange') {
             root.classList.remove(`theme-${themeName}`);
         }
     });
@@ -81,16 +105,23 @@ export function ThemeProvider({
     if (theme !== 'orange') {
       root.classList.add(`theme-${theme}`)
     }
-  }, [theme])
+  }, [theme, mode])
 
-  const setTheme = (newTheme: Theme) => {
+  const setTheme = (newTheme: ColorTheme) => {
       localStorage.setItem(storageKey, newTheme);
       setThemeState(newTheme);
+  }
+
+  const setMode = (newMode: ThemeMode) => {
+    localStorage.setItem(modeStorageKey, newMode);
+    setModeState(newMode);
   }
 
   const value = {
     theme,
     setTheme,
+    mode,
+    setMode,
   }
 
   return (

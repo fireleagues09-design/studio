@@ -49,8 +49,8 @@ import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useTheme, type Theme } from "@/context/ThemeProvider";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useTheme, type ColorTheme } from "@/context/ThemeProvider";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 
@@ -68,7 +68,7 @@ type UserProfile = {
     isRegistered?: boolean;
 }
 
-const themes: { name: Theme; color: string }[] = [
+const themes: { name: ColorTheme; color: string }[] = [
   { name: 'orange', color: 'hsl(24.6 95% 53.1%)' },
   { name: 'violet', color: 'hsl(262.1 83.3% 57.8%)' },
   { name: 'green', color: 'hsl(142.1 70.6% 45.3%)' },
@@ -92,7 +92,7 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, mode, setMode } = useTheme();
   
   useEffect(() => {
     setLoading(true);
@@ -188,23 +188,37 @@ export function Header() {
          <DropdownMenuSub>
             <DropdownMenuSubTrigger>
                 <Palette className="mr-2 h-4 w-4" />
-                <span>Change Theme</span>
+                <span>Change UI Colour</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                    <div className="flex w-48 flex-wrap justify-start gap-2 p-1">
-                        {themes.map((t) => (
-                        <button
-                            key={t.name}
-                            onClick={() => setTheme(t.name)}
-                            aria-label={`Set ${t.name} theme`}
-                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                        >
-                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
-                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                <DropdownMenuSubContent className="w-60 p-0">
+                    <div className="p-2 space-y-2">
+                        <div className="flex items-center justify-between px-1">
+                            <Label htmlFor="dark-mode-toggle" className="text-sm font-normal">Dark Mode</Label>
+                            <Switch
+                                id="dark-mode-toggle"
+                                checked={mode === 'dark'}
+                                onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                            />
+                        </div>
+                        <Separator />
+                        <div className="space-y-1">
+                            <Label className="px-1 text-xs text-muted-foreground">Accent Colour</Label>
+                            <div className="flex flex-wrap justify-start gap-1 px-1">
+                                {themes.map((t) => (
+                                <button
+                                    key={t.name}
+                                    onClick={() => setTheme(t.name)}
+                                    aria-label={`Set ${t.name} theme`}
+                                    className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                                >
+                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
+                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                                    </div>
+                                </button>
+                                ))}
                             </div>
-                        </button>
-                        ))}
+                        </div>
                     </div>
                 </DropdownMenuSubContent>
             </DropdownMenuPortal>
@@ -251,18 +265,32 @@ export function Header() {
         
         <Separator className="my-2"/>
         
-        <div className="space-y-3 px-2 py-2">
-            <Label className="text-muted-foreground">Theme</Label>
-            <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex flex-wrap gap-4 pt-1 pl-1">
-                {themes.map((t) => (
-                    <div key={`m-${t.name}`}>
-                    <RadioGroupItem value={t.name} id={`m-theme-${t.name}`} className="peer sr-only" />
-                    <Label htmlFor={`m-theme-${t.name}`} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent p-0 peer-data-[state=checked]:border-primary">
-                        <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.color }}/>
-                    </Label>
-                    </div>
-                ))}
-            </RadioGroup>
+        <div className="space-y-4 px-2 py-2">
+            <div className="flex items-center justify-between">
+                <Label htmlFor="mobile-dark-mode" className="font-normal text-base">Dark Mode</Label>
+                <Switch 
+                    id="mobile-dark-mode"
+                    checked={mode === 'dark'}
+                    onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                />
+            </div>
+             <div className="space-y-2">
+                <Label className="text-base">UI Colour</Label>
+                <div className="flex flex-wrap gap-4 pt-2">
+                    {themes.map((t) => (
+                        <button
+                            key={`m-${t.name}`}
+                            onClick={() => setTheme(t.name)}
+                            aria-label={`Set ${t.name} theme`}
+                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                        >
+                            <div className={cn('w-8 h-8 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-muted')}>
+                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
         </div>
         
         <Separator className="my-2"/>
@@ -349,20 +377,34 @@ export function Header() {
                                 <Palette className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <div className="flex w-48 flex-wrap justify-start gap-2 p-1">
-                                {themes.map((t) => (
-                                <button
-                                    key={t.name}
-                                    onClick={() => setTheme(t.name)}
-                                    aria-label={`Set ${t.name} theme`}
-                                    className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
-                                >
-                                    <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
-                                        <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                        <DropdownMenuContent align="end" className="w-60 p-0">
+                             <div className="p-2 space-y-2">
+                                <div className="flex items-center justify-between px-1">
+                                    <Label htmlFor="dark-mode-toggle-guest" className="text-sm font-normal">Dark Mode</Label>
+                                    <Switch
+                                        id="dark-mode-toggle-guest"
+                                        checked={mode === 'dark'}
+                                        onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                                    />
+                                </div>
+                                <Separator />
+                                <div className="space-y-1">
+                                    <Label className="px-1 text-xs text-muted-foreground">Accent Colour</Label>
+                                    <div className="flex flex-wrap justify-start gap-1 px-1">
+                                        {themes.map((t) => (
+                                        <button
+                                            key={t.name}
+                                            onClick={() => setTheme(t.name)}
+                                            aria-label={`Set ${t.name} theme`}
+                                            className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                                        >
+                                            <div className={cn('w-5 h-5 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-transparent')}>
+                                                <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                                            </div>
+                                        </button>
+                                        ))}
                                     </div>
-                                </button>
-                                ))}
+                                </div>
                             </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -419,18 +461,32 @@ export function Header() {
                          mobileUserMenuItems
                       ) : (
                         <>
-                           <div className="space-y-3 px-2 py-2">
-                                <Label className="text-muted-foreground">Theme</Label>
-                                <RadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)} className="flex flex-wrap gap-4 pt-1 pl-1">
-                                    {themes.map((t) => (
-                                        <div key={`m-${t.name}`}>
-                                        <RadioGroupItem value={t.name} id={`m-theme-${t.name}`} className="peer sr-only" />
-                                        <Label htmlFor={`m-theme-${t.name}`} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-muted bg-transparent p-0 peer-data-[state=checked]:border-primary">
-                                            <div className="h-6 w-6 rounded-full" style={{ backgroundColor: t.color }}/>
-                                        </Label>
-                                        </div>
-                                    ))}
-                                </RadioGroup>
+                           <div className="space-y-4 px-2 py-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="mobile-dark-mode-guest" className="font-normal text-base">Dark Mode</Label>
+                                    <Switch 
+                                        id="mobile-dark-mode-guest"
+                                        checked={mode === 'dark'}
+                                        onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-base">UI Colour</Label>
+                                    <div className="flex flex-wrap gap-4 pt-2">
+                                        {themes.map((t) => (
+                                            <button
+                                                key={`m-g-${t.name}`}
+                                                onClick={() => setTheme(t.name)}
+                                                aria-label={`Set ${t.name} theme`}
+                                                className="p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover"
+                                            >
+                                                <div className={cn('w-8 h-8 rounded-full border-2 p-0.5', theme === t.name ? 'border-primary' : 'border-muted')}>
+                                                    <div className="w-full h-full rounded-full" style={{ backgroundColor: t.color }} />
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                             <Separator />
                           <SheetClose asChild>

@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -23,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -38,7 +39,11 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <Suspense fallback={null}>
-          <ThemeProvider storageKey="fireleagues-theme" defaultTheme="orange">
+          <ThemeProvider
+            storageKey="fireleagues-theme"
+            modeStorageKey="fireleagues-mode"
+            defaultTheme="orange"
+          >
             <LoadingProvider>
               <div className="relative flex min-h-screen flex-col bg-background">
                 <Header />
