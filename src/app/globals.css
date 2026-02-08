@@ -24,6 +24,12 @@
     --input: 20 5.9% 90%;
     --ring: 24.6 95% 53.1%;
     --radius: 0.5rem;
+
+    /* Loader variables */
+    --loader-gradient-start: #ffcc00;
+    --loader-gradient-end: #ff3c00;
+    --loader-glow-primary: #ff6a00;
+    --loader-glow-secondary: #ff2200;
   }
 
   .dark {
@@ -46,18 +52,36 @@
     --border: 12 6.5% 15.1%;
     --input: 12 6.5% 15.1%;
     --ring: 24.6 95% 53.1%;
+    
+    /* Loader variables */
+    --loader-gradient-start: #ffcc00;
+    --loader-gradient-end: #ff3c00;
+    --loader-glow-primary: #ff6a00;
+    --loader-glow-secondary: #ff2200;
   }
 
   .theme-violet {
     --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --ring: 262.1 83.3% 57.8%;
+    
+    /* Loader variables for violet */
+    --loader-gradient-start: #e3c8ff;
+    --loader-gradient-end: #6424b3;
+    --loader-glow-primary: #8f33ff;
+    --loader-glow-secondary: #4b1a85;
   }
 
   .dark.theme-violet {
     --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --ring: 262.1 83.3% 57.8%;
+
+    /* Loader variables for violet */
+    --loader-gradient-start: #e3c8ff;
+    --loader-gradient-end: #6424b3;
+    --loader-glow-primary: #8f33ff;
+    --loader-glow-secondary: #4b1a85;
   }
 }
 
@@ -96,8 +120,8 @@
   top:50%;
   height:5px;
   width:0;
-  background:linear-gradient(90deg,#ffcc00,#ff3c00);
-  box-shadow:0 0 14px #ff6a00,0 0 30px #ff2200;
+  background:linear-gradient(90deg, var(--loader-gradient-start), var(--loader-gradient-end));
+  box-shadow:0 0 14px var(--loader-glow-primary),0 0 30px var(--loader-glow-secondary);
 }
 
 .line.left{
@@ -136,7 +160,7 @@
   background:#fff;
   border-radius:50%;
   transform:translate(-50%,-50%) scale(0);
-  box-shadow:0 0 25px #ff6a00,0 0 60px #ff0000;
+  box-shadow:0 0 25px var(--loader-glow-primary),0 0 60px var(--loader-glow-secondary);
 
   animation:sparkLoop 3s infinite;
 }
@@ -161,7 +185,7 @@
   transform:translate(-50%,-50%) scale(0.85);
   opacity:0;
 
-  filter:drop-shadow(0 0 18px #ff6a00);
+  filter:drop-shadow(0 0 18px var(--loader-glow-primary));
 
   animation:logoLoop 3s cubic-bezier(.4,0,.2,1) infinite;
 }
