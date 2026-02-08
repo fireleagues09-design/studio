@@ -110,6 +110,7 @@ const BestiePage = () => {
   // States for 'must_play' (teleport) step
   const [noHoverCount, setNoHoverCount] = useState(0);
   const [noButtonPos, setNoButtonPos] = useState<React.CSSProperties>({});
+  const [noButtonLastSide, setNoButtonLastSide] = useState<'left' | 'right' | null>(null);
   
   // States for 'chase' step
   const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
@@ -250,21 +251,24 @@ const BestiePage = () => {
       if (noHoverCount >= 6) {
         setStep('help');
         setNoButtonPos({});
+        setNoButtonLastSide(null);
         return;
       }
       
       setNoHoverCount(c => c + 1);
 
-      const side = Math.random() > 0.5 ? 'left' : 'right';
-      const newLeft = side === 'left' 
-        ? `${Math.random() * 25}%` // 0-25%
-        : `${Math.random() * 25 + 75}%`; // 75-100%
+      const nextSide = noButtonLastSide === 'left' ? 'right' : 'left';
+      setNoButtonLastSide(nextSide);
+
+      const newLeft = nextSide === 'left' 
+        ? `${Math.random() * 25}%` // 0-25% from left edge
+        : `${Math.random() * 25 + 75}%`; // 75-100% from left edge
 
       setNoButtonPos({
         position: 'absolute',
-        top: `${Math.random() * 80 + 10}%`,
+        top: `${Math.random() * 80 + 10}%`, // 10% to 90% from top
         left: newLeft,
-        transform: `translateX(-${side === 'left' ? 0 : 100}%)`,
+        transform: `translateX(-${nextSide === 'left' ? 0 : 100}%)`,
         transition: 'top 0.2s, left 0.2s',
       });
     }
@@ -909,4 +913,5 @@ export function Header() {
     </>
   );
 }
+
 
