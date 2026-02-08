@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -185,6 +184,8 @@ export default function RegisterPage() {
             setIsEmailServiceDown(true);
         } else if (error.code === 'auth/email-already-in-use') {
             errorMessage = 'This email is already registered. Please log in.';
+        } else if (error.code === 'auth/operation-not-allowed') {
+            errorMessage = 'Email/Password sign-up is not enabled. Please enable it in your Firebase project authentication settings.';
         }
         toast({
             title: "Registration Error",
