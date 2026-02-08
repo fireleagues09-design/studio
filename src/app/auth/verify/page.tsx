@@ -78,9 +78,9 @@ export default function VerifyPage() {
               return;
             }
 
-            const { email, password, inGameName } = registrationData;
+            const { email, password, username } = registrationData;
 
-            if (!email || !password || !inGameName) {
+            if (!email || !password || !username) {
                 setErrorMessage('Incomplete registration data. Please start over.');
                 setStatus('error');
                 hideLoader();
@@ -94,7 +94,7 @@ export default function VerifyPage() {
 
                 // Step 2: Create their Firestore document
                 const userData = {
-                    inGameName,
+                    username,
                     email: user.email,
                     wallet: { deposit: 0, winning: 0, bonus: 0 },
                     registeredOn: serverTimestamp(),

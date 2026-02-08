@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [inGameName, setInGameName] = useState(""); // This is "Username" in the UI
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEmailServiceDown, setIsEmailServiceDown] = useState(false);
   const { toast } = useToast();
@@ -83,19 +83,19 @@ export default function RegisterPage() {
     }
   };
 
-  const validateUsername = async (username: string) => {
-    if (username.length < 6 || username.length > 12) {
+  const validateUsername = async (usernameValue: string) => {
+    if (usernameValue.length < 6 || usernameValue.length > 12) {
       toast({ title: "Invalid Username", description: "Username must be between 6 and 12 characters long.", variant: "destructive" });
       return false;
     }
-    if (!/^[a-zA-Z0-9]+$/.test(username)) {
+    if (!/^[a-zA-Z0-9]+$/.test(usernameValue)) {
       toast({ title: "Invalid Username", description: "Username can only contain letters and numbers.", variant: "destructive" });
       return false;
     }
 
     try {
       const usersRef = collection(db, "users");
-      const q = query(usersRef, where("inGameName", "==", username));
+      const q = query(usersRef, where("username", "==", usernameValue));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -117,7 +117,7 @@ export default function RegisterPage() {
 
 
   const handleEmailRegister = async () => {
-    if (!email || !password || !inGameName || !confirmPassword) {
+    if (!email || !password || !username || !confirmPassword) {
       toast({ title: "Error", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
@@ -133,7 +133,7 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-        const isUsernameValid = await validateUsername(inGameName);
+        const isUsernameValid = await validateUsername(username);
         if (!isUsernameValid) {
             setLoading(false);
             return;
@@ -157,7 +157,7 @@ export default function RegisterPage() {
 
         await sendSignInLinkToEmail(auth, email, actionCodeSettings);
 
-        const registrationDetails = { email, password, inGameName };
+        const registrationDetails = { email, password, username };
         window.localStorage.setItem('registrationDetails', JSON.stringify(registrationDetails));
 
         router.push('/auth/verify');
@@ -232,13 +232,13 @@ export default function RegisterPage() {
             )}
 
             <div className="grid gap-2">
-              <Label htmlFor="in-game-name">Username</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="in-game-name"
+                id="username"
                 placeholder="6-12 character username"
                 required
-                value={inGameName}
-                onChange={(e) => setInGameName(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 disabled={loading || isEmailServiceDown}
               />
               <p className="text-xs text-muted-foreground">Must be 6-12 characters, letters and numbers only.</p>
