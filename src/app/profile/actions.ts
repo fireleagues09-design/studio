@@ -2,17 +2,7 @@
 'use server';
 
 import { auth, db } from '@/lib/firebase-admin';
-import type { Team, TeamMember } from '@/lib/mock-data';
-
-async function verifyToken(idToken: string): Promise<string> {
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        return decodedToken.uid;
-    } catch (error) {
-        console.error('Error verifying token:', error);
-        throw new Error('Authentication failed.');
-    }
-}
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function setUsername(
     idToken: string,
@@ -33,30 +23,41 @@ export async function setUsername(
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
         const userId = decodedToken.uid;
+        const userEmail = decodedToken.email;
         
         const userRef = db.collection('users').doc(userId);
         const usernameQuery = db.collection('users').where('inGameName', '==', username);
 
-        // 2. Transaction to check uniqueness and update user
+        // Transaction to check uniqueness and update/create user
         await db.runTransaction(async (transaction) => {
             const usernameSnapshot = await transaction.get(usernameQuery);
             if (!usernameSnapshot.empty) {
-                // Throw an error to abort the transaction
                 throw new Error("This username is already taken. Please choose another one.");
             }
 
             const userDoc = await transaction.get(userRef);
-            if (!userDoc.exists) {
-                throw new Error("User profile not found.");
+            
+            if (userDoc.exists()) {
+                // Document exists, update it.
+                if (userDoc.data()?.isRegistered === true) {
+                     throw new Error("Username has already been set for this account.");
+                }
+                transaction.update(userRef, {
+                    inGameName: username,
+                    isRegistered: true,
+                });
+            } else {
+                // Document does not exist, create it.
+                // This makes the flow robust against client-side creation failures.
+                const newUserProfile = {
+                    inGameName: username,
+                    isRegistered: true,
+                    email: userEmail,
+                    wallet: { deposit: 0, winning: 0, bonus: 0 },
+                    registeredOn: FieldValue.serverTimestamp(),
+                };
+                transaction.set(userRef, newUserProfile);
             }
-            if (userDoc.data()?.isRegistered === true) {
-                 throw new Error("Username has already been set for this account.");
-            }
-
-            transaction.update(userRef, {
-                inGameName: username,
-                isRegistered: true,
-            });
         });
 
         return { success: true, message: 'Username set successfully!' };
