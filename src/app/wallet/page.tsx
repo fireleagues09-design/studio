@@ -8,7 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy, Info, Clock, XCircle } from 'lucide-react';
+import { Wallet, PlusCircle, MinusCircle, ArrowUpRight, ArrowDownLeft, Gift, PiggyBank, CircleDollarSign, CalendarIcon, Copy, Info, Clock, XCircle, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -520,43 +520,54 @@ export default function WalletPage() {
                                 <CardTitle>Transaction History</CardTitle>
                                 <CardDescription>Your last 10 transactions. Use the filter to see more.</CardDescription>
                             </div>
-                            <Popover>
-                                <PopoverTrigger asChild>
+                             <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <Button
+                                        id="date"
+                                        variant={"outline"}
+                                        className={cn(
+                                        "w-full sm:w-[300px] justify-start text-left font-normal",
+                                        !dateRange && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {dateRange?.from ? (
+                                        dateRange.to ? (
+                                            <>
+                                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                                            {format(dateRange.to, "LLL dd, y")}
+                                            </>
+                                        ) : (
+                                            format(dateRange.from, "LLL dd, y")
+                                        )
+                                        ) : (
+                                        <span>Pick a date range</span>
+                                        )}
+                                    </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="end">
+                                        <Calendar
+                                            initialFocus
+                                            mode="range"
+                                            defaultMonth={dateRange?.from}
+                                            selected={dateRange}
+                                            onSelect={setDateRange}
+                                            numberOfMonths={2}
+                                            disabled={(date) => date > new Date() || date < subMonths(new Date(), 3)}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                                 <Button
-                                    id="date"
-                                    variant={"outline"}
-                                    className={cn(
-                                    "w-full sm:w-[300px] justify-start text-left font-normal",
-                                    !dateRange && "text-muted-foreground"
-                                    )}
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={fetchTransactions}
+                                    disabled={loadingTransactions}
+                                    aria-label="Refresh transactions"
                                 >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateRange?.from ? (
-                                    dateRange.to ? (
-                                        <>
-                                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                                        {format(dateRange.to, "LLL dd, y")}
-                                        </>
-                                    ) : (
-                                        format(dateRange.from, "LLL dd, y")
-                                    )
-                                    ) : (
-                                    <span>Pick a date range</span>
-                                    )}
+                                    <RefreshCw className={cn("h-4 w-4", loadingTransactions && "animate-spin")} />
                                 </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="end">
-                                    <Calendar
-                                        initialFocus
-                                        mode="range"
-                                        defaultMonth={dateRange?.from}
-                                        selected={dateRange}
-                                        onSelect={setDateRange}
-                                        numberOfMonths={2}
-                                        disabled={(date) => date > new Date() || date < subMonths(new Date(), 3)}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
