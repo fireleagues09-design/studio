@@ -17,7 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, UserCredential, getAdditionalUserInfo, sendSignInLinkToEmail, fetchSignInMethodsForEmail } from "firebase/auth";
+import { signInWithPopup, UserCredential, getAdditionalUserInfo, createUserWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail } from "firebase/auth";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -150,24 +150,41 @@ export default function RegisterPage() {
             return;
         }
 
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+            username: username,
+            email: user.email,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+            isRegistered: true,
+            emailVerified: false,
+        });
+        
         const actionCodeSettings = {
-            url: `${window.location.origin}/auth/verify`,
+            url: `${window.location.origin}/login`,
             handleCodeInApp: true,
         };
+        await sendEmailVerification(user, actionCodeSettings);
+        
+        await auth.signOut();
 
-        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-
-        const registrationDetails = { email, password, username };
-        window.localStorage.setItem('registrationDetails', JSON.stringify(registrationDetails));
-
+        toast({
+            title: 'Almost there!',
+            description: "We've sent a verification link to your email.",
+        });
+        
         router.push('/auth/verify');
 
     } catch (error: any) {
-        console.error("Error during registration initiation:", error);
-        let errorMessage = "Could not start the registration process. Please try again.";
+        console.error("Error during registration:", error);
+        let errorMessage = "Could not create your account. Please try again.";
         if (error.code === 'auth/quota-exceeded') {
             errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
             setIsEmailServiceDown(true);
+        } else if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'This email is already registered. Please log in.';
         }
         toast({
             title: "Registration Error",
@@ -182,8 +199,6 @@ export default function RegisterPage() {
     setLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        // handleAuthSuccess will now manage new vs existing users
-        // and create a partial profile for new users.
         await handleAuthSuccess(result);
     } catch (error: any) {
         console.error("Google sign up error:", error);
