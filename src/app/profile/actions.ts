@@ -23,12 +23,11 @@ export async function setUsername(
     try {
         const decodedToken = await auth.verifyIdToken(idToken);
         const userId = decodedToken.uid;
-        const userEmail = decodedToken.email;
         
         const userRef = db.collection('users').doc(userId);
         const usernameQuery = db.collection('users').where('username', '==', username);
 
-        // Transaction to ensure username is unique and then create the new user profile.
+        // Transaction to ensure username is unique and then update the profile.
         await db.runTransaction(async (transaction) => {
             const usernameSnapshot = await transaction.get(usernameQuery);
             if (!usernameSnapshot.empty) {
@@ -36,21 +35,16 @@ export async function setUsername(
             }
 
             const userDoc = await transaction.get(userRef);
-            if (userDoc.exists) {
-                // This case should ideally not be hit if the UI flow is correct,
-                // but as a safeguard, we prevent overwriting an existing profile's username.
-                throw new Error("A profile for this user already exists.");
+            if (!userDoc.exists) {
+                // This should not happen if the login/register flow is correct, but acts as a safeguard.
+                throw new Error("User profile does not exist. Please contact support.");
             }
             
-            // Create the new user profile document.
-            const newUserProfile = {
+            // Update the existing user document to mark registration as complete.
+            transaction.update(userRef, {
                 username: username,
-                email: userEmail,
                 isRegistered: true, // Mark profile as complete
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: FieldValue.serverTimestamp(),
-            };
-            transaction.set(userRef, newUserProfile);
+            });
         });
 
         return { success: true, message: 'Username set successfully!' };

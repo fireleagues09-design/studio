@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -15,8 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, UserCredential } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification, getAdditionalUserInfo } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -34,24 +35,68 @@ export default function LoginPage() {
     hideLoader();
   }, [hideLoader]);
 
-  const handleAuthSuccess = async (userCredential: UserCredential) => {
+  const handleLoginSuccess = async (userCredential: UserCredential) => {
     const user = userCredential.user;
     const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
 
-    if (userDoc.exists()) {
-        // Existing user, normal login.
-        toast({ title: "Success", description: "Logged in successfully!" });
-        router.push("/");
-    } else {
-        // This is a new user logging in for the first time.
-        // We don't create a document here. We redirect them to complete their profile,
-        // where the document will be created.
-        toast({
-            title: "Welcome!",
-            description: "Please complete your profile to continue.",
-        });
-        router.push("/complete-profile");
+    try {
+        const userDoc = await getDoc(userDocRef);
+
+        // CASE 1: Auth user exists, but Firestore doc is missing (orphan from failed registration)
+        if (!userDoc.exists()) {
+            toast({
+                title: "Incomplete Registration",
+                description: "Your profile is incomplete. We're guiding you to finish setup.",
+            });
+            // Re-create the placeholder doc to fix the orphan account
+            await setDoc(userDocRef, {
+                email: user.email,
+                username: user.displayName || '',
+                isRegistered: false,
+                emailVerified: user.emailVerified,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+
+            if (!user.emailVerified) {
+                await sendEmailVerification(user);
+                router.push('/auth/verify');
+            } else {
+                router.push('/complete-profile');
+            }
+            return;
+        }
+        
+        const profileData = userDoc.data();
+
+        // CASE 2: Firestore doc exists, but email is not verified
+        if (!user.emailVerified) {
+            toast({
+                title: "Email Not Verified",
+                description: "Redirecting you to the verification page to complete your registration.",
+            });
+            await sendEmailVerification(user); // Resend link
+            router.push('/auth/verify');
+            return;
+        }
+        
+        // CASE 3: User is fully authenticated and verified, check if profile is complete
+        if (!profileData.isRegistered) {
+            toast({
+                title: "Welcome Back!",
+                description: "Please complete your profile to continue.",
+            });
+            router.push("/complete-profile");
+        } else {
+            // Normal login
+            toast({ title: "Success", description: "Logged in successfully!" });
+            router.push("/");
+        }
+
+    } catch (error: any) {
+        console.error("Error during login success handling:", error);
+        toast({ title: "Login Error", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
+        setLoading(false);
     }
   };
   
@@ -63,19 +108,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
-        if (!userCredential.user.emailVerified) {
-            // The user is authenticated but hasn't verified their email.
-            // Redirect them to the verification page to complete the process.
-            toast({
-                title: "Email Not Verified",
-                description: "Redirecting you to the verification page to complete your registration.",
-            });
-            router.push('/auth/verify');
-            return;
-        }
-
-        await handleAuthSuccess(userCredential);
+        await handleLoginSuccess(userCredential);
       } catch (error: any) {
         console.error("Error signing in:", error);
         let description = "Failed to login. Please check your credentials.";
@@ -83,6 +116,7 @@ export default function LoginPage() {
           description = "Invalid email or password.";
         }
         toast({ title: "Login Error", description, variant: "destructive" });
+      } finally {
         setLoading(false);
       }
   };
@@ -91,12 +125,13 @@ export default function LoginPage() {
       setLoading(true);
       try {
         const result = await signInWithPopup(auth, googleProvider);
-        await handleAuthSuccess(result);
+        await handleLoginSuccess(result);
       } catch (error: any) {
         console.error("Google login error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
         }
+      } finally {
         setLoading(false);
       }
   }

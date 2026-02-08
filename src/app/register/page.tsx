@@ -17,6 +17,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, User as FirebaseUser, updateProfile, getAdditionalUserInfo } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -69,6 +70,18 @@ export default function RegisterPage() {
         userToCleanUp = userCredential.user;
 
         await updateProfile(userToCleanUp, { displayName: username });
+
+        // Create the initial user document in Firestore
+        const userDocRef = doc(db, 'users', userToCleanUp.uid);
+        await setDoc(userDocRef, {
+            username: username,
+            email: userToCleanUp.email,
+            isRegistered: false, // Profile is incomplete until they confirm username
+            emailVerified: false,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+        });
+
         await sendEmailVerification(userToCleanUp);
 
         toast({
@@ -80,24 +93,20 @@ export default function RegisterPage() {
 
     } catch (error: any) {
         console.error("Error during registration:", error);
-        let errorMessage = "Could not create your account. Please try again.";
+        
+        // If auth user was created but a subsequent step failed, delete the orphaned user.
+        if (userToCleanUp) {
+            await userToCleanUp.delete().catch(e => console.error("Critical: Failed to delete orphaned user during cleanup:", e));
+        }
 
+        let errorMessage = "Could not create your account. Please try again.";
         if (error.code === 'auth/email-already-in-use') {
              errorMessage = "This email is already registered. Please log in instead.";
         } else if (error.code === 'auth/quota-exceeded') {
             errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
             setIsEmailServiceDown(true);
-        } else if (error.code === 'auth/operation-not-allowed') {
-            errorMessage = 'Email/Password sign-up is not enabled. Please enable it in your Firebase project authentication settings.';
-        } else if (error.message) {
-            errorMessage = error.message;
         }
-
-        // If auth user was created but a subsequent step failed, delete the orphaned user.
-        if (userToCleanUp) {
-            await userToCleanUp.delete().catch(e => console.error("Critical: Failed to delete orphaned user:", e));
-        }
-
+        
         toast({
             title: "Registration Error",
             description: errorMessage,
@@ -115,12 +124,25 @@ export default function RegisterPage() {
         const additionalInfo = getAdditionalUserInfo(result);
         
         if (additionalInfo?.isNewUser) {
+            // Create their Firestore document right away
+            const user = result.user;
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, {
+                username: user.displayName || '',
+                email: user.email,
+                isRegistered: false, // User still needs to confirm/set their username
+                emailVerified: user.emailVerified,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+
             toast({
                 title: "Account Created!",
                 description: "Let's set up your profile.",
             });
             router.push('/complete-profile');
         } else {
+             // Existing user logging in
              toast({ title: "Success", description: "Logged in successfully!" });
              router.push('/');
         }
@@ -263,5 +285,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    
