@@ -37,7 +37,7 @@ export async function setUsername(
 
             const userDoc = await transaction.get(userRef);
             
-            if (userDoc.exists()) {
+            if (userDoc.exists) {
                 // Document exists, update it.
                 if (userDoc.data()?.isRegistered === true) {
                      throw new Error("Username has already been set for this account.");
