@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,6 +19,7 @@ export default function CompleteProfilePage() {
     const [username, setUsernameState] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [isGoogleUser, setIsGoogleUser] = useState(false);
     
     const router = useRouter();
     const { hideLoader } = useLoading();
@@ -32,6 +32,12 @@ export default function CompleteProfilePage() {
                 // Pre-fill username from Auth profile if it exists (from email signup)
                 if (currentUser.displayName) {
                     setUsernameState(currentUser.displayName);
+                }
+                // Check provider to conditionally show logout button
+                if (currentUser.providerData.some(provider => provider.providerId === 'google.com')) {
+                    setIsGoogleUser(true);
+                } else {
+                    setIsGoogleUser(false);
                 }
             } else {
                 // If not logged in, they shouldn't be here.
@@ -119,14 +125,16 @@ export default function CompleteProfilePage() {
                             <Button type="submit" disabled={anyLoading} className="w-full">
                                 {isSaving ? 'Saving...' : 'Save and Continue'}
                             </Button>
-                            <Button type="button" variant="outline" onClick={handleLogout} disabled={anyLoading} className="w-full">
-                                {isLoggingOut ? 'Logging out...' : (
-                                    <>
-                                        <LogOut className="mr-2 h-4 w-4" />
-                                        Logout
-                                    </>
-                                )}
-                            </Button>
+                            {isGoogleUser && (
+                                <Button type="button" variant="outline" onClick={handleLogout} disabled={anyLoading} className="w-full">
+                                    {isLoggingOut ? 'Logging out...' : (
+                                        <>
+                                            <LogOut className="mr-2 h-4 w-4" />
+                                            Logout
+                                        </>
+                                    )}
+                                </Button>
+                            )}
                         </div>
                     </form>
                 </CardContent>
