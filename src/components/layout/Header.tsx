@@ -261,23 +261,23 @@ const BestiePage = () => {
       const nextSide = noButtonLastSide === 'left' ? 'right' : 'left';
       setNoButtonLastSide(nextSide);
       
-      const top = Math.random() * 80 + 10; // 10vh to 90vh
+      const top = Math.random() * 80 + 10; // 10% to 90%
       
       const newPos: React.CSSProperties = {
-          position: 'fixed',
-          top: `${top}vh`,
+          position: 'absolute',
+          top: `${top}%`,
           transform: `translateY(-50%)`,
           transition: 'top 0.3s ease-out, left 0.3s ease-out, right 0.3s ease-out',
       };
 
       if (nextSide === 'left') {
-          const left = Math.random() * 20 + 5; // 5vw to 25vw from left edge
-          newPos.left = `${left}vw`;
-          newPos.right = 'auto'; // Important to reset the other property
+          const left = Math.random() * 20 + 5; // 5% to 25% from left edge
+          newPos.left = `${left}%`;
+          newPos.right = 'auto';
       } else { // right
-          const right = Math.random() * 20 + 5; // 5vw to 25vw from right edge
-          newPos.right = `${right}vw`;
-          newPos.left = 'auto'; // Important to reset the other property
+          const right = Math.random() * 20 + 5; // 5% to 25% from right edge
+          newPos.right = `${right}%`;
+          newPos.left = 'auto';
       }
       
       setNoButtonPos(newPos);
@@ -343,7 +343,7 @@ const BestiePage = () => {
               onClick={handleNoClick}
               onMouseEnter={handleNoHover}
               style={noButtonPos}
-              className={cn("animate-in fade-in slide-in-from-bottom-5 duration-500", noButtonPos.position === 'fixed' && 'z-50')}
+              className={cn("animate-in fade-in slide-in-from-bottom-5 duration-500", noButtonPos.position === 'absolute' && 'z-50')}
             >
               No
             </Button>
@@ -923,6 +923,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
