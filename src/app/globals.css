@@ -61,7 +61,7 @@
   }
 
   /* --- THEMES --- */
-  .theme-violet {
+  :root.theme-violet {
     --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --ring: 262.1 83.3% 57.8%;
@@ -80,7 +80,7 @@
     --loader-glow-secondary: #4b1a85;
   }
   
-  .theme-green {
+  :root.theme-green {
     --primary: 142.1 70.6% 45.3%;
     --primary-foreground: 144.9 80.4% 96.1%;
     --ring: 142.1 70.6% 45.3%;
@@ -99,7 +99,7 @@
     --loader-glow-secondary: #2b8a3e;
   }
 
-  .theme-pink {
+  :root.theme-pink {
     --primary: 340.9 95.8% 60.6%;
     --primary-foreground: 355.7 100% 97.3%;
     --ring: 340.9 95.8% 60.6%;
@@ -118,7 +118,7 @@
     --loader-glow-secondary: #d6336c;
   }
 
-  .theme-blue {
+  :root.theme-blue {
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 210 40% 98%;
     --ring: 217.2 91.2% 59.8%;
@@ -137,7 +137,7 @@
     --loader-glow-secondary: #1864ab;
   }
 
-  .theme-yellow {
+  :root.theme-yellow {
     --primary: 47.9 95.8% 53.1%;
     --primary-foreground: 48 95.5% 95.3%;
     --ring: 47.9 95.8% 53.1%;
@@ -156,7 +156,7 @@
     --loader-glow-secondary: #f59f00;
   }
 
-  .theme-red {
+  :root.theme-red {
     --primary: 355.7 89.7% 61.2%;
     --primary-foreground: 355.7 100% 97.3%;
     --ring: 355.7 89.7% 61.2%;
@@ -175,7 +175,7 @@
     --loader-glow-secondary: #e03131;
   }
 
-  .theme-teal {
+  :root.theme-teal {
     --primary: 175.9 74.4% 39.8%;
     --primary-foreground: 180 100% 97.1%;
     --ring: 175.9 74.4% 39.8%;
@@ -194,7 +194,7 @@
     --loader-glow-secondary: #0ca678;
   }
 
-  .theme-lime {
+  :root.theme-lime {
     --primary: 74.9 83.1% 54.1%;
     --primary-foreground: 75 90% 95.3%;
     --ring: 74.9 83.1% 54.1%;
@@ -213,7 +213,7 @@
     --loader-glow-secondary: #94d82d;
   }
 
-  .theme-cyan {
+  :root.theme-cyan {
     --primary: 198.8 93.4% 52.4%;
     --primary-foreground: 204 100% 96.9%;
     --ring: 198.8 93.4% 52.4%;
@@ -232,7 +232,7 @@
     --loader-glow-secondary: #228be6;
   }
   
-  .theme-indigo {
+  :root.theme-indigo {
     --primary: 236.9 81.3% 63.3%;
     --primary-foreground: 240 100% 97.1%;
     --ring: 236.9 81.3% 63.3%;
@@ -251,7 +251,7 @@
     --loader-glow-secondary: #5c7cfa;
   }
 
-  .theme-grape {
+  :root.theme-grape {
     --primary: 288.1 72.8% 57.5%;
     --primary-foreground: 286.7 100% 97.3%;
     --ring: 288.1 72.8% 57.5%;
@@ -270,7 +270,7 @@
     --loader-glow-secondary: #cc5de8;
   }
 
-  .theme-spring-green {
+  :root.theme-spring-green {
     --primary: 145 100% 45%;
     --primary-foreground: 145 100% 95%;
     --ring: 145 100% 45%;
