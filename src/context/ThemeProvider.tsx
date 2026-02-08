@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'orange' | 'violet'
+export type Theme = 'orange' | 'violet'
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -12,12 +12,12 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme
-  toggleTheme: () => void
+  setTheme: (theme: Theme) => void
 }
 
 const initialState: ThemeProviderState = {
   theme: 'orange',
-  toggleTheme: () => null,
+  setTheme: () => null,
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
@@ -28,12 +28,12 @@ export function ThemeProvider({
   storageKey = 'fireleagues-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  const [theme, setThemeState] = useState<Theme>(defaultTheme)
   
   useEffect(() => {
     const storedTheme = localStorage.getItem(storageKey) as Theme | null;
     if (storedTheme) {
-        setTheme(storedTheme)
+        setThemeState(storedTheme)
     }
   }, [storageKey])
 
@@ -46,15 +46,14 @@ export function ThemeProvider({
     // 'orange' theme is the default, no class needed
   }, [theme])
 
-  const toggleTheme = () => {
-      const newTheme = theme === 'orange' ? 'violet' : 'orange';
+  const setTheme = (newTheme: Theme) => {
       localStorage.setItem(storageKey, newTheme);
-      setTheme(newTheme);
+      setThemeState(newTheme);
   }
 
   const value = {
     theme,
-    toggleTheme,
+    setTheme,
   }
 
   return (

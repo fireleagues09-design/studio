@@ -31,7 +31,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
@@ -45,7 +51,9 @@ import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { useTheme } from "@/context/ThemeProvider";
+import { useTheme, type Theme } from "@/context/ThemeProvider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 
 type WalletData = {
@@ -70,7 +78,7 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
-  const { toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   
   useEffect(() => {
     setLoading(true);
@@ -163,10 +171,20 @@ export function Header() {
             </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
-            <Palette className="mr-2 h-4 w-4" />
-            <span>Change Theme</span>
-        </DropdownMenuItem>
+         <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+                <Palette className="mr-2 h-4 w-4" />
+                <span>Change Theme</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+                        <DropdownMenuRadioItem value="orange">Orange</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="violet">Violet</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+        </DropdownMenuSub>
         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
@@ -208,7 +226,23 @@ export function Header() {
         )}
         
         <Separator className="my-2"/>
-
+        
+        <div className="space-y-3 px-2 py-2">
+            <Label className="text-muted-foreground">Theme</Label>
+            <RadioGroup defaultValue={theme} onValueChange={(value) => setTheme(value as Theme)} className="pl-1">
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="orange" id="theme-orange" />
+                    <Label htmlFor="theme-orange">Orange</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="violet" id="theme-violet" />
+                    <Label htmlFor="theme-violet">Violet</Label>
+                </div>
+            </RadioGroup>
+        </div>
+        
+        <Separator className="my-2"/>
+        
         <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-base">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
@@ -285,9 +319,20 @@ export function Header() {
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-                      <Palette className="h-5 w-5" />
-                  </Button>
+                  <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                             <Button variant="ghost" size="icon" aria-label="Toggle theme">
+                                <Palette className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+                                <DropdownMenuRadioItem value="orange">Orange</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="violet">Violet</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
                   <Button variant="ghost" size="sm" asChild>
                     <Link href="/login">
                       Login
@@ -330,10 +375,6 @@ export function Header() {
                           </Link>
                       </SheetClose>
                     ))}
-                    <Button variant="ghost" onClick={() => { toggleTheme(); setSheetOpen(false); }} className="justify-start text-lg font-medium">
-                        <Palette className="mr-2 h-4 w-4" />
-                        Change Theme
-                    </Button>
                     <div className="border-t pt-4 flex flex-col space-y-3">
                       {loading ? (
                           <div className="space-y-2">
@@ -344,6 +385,20 @@ export function Header() {
                          mobileUserMenuItems
                       ) : (
                         <>
+                           <div className="space-y-3 px-2 py-2">
+                                <Label className="text-muted-foreground">Theme</Label>
+                                <RadioGroup defaultValue={theme} onValueChange={(value) => setTheme(value as Theme)} className="pl-1">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="orange" id="m-theme-orange" />
+                                        <Label htmlFor="m-theme-orange">Orange</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="violet" id="m-theme-violet" />
+                                        <Label htmlFor="m-theme-violet">Violet</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                            <Separator />
                           <SheetClose asChild>
                               <Button variant="outline" asChild className="w-full justify-start">
                                 <Link href="/login">
