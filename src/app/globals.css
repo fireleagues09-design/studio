@@ -373,17 +373,20 @@
 
 @keyframes fall-with-wind {
   0% {
-    transform: translateY(-300%) translateX(0) rotate(0deg);
+    transform: translateY(-600%) translateX(0) rotate(0deg);
     opacity: 0;
   }
   20% {
-    transform: translateY(-200%) translateX(-20px) rotate(-15deg);
+    transform: translateY(-400%) translateX(-40px) rotate(-25deg);
   }
   40% {
-    transform: translateY(-100%) translateX(20px) rotate(15deg);
+    transform: translateY(-200%) translateX(40px) rotate(25deg);
   }
   60% {
-    transform: translateY(-50%) translateX(-15px) rotate(-10deg);
+    transform: translateY(-100%) translateX(-30px) rotate(-15deg);
+  }
+  80% {
+    transform: translateY(-50%) translateX(15px) rotate(10deg);
   }
   100% {
     transform: translateY(0) translateX(0) rotate(0deg);

@@ -426,7 +426,7 @@ const BestiePage = () => {
         buttons = (
             <div className="relative h-11">
                 {showFinalFall && (
-                    <Button size="lg" style={{ animation: 'fall-with-wind 1.5s ease-out forwards' }}>
+                    <Button size="lg" style={{ animation: 'fall-with-wind 15s ease-out forwards' }}>
                         Yes
                     </Button>
                 )}
@@ -961,6 +961,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
