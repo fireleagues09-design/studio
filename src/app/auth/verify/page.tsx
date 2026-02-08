@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification, signOut, deleteUser } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteDoc, doc } from 'firebase/firestore';
-
 
 export default function VerifyPage() {
     const router = useRouter();
@@ -41,14 +40,8 @@ export default function VerifyPage() {
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
 
         try {
-            // Delete Firestore doc first
-            await deleteDoc(doc(db, "users", targetUser.uid));
-        } catch (error) {
-             console.error("Failed to delete user document during cleanup:", error);
-        }
-
-        try {
-            // Then delete auth user
+            // Delete the unverified user from Firebase Authentication.
+            // No database document should exist yet, so we don't touch Firestore.
             await deleteUser(targetUser);
         } catch (error) {
              console.error("Failed to delete auth user during cleanup:", error);
