@@ -2,11 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 const EMOJIS = ['🎁', '💖'];
 
 const BestiePage = () => {
   const [particles, setParticles] = useState<{ id: number; content: string | null; x: number; delay: number; duration: number; type: 'emoji' | 'snow' }[]>([]);
+  const [interactionStep, setInteractionStep] = useState(0);
+  const [showButtons, setShowButtons] = useState(true);
 
   useEffect(() => {
     const generateParticles = () => {
@@ -28,13 +31,69 @@ const BestiePage = () => {
     generateParticles();
   }, []);
 
+  const handleNoClick = () => {
+    if (interactionStep === 0) {
+      setInteractionStep(1);
+    } else if (interactionStep === 2) {
+      setInteractionStep(3);
+    }
+  };
+
+  const handleContinueClick = () => {
+    setShowButtons(false);
+    setInteractionStep(2);
+    setTimeout(() => {
+      setShowButtons(true);
+    }, 100); // Small delay to trigger transition
+  };
+
+  const renderContent = () => {
+    switch (interactionStep) {
+      case 1:
+        return {
+          title: 'whyyyyyy ???',
+          buttons: <Button size="lg" onClick={handleContinueClick}>Continue</Button>
+        };
+      case 2:
+      case 3: // Same title for step 3
+        return {
+          title: 'You must have to playyyyyy and click yesss only or if you click no button then i will remove the no nutton',
+          buttons: (
+            <div className={cn(
+              "flex gap-4 justify-center transition-opacity duration-500",
+              showButtons ? "opacity-100" : "opacity-0"
+            )}>
+              <Button size="lg">Yes</Button>
+              {interactionStep === 2 && (
+                <Button size="lg" variant="outline" onClick={handleNoClick}>No</Button>
+              )}
+            </div>
+          )
+        };
+      case 0:
+      default:
+        return {
+          title: 'Hey wanna play a game',
+          buttons: (
+            <div className="flex gap-4 justify-center">
+              <Button size="lg">Yes</Button>
+              <Button size="lg" variant="outline" onClick={handleNoClick}>No</Button>
+            </div>
+          )
+        };
+    }
+  };
+
+  const { title, buttons } = renderContent();
+
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950/95 overflow-hidden">
       <div className="falling-emojis">
         {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
             key={id}
-            className={type === 'emoji' ? 'emoji' : 'snowflake'}
+            className={type === 'emoji' ? 'emoji text-base' : 'snowflake'}
             style={{
               left: `${x}vw`,
               animationDelay: `${delay}s`,
@@ -46,17 +105,12 @@ const BestiePage = () => {
         ))}
       </div>
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-        <div className="text-center p-8 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg">
+        <div className="text-center p-8 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg max-w-md">
           <h1 className="text-4xl font-bold text-primary mb-6">
-            Hey wanna play a game
+            {title}
           </h1>
-          <div className="flex gap-4 justify-center">
-            <Button size="lg">
-              Yes
-            </Button>
-            <Button size="lg" variant="outline">
-              No
-            </Button>
+          <div className="min-h-[44px]">
+            {buttons}
           </div>
         </div>
       </div>
