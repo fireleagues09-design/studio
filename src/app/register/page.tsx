@@ -16,8 +16,20 @@ import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, User as FirebaseUser, updateProfile, getAdditionalUserInfo } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { 
+    signInWithPopup, 
+    createUserWithEmailAndPassword, 
+    sendEmailVerification, 
+    updateProfile, 
+    getAdditionalUserInfo,
+    signInWithEmailAndPassword
+} from "firebase/auth";
+import { 
+    doc, 
+    setDoc, 
+    serverTimestamp,
+    getDoc
+} from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -63,55 +75,104 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    let userToCleanUp: FirebaseUser | null = null;
     
     try {
+        // 1. Try normal registration
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        userToCleanUp = userCredential.user;
+        const user = userCredential.user;
 
-        await updateProfile(userToCleanUp, { displayName: username });
+        await updateProfile(user, { displayName: username });
 
-        // Create the initial user document in Firestore
-        const userDocRef = doc(db, 'users', userToCleanUp.uid);
-        await setDoc(userDocRef, {
+        // Create the Firestore doc
+        await setDoc(doc(db, "users", user.uid), {
             username: username,
-            email: userToCleanUp.email,
-            isRegistered: false, // Profile is incomplete until they confirm username
+            email: user.email,
+            isRegistered: false,
             emailVerified: false,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
         });
 
-        await sendEmailVerification(userToCleanUp);
-
+        // Send verification and redirect
+        await sendEmailVerification(user);
         toast({
             title: 'Almost there!',
             description: "We've sent a verification link to your email.",
         });
-        
         router.push('/auth/verify');
 
     } catch (error: any) {
-        console.error("Error during registration:", error);
-        
-        // If auth user was created but a subsequent step failed, delete the orphaned user.
-        if (userToCleanUp) {
-            await userToCleanUp.delete().catch(e => console.error("Critical: Failed to delete orphaned user during cleanup:", e));
-        }
-
-        let errorMessage = "Could not create your account. Please try again.";
+        // IMPORTANT PART: Handle existing email
         if (error.code === 'auth/email-already-in-use') {
-             errorMessage = "This email is already registered. Please log in instead.";
-        } else if (error.code === 'auth/quota-exceeded') {
-            errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
-            setIsEmailServiceDown(true);
-        }
+            toast({
+                title: 'Account Found',
+                description: 'This email is in use. We will try logging you in to complete your registration.',
+            });
+
+            try {
+                // 2. User already exists in Auth -> sign them in
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                const userDocRef = doc(db, "users", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                // 3. Firestore doc missing -> incomplete registration (repair it)
+                if (!userDocSnap.exists()) {
+                    await setDoc(userDocRef, {
+                        username: user.displayName || username, // Use existing or new username
+                        email: user.email,
+                        isRegistered: false,
+                        emailVerified: user.emailVerified,
+                        wallet: { deposit: 0, winning: 0, bonus: 0 },
+                        registeredOn: serverTimestamp(),
+                    });
+                }
+                
+                // 4. Send verification and redirect (covers both repaired and existing-but-unverified users)
+                if (!user.emailVerified) {
+                    await sendEmailVerification(user);
+                    toast({
+                        title: 'Verification Required',
+                        description: "We've sent a new verification link to your email.",
+                    });
+                    router.push('/auth/verify');
+                    return;
+                }
+
+                // 5. If user is already verified, the main auth listener will redirect them correctly.
+                router.push('/');
+
+            } catch (signInError: any) {
+                // This catch handles if signInWithEmailAndPassword fails (e.g., wrong password)
+                console.error("Sign-in attempt failed during registration recovery:", signInError);
+                let errorMessage = "We found an account with that email, but the password was incorrect. Please try logging in directly.";
+                if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
+                   errorMessage = "The password you entered is incorrect for this account. Please try logging in instead."
+                }
+                toast({
+                    title: "Login Failed",
+                    description: errorMessage,
+                    variant: "destructive",
+                });
+            }
         
-        toast({
-            title: "Registration Error",
-            description: errorMessage,
-            variant: "destructive",
-        });
+        } else if (error.code === 'auth/quota-exceeded') {
+            toast({
+                title: "Registration Error",
+                description: 'Our email service is temporarily at its limit. Please sign up with Google or try again later.',
+                variant: 'destructive'
+            });
+            setIsEmailServiceDown(true);
+        } else {
+            // Handle other registration errors
+            console.error("Error during registration:", error);
+            toast({
+                title: "Registration Error",
+                description: error.message || 'Could not create your account. Please try again.',
+                variant: "destructive",
+            });
+        }
     } finally {
         setLoading(false);
     }
@@ -140,7 +201,15 @@ export default function RegisterPage() {
                 title: "Account Created!",
                 description: "Let's set up your profile.",
             });
-            router.push('/complete-profile');
+            
+             if (user.emailVerified) {
+                router.push('/complete-profile');
+             } else {
+                // This case is rare for Google Auth but good to handle.
+                await sendEmailVerification(user);
+                router.push('/auth/verify');
+             }
+
         } else {
              // Existing user logging in
              toast({ title: "Success", description: "Logged in successfully!" });
