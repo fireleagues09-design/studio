@@ -168,8 +168,9 @@ const BestiePage = () => {
     if (step === 'chase') {
       chaseActiveRef.current = true;
       setShowCatchMessage(false);
+      chasePathIndexRef.current = 0;
 
-      // Initial hands appear from the sides
+      // Hands appear from the side
       setHandsPos({
         left: { top: '50%', left: '10%', opacity: 1, transition: 'opacity 0.5s' },
         right: { top: '50%', left: '90%', opacity: 1, transition: 'opacity 0.5s' },
@@ -179,46 +180,52 @@ const BestiePage = () => {
         { top: '15%', left: '15%' }, 
         { top: '80%', left: '85%' },
         { top: '20%', left: '90%' },
-        { top: '85%', left: '10%' }, 
+        { top: '85%', left: '10%' },
+        { top: '50%', left: '50%' },
+        { top: '15%', left: '80%' },
+        { top: '75%', left: '20%' },
       ];
 
       const runChaseSequence = () => {
         if (!chaseActiveRef.current) return;
 
-        // 1. Button jumps instantly to a new spot
-        const nextPos = chasePath[chasePathIndexRef.current % chasePath.length];
+        // 1. Button jumps to a new position and stays
+        const nextButtonPos = chasePath[chasePathIndexRef.current % chasePath.length];
         chasePathIndexRef.current += 1;
-        setRunawayPos(currentPos => ({
-            ...currentPos,
-            top: nextPos.top,
-            left: nextPos.left,
-            transition: 'none', // Instant jump
-        }));
+        setRunawayPos({
+            position: 'absolute',
+            opacity: 1,
+            top: nextButtonPos.top,
+            left: nextButtonPos.left,
+            transform: 'translate(-50%, -50%)',
+            transition: 'top 0.2s ease-out, left 0.2s ease-out',
+        });
 
-        // 2. Hands wait, then pursue
+        // 2. After a short delay, hands start moving to catch it
         setTimeout(() => {
           if (!chaseActiveRef.current) return;
           setHandsPos({
-            left: { top: nextPos.top, left: `calc(${nextPos.left} - 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
-            right: { top: nextPos.top, left: `calc(${nextPos.left} + 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
+            left: { top: nextButtonPos.top, left: `calc(${nextButtonPos.left} - 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
+            right: { top: nextButtonPos.top, left: `calc(${nextButtonPos.left} + 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
           });
-        }, 200); // A short delay before hands start moving
-
-        // 3. Schedule next jump
-        setTimeout(runChaseSequence, 1200); // Loop every 1.2 seconds
+        }, 300);
       };
 
-      const startChaseTimeout = setTimeout(runChaseSequence, 500);
+      // Run the sequence every 1.5 seconds
+      const sequenceInterval = setInterval(runChaseSequence, 1500);
+      runChaseSequence(); // Run it once immediately
 
+      // After 10 seconds, stop the chase and go to 'caught' state
       catchTimeoutRef.current = setTimeout(() => {
+          clearInterval(sequenceInterval);
           chaseActiveRef.current = false;
           setStep('caught');
       }, 10000);
 
       return () => {
+        clearInterval(sequenceInterval);
         chaseActiveRef.current = false;
         if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
-        clearTimeout(startChaseTimeout);
       }
     }
   }, [step]);
@@ -416,7 +423,7 @@ const BestiePage = () => {
         {title && <h1 key={step} className="text-xl md:text-2xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
           {title}
         </h1>}
-        <div className="min-h-[44px] flex items-center justify-center">
+        <div className="relative flex-grow">
           {buttons}
         </div>
       </div>
@@ -937,6 +944,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
