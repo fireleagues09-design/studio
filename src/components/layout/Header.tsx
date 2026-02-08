@@ -251,7 +251,7 @@ const BestiePage = () => {
   // Effect for final fall
   useEffect(() => {
     if (step === 'final') {
-        const timer = setTimeout(() => setShowFinalFall(true), 500);
+        const timer = setTimeout(() => setShowFinalFall(true), 9000);
         return () => clearTimeout(timer);
     }
   }, [step]);
@@ -944,6 +944,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
