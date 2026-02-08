@@ -325,7 +325,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="relative flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               size="lg"
@@ -913,5 +913,6 @@ export function Header() {
     </>
   );
 }
+
 
 
