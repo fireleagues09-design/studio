@@ -258,28 +258,29 @@ const BestiePage = () => {
       
       setNoHoverCount(c => c + 1);
 
-      // Determine the next side to avoid consecutive teleports to the same side
       const nextSide = noButtonLastSide === 'left' ? 'right' : 'left';
       setNoButtonLastSide(nextSide);
       
-      // Generate coordinates for far left/right of the viewport
       const top = Math.random() * 80 + 10; // 10vh to 90vh
-      let left;
-
-      if (nextSide === 'left') {
-          left = Math.random() * 20 + 5; // 5vw to 25vw
-      } else { // right
-          left = Math.random() * 20 + 75; // 75vw to 95vw
-      }
       
-      setNoButtonPos({
+      const newPos: React.CSSProperties = {
           position: 'fixed',
           top: `${top}vh`,
-          left: `${left}vw`,
-          // Adjust transform to ensure the button stays fully on screen
-          transform: `translate(${nextSide === 'left' ? '0' : '-100%'}, -50%)`,
-          transition: 'top 0.3s ease-out, left 0.3s ease-out',
-      });
+          transform: `translateY(-50%)`,
+          transition: 'top 0.3s ease-out, left 0.3s ease-out, right 0.3s ease-out',
+      };
+
+      if (nextSide === 'left') {
+          const left = Math.random() * 20 + 5; // 5vw to 25vw from left edge
+          newPos.left = `${left}vw`;
+          newPos.right = 'auto'; // Important to reset the other property
+      } else { // right
+          const right = Math.random() * 20 + 5; // 5vw to 25vw from right edge
+          newPos.right = `${right}vw`;
+          newPos.left = 'auto'; // Important to reset the other property
+      }
+      
+      setNoButtonPos(newPos);
     }
   };
 
@@ -922,6 +923,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
