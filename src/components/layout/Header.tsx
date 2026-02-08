@@ -111,21 +111,22 @@ const BestiePage = () => {
   // States for 'must_play' (teleport) step
   const [noHoverCount, setNoHoverCount] = useState(0);
   const [noButtonPos, setNoButtonPos] = useState<React.CSSProperties>({});
-  const noButtonLastSide = useRef<'left' | 'right' | null>(null);
   
   // States for 'chase' step
   const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0 });
   const [handsPos, setHandsPos] = useState({
-    left: { top: '50%', left: 'calc(50% - 6rem)' },
-    right: { top: '50%', left: 'calc(50% + 6rem)' },
+    left: { top: '50%', left: '10%', opacity: 0, transition: 'opacity 0.5s ease-in-out' },
+    right: { top: '50%', left: '90%', opacity: 0, transition: 'opacity 0.5s ease-in-out' },
   });
+  const [showCatchMessage, setShowCatchMessage] = useState(false);
+
 
   // State for 'final' step
   const [showFinalFall, setShowFinalFall] = useState(false);
 
   // Timer/Interval refs
-  const chaseIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const catchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chaseActiveRef = useRef(false);
   const chasePathIndexRef = useRef(0);
   const noButtonRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -164,70 +165,82 @@ const BestiePage = () => {
   
   // Effect for 'chase' step animation
   useEffect(() => {
-    if (step !== 'chase') {
-      if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
-      if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
-      chasePathIndexRef.current = 0; // Reset index
-      return;
-    }
+    if (step === 'chase') {
+      chaseActiveRef.current = true;
+      setShowCatchMessage(false);
 
-    setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1 });
-    
-    const chasePath = [
-      // 1. Left upside corner
-      { top: `${Math.random() * 15 + 10}%`, left: `${Math.random() * 15 + 10}%` }, 
-      // 2. Middle little right
-      { top: `${Math.random() * 20 + 40}%`, left: `${Math.random() * 20 + 55}%` },
-      // 3. Down left
-      { top: `${Math.random() * 15 + 75}%`, left: `${Math.random() * 15 + 10}%` }, 
-      // 4. Down corner right
-      { top: `${Math.random() * 15 + 75}%`, left: `${Math.random() * 15 + 75}%` }, 
-    ];
+      // Initial hands appear from the sides
+      setHandsPos({
+        left: { top: '50%', left: '10%', opacity: 1, transition: 'opacity 0.5s' },
+        right: { top: '50%', left: '90%', opacity: 1, transition: 'opacity 0.5s' },
+      });
+      
+      const chasePath = [
+        { top: '15%', left: '15%' }, 
+        { top: '80%', left: '85%' },
+        { top: '20%', left: '90%' },
+        { top: '85%', left: '10%' }, 
+      ];
 
-    const startChaseTimeout = setTimeout(() => {
-        chaseIntervalRef.current = setInterval(() => {
-            const nextPos = chasePath[chasePathIndexRef.current % chasePath.length];
-            chasePathIndexRef.current += 1;
+      const runChaseSequence = () => {
+        if (!chaseActiveRef.current) return;
 
-            setRunawayPos(currentPos => ({
-                ...currentPos,
-                top: nextPos.top,
-                left: nextPos.left,
-                transition: 'top 1.2s ease-in-out, left 1.2s ease-in-out',
-            }));
-        }, 1500);
-    }, 500);
+        // 1. Button jumps instantly to a new spot
+        const nextPos = chasePath[chasePathIndexRef.current % chasePath.length];
+        chasePathIndexRef.current += 1;
+        setRunawayPos(currentPos => ({
+            ...currentPos,
+            top: nextPos.top,
+            left: nextPos.left,
+            transition: 'none', // Instant jump
+        }));
 
+        // 2. Hands wait, then pursue
+        setTimeout(() => {
+          if (!chaseActiveRef.current) return;
+          setHandsPos({
+            left: { top: nextPos.top, left: `calc(${nextPos.left} - 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
+            right: { top: nextPos.top, left: `calc(${nextPos.left} + 4rem)`, opacity: 1, transition: 'top 0.8s ease-in, left 0.8s ease-in' },
+          });
+        }, 200); // A short delay before hands start moving
 
-    catchTimeoutRef.current = setTimeout(() => {
-        if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
+        // 3. Schedule next jump
+        setTimeout(runChaseSequence, 1200); // Loop every 1.2 seconds
+      };
+
+      const startChaseTimeout = setTimeout(runChaseSequence, 500);
+
+      catchTimeoutRef.current = setTimeout(() => {
+          chaseActiveRef.current = false;
+          setStep('caught');
+      }, 10000);
+
+      return () => {
+        chaseActiveRef.current = false;
+        if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
         clearTimeout(startChaseTimeout);
-        setStep('caught');
-    }, 10000);
-
-    return () => {
-      if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
-      if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
-      clearTimeout(startChaseTimeout);
+      }
+    }
+  }, [step]);
+  
+  // Effect for 'caught' state
+  useEffect(() => {
+    if (step === 'caught') {
+      // Lock hands to the final button position
+      const top = runawayPos.top as string;
+      const left = runawayPos.left as string;
+      setHandsPos({
+        left: { top: top, left: `calc(${left} - 4rem)`, opacity: 1, transition: 'top 0.3s ease-out, left 0.3s ease-out' },
+        right: { top: top, left: `calc(${left} + 4rem)`, opacity: 1, transition: 'top 0.3s ease-out, left 0.3s ease-out' },
+      });
+      // Show catch message
+      const messageTimer = setTimeout(() => setShowCatchMessage(true), 400);
+      return () => clearTimeout(messageTimer);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Effect to make hands follow the button
-  useEffect(() => {
-     if (step === 'chase' || step === 'caught') {
-        const top = runawayPos.top as string;
-        const left = runawayPos.left as string;
-        
-        const handsTransition = step === 'chase' ? 'top 1s ease-out 0.3s, left 1s ease-out 0.3s' : 'top 0.3s ease-out, left 0.3s ease-out';
 
-        setHandsPos({
-            left: { top: top, left: `calc(${left} - 4rem)`, transition: handsTransition },
-            right: { top: top, left: `calc(${left} + 4rem)`, transition: handsTransition }
-        });
-     }
-  }, [runawayPos, step]);
-  
   // Effect for final fall
   useEffect(() => {
     if (step === 'final') {
@@ -248,37 +261,22 @@ const BestiePage = () => {
       if (noHoverCount >= 6) {
         setStep('help');
         setNoButtonPos({}); // Reset position
-        noButtonLastSide.current = null;
         return;
       }
       
       setNoHoverCount(c => c + 1);
-
-      const nextSide = noButtonLastSide.current === 'left' ? 'right' : 'left';
-      noButtonLastSide.current = nextSide;
       
       if (!cardRef.current || !noButtonRef.current) return;
 
       const cardRect = cardRef.current.getBoundingClientRect();
       const buttonRect = noButtonRef.current.getBoundingClientRect();
 
-      const top = Math.random() * (cardRect.height - buttonRect.height);
-      
       const newPos: React.CSSProperties = {
           position: 'absolute',
-          top: `${top}px`,
-          transition: 'top 0.3s ease-out, left 0.3s ease-out, right 0.3s ease-out',
+          top: `${Math.random() * (cardRect.height - buttonRect.height)}px`,
+          left: `${Math.random() * (cardRect.width - buttonRect.width)}px`,
+          transition: 'top 0.3s ease-out, left 0.3s ease-out',
       };
-
-      if (nextSide === 'left') {
-          const left = Math.random() * (cardRect.width * 0.2) + (cardRect.width * 0.05);
-          newPos.left = `${left}px`;
-          newPos.right = 'auto';
-      } else { // right
-          const right = Math.random() * (cardRect.width * 0.2) + (cardRect.width * 0.05);
-          newPos.right = `${right}px`;
-          newPos.left = 'auto';
-      }
       
       setNoButtonPos(newPos);
     }
@@ -335,7 +333,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center">
+          <div className="relative h-11 w-full flex justify-center items-center gap-4">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               ref={noButtonRef}
@@ -362,10 +360,12 @@ const BestiePage = () => {
 
       case 'chase':
       case 'caught':
-        title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
+        title = step === 'chase' 
+            ? 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button'
+            : ' ';
         buttons = (
             <>
-                <Button size="lg" style={{ position: 'absolute', top: '75%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
+                <Button size="lg" style={{ position: 'absolute', top: '80%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
                 <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)'}} />
                 <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)'}} />
@@ -380,6 +380,19 @@ const BestiePage = () => {
                 >
                     No
                 </Button>
+                 {showCatchMessage && (
+                    <div 
+                        className="absolute text-xs bg-background/80 text-foreground px-2 py-1 rounded-md shadow-lg"
+                        style={{
+                            top: `calc(${runawayPos.top} - 4.5rem)`, 
+                            left: runawayPos.left,
+                            transform: 'translateX(-50%)',
+                            animation: 'continue-button-appear 0.5s ease-out forwards'
+                        }}
+                    >
+                        yayy i catched it
+                    </div>
+                )}
             </>
         );
         break;
@@ -924,6 +937,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
