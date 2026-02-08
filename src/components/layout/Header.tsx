@@ -16,6 +16,7 @@ import {
   ClipboardList,
   MessageSquare,
   Gift,
+  Palette,
 } from "lucide-react";
 import {
   Sheet,
@@ -44,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useTheme } from "@/context/ThemeProvider";
 
 
 type WalletData = {
@@ -68,6 +70,7 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
+  const { toggleTheme } = useTheme();
   
   useEffect(() => {
     setLoading(true);
@@ -239,6 +242,9 @@ export function Header() {
 
           <div className="flex items-center justify-end space-x-2">
             <div className="hidden md:flex items-center space-x-2">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+                  <Palette className="h-5 w-5" />
+              </Button>
               {loading ? (
                   <div className="flex items-center space-x-2">
                       <Skeleton className="h-9 w-24" />
@@ -320,6 +326,10 @@ export function Header() {
                           </Link>
                       </SheetClose>
                     ))}
+                    <Button variant="ghost" onClick={() => { toggleTheme(); setSheetOpen(false); }} className="justify-start text-lg font-medium">
+                        <Palette className="mr-2 h-4 w-4" />
+                        Change Theme
+                    </Button>
                     <div className="border-t pt-4 flex flex-col space-y-3">
                       {loading ? (
                           <div className="space-y-2">

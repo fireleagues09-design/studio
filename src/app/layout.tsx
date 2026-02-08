@@ -9,6 +9,7 @@ import { FloatingHomeButton } from "@/components/FloatingHomeButton";
 import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
+import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "FireLeagues - Free Fire Tournaments",
@@ -37,17 +38,19 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased")}>
         <Suspense fallback={null}>
-          <LoadingProvider>
-            <div className="relative flex min-h-screen flex-col bg-background">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-            <FloatingHomeButton />
-            <Toaster />
-            <FullScreenLoader />
-            <NavigationEvents />
-          </LoadingProvider>
+          <ThemeProvider storageKey="fireleagues-theme" defaultTheme="orange">
+            <LoadingProvider>
+              <div className="relative flex min-h-screen flex-col bg-background">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
+              <FloatingHomeButton />
+              <Toaster />
+              <FullScreenLoader />
+              <NavigationEvents />
+            </LoadingProvider>
+          </ThemeProvider>
         </Suspense>
       </body>
     </html>
