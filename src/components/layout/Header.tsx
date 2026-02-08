@@ -176,22 +176,39 @@ const BestiePage = () => {
         right: { top: '50%', left: '90%', opacity: 1, transition: 'opacity 0.5s' },
       });
       
-      const chasePath = [
-        { top: '15%', left: '15%' }, 
-        { top: '80%', left: '85%' },
-        { top: '20%', left: '90%' },
-        { top: '85%', left: '10%' },
-        { top: '50%', left: '50%' },
-        { top: '15%', left: '80%' },
-        { top: '75%', left: '20%' },
-      ];
-
       const runChaseSequence = () => {
         if (!chaseActiveRef.current) return;
 
-        // 1. Button jumps to a new position and stays
-        const nextButtonPos = chasePath[chasePathIndexRef.current % chasePath.length];
+        // 1. Button jumps to a new random, far position by alternating quadrants
+        const quadrant = chasePathIndexRef.current % 4;
+        let topRange: [number, number], leftRange: [number, number];
+
+        switch(quadrant) {
+            case 0: // Top-left
+                topRange = [15, 40];
+                leftRange = [15, 40];
+                break;
+            case 1: // Bottom-right
+                topRange = [60, 85];
+                leftRange = [60, 85];
+                break;
+            case 2: // Top-right
+                topRange = [15, 40];
+                leftRange = [60, 85];
+                break;
+            case 3: // Bottom-left
+            default: // Fallback
+                topRange = [60, 85];
+                leftRange = [15, 40];
+                break;
+        }
+
+        const newTop = `${topRange[0] + Math.random() * (topRange[1] - topRange[0])}%`;
+        const newLeft = `${leftRange[0] + Math.random() * (leftRange[1] - leftRange[0])}%`;
+        
+        const nextButtonPos = { top: newTop, left: newLeft };
         chasePathIndexRef.current += 1;
+
         setRunawayPos({
             position: 'absolute',
             opacity: 1,
@@ -371,7 +388,7 @@ const BestiePage = () => {
             ? 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button'
             : ' ';
         buttons = (
-            <>
+            <div className="relative flex-grow flex justify-center items-center">
                 <Button size="lg" style={{ position: 'absolute', top: '80%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
                 <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)'}} />
@@ -400,7 +417,7 @@ const BestiePage = () => {
                         yayy i catched it
                     </div>
                 )}
-            </>
+            </div>
         );
         break;
       
@@ -944,6 +961,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
