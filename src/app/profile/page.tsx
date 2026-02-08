@@ -88,7 +88,7 @@ export default function ProfilePage() {
                     <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
                          <div className="flex items-center gap-2">
-                            <Input id="username" value={profile.username} disabled />
+                            <Input id="username" value={profile.username || ''} disabled />
                         </div>
                         <p className="text-xs text-muted-foreground pt-1">This is your unique FireLeagues username. It cannot be changed.</p>
                     </div>

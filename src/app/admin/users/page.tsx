@@ -30,7 +30,7 @@ import { useLoading } from "@/context/LoadingContext";
 
 // ---------------------- TYPES ----------------------
 type UserDoc = {
-  inGameName?: string;
+  username?: string;
   email?: string;
   phone?: string;
   wallet?: {
@@ -167,7 +167,7 @@ export default function AdminUsersPage() {
 
           // 3) Search by name prefix — try name then email
           const usersRef = collection(db, "users");
-          const nameQuery = query(usersRef, orderBy("inGameName"), startAt(q), endAt(q + "\\uf8ff"), limit(30));
+          const nameQuery = query(usersRef, orderBy("username"), startAt(q), endAt(q + "\\uf8ff"), limit(30));
           const emailQuery = query(usersRef, orderBy("email"), startAt(q), endAt(q + "\\uf8ff"), limit(30));
 
           // Use onSnapshot to get real-time results but unsubscribe after first response
@@ -386,7 +386,7 @@ export default function AdminUsersPage() {
       <div className="mb-4 flex gap-2">
         <input
           className="flex-1 border rounded px-3 py-2 bg-gray-800 border-gray-700 text-white"
-          placeholder="Search by UID, name, email or phone..."
+          placeholder="Search by UID, username, email or phone..."
           value={queryText}
           onChange={(e) => setQueryText(e.target.value)}
         />
@@ -409,7 +409,7 @@ export default function AdminUsersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-400">
-                    <th className="py-2 px-2">Name</th>
+                    <th className="py-2 px-2">Username</th>
                     <th className="px-2">Email</th>
                     <th className="px-2">Balance</th>
                     <th className="px-2">Admin</th>
@@ -419,7 +419,7 @@ export default function AdminUsersPage() {
                 <tbody>
                   {results.map((r) => (
                     <tr key={r.id} className="border-t border-gray-700 hover:bg-gray-700/50">
-                      <td className="py-2 px-2">{r.data.inGameName ?? "—"}</td>
+                      <td className="py-2 px-2">{r.data.username ?? "—"}</td>
                       <td className="px-2">{r.data.email ?? "—"}</td>
                       <td className="px-2">₹{totalBalance(r.data.wallet).toFixed(2)}</td>
                       <td className="px-2">{r.data.isAdmin ? "Yes" : "No"}</td>
@@ -445,7 +445,7 @@ export default function AdminUsersPage() {
             <div className="text-gray-400 mb-2">Selected User</div>
             {selectedUser ? (
               <div>
-                <div className="mb-2 font-semibold">{selectedUser.data.inGameName ?? selectedUser.id}</div>
+                <div className="mb-2 font-semibold">{selectedUser.data.username ?? selectedUser.id}</div>
                 <div className="text-sm text-gray-400 break-all">UID: {selectedUser.id}</div>
                 <div className="text-sm text-gray-400">Email: {selectedUser.data.email ?? "—"}</div>
                 <div className="text-sm text-gray-400">Phone: {selectedUser.data.phone ?? "—"}</div>
