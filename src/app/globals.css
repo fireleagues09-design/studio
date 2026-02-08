@@ -21,6 +21,15 @@
     --border: 20 5.9% 90%;
     --input: 20 5.9% 90%;
     --radius: 0.5rem;
+
+    /* DEFAULT THEME (ORANGE) */
+    --primary: 24.6 95% 53.1%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --ring: 24.6 95% 53.1%;
+    --loader-gradient-start: #ffcc00;
+    --loader-gradient-end: #ff3c00;
+    --loader-glow-primary: #ff6a00;
+    --loader-glow-secondary: #ff2200;
   }
 
   .dark {
@@ -52,26 +61,8 @@
     --loader-glow-primary: #ff6a00;
     --loader-glow-secondary: #ff2200;
   }
-  .dark.theme-orange {
-    --primary: 24.6 95% 53.1%;
-    --primary-foreground: 60 9.1% 97.8%;
-    --ring: 24.6 95% 53.1%;
-    --loader-gradient-start: #ffcc00;
-    --loader-gradient-end: #ff3c00;
-    --loader-glow-primary: #ff6a00;
-    --loader-glow-secondary: #ff2200;
-  }
 
   .theme-violet {
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --ring: 262.1 83.3% 57.8%;
-    --loader-gradient-start: #e3c8ff;
-    --loader-gradient-end: #6424b3;
-    --loader-glow-primary: #8f33ff;
-    --loader-glow-secondary: #4b1a85;
-  }
-  .dark.theme-violet {
     --primary: 262.1 83.3% 57.8%;
     --primary-foreground: 210 40% 98%;
     --ring: 262.1 83.3% 57.8%;
@@ -90,26 +81,8 @@
     --loader-glow-primary: #37b24d;
     --loader-glow-secondary: #2b8a3e;
   }
-  .dark.theme-green {
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 96.1%;
-    --ring: 142.1 70.6% 45.3%;
-    --loader-gradient-start: #b2f2bb;
-    --loader-gradient-end: #2f9e44;
-    --loader-glow-primary: #37b24d;
-    --loader-glow-secondary: #2b8a3e;
-  }
 
   .theme-pink {
-    --primary: 340.9 95.8% 60.6%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --ring: 340.9 95.8% 60.6%;
-    --loader-gradient-start: #ffbde6;
-    --loader-gradient-end: #f03e9f;
-    --loader-glow-primary: #f767ab;
-    --loader-glow-secondary: #d6336c;
-  }
-  .dark.theme-pink {
     --primary: 340.9 95.8% 60.6%;
     --primary-foreground: 355.7 100% 97.3%;
     --ring: 340.9 95.8% 60.6%;
@@ -128,26 +101,8 @@
     --loader-glow-primary: #339af0;
     --loader-glow-secondary: #1864ab;
   }
-  .dark.theme-blue {
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 210 40% 98%;
-    --ring: 217.2 91.2% 59.8%;
-    --loader-gradient-start: #a3c9ff;
-    --loader-gradient-end: #1c7ed6;
-    --loader-glow-primary: #339af0;
-    --loader-glow-secondary: #1864ab;
-  }
 
   .theme-yellow {
-    --primary: 47.9 95.8% 53.1%;
-    --primary-foreground: 48 95.5% 95.3%;
-    --ring: 47.9 95.8% 53.1%;
-    --loader-gradient-start: #ffec99;
-    --loader-gradient-end: #fcc419;
-    --loader-glow-primary: #ffd43b;
-    --loader-glow-secondary: #f59f00;
-  }
-  .dark.theme-yellow {
     --primary: 47.9 95.8% 53.1%;
     --primary-foreground: 48 95.5% 95.3%;
     --ring: 47.9 95.8% 53.1%;
@@ -166,26 +121,8 @@
     --loader-glow-primary: #ff6b6b;
     --loader-glow-secondary: #e03131;
   }
-  .dark.theme-red {
-    --primary: 355.7 89.7% 61.2%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --ring: 355.7 89.7% 61.2%;
-    --loader-gradient-start: #ffc9c9;
-    --loader-gradient-end: #fa5252;
-    --loader-glow-primary: #ff6b6b;
-    --loader-glow-secondary: #e03131;
-  }
 
   .theme-teal {
-    --primary: 175.9 74.4% 39.8%;
-    --primary-foreground: 180 100% 97.1%;
-    --ring: 175.9 74.4% 39.8%;
-    --loader-gradient-start: #96f2d7;
-    --loader-gradient-end: #12b886;
-    --loader-glow-primary: #20c997;
-    --loader-glow-secondary: #0ca678;
-  }
-  .dark.theme-teal {
     --primary: 175.9 74.4% 39.8%;
     --primary-foreground: 180 100% 97.1%;
     --ring: 175.9 74.4% 39.8%;
@@ -204,26 +141,8 @@
     --loader-glow-primary: #c0eb75;
     --loader-glow-secondary: #94d82d;
   }
-  .dark.theme-lime {
-    --primary: 74.9 83.1% 54.1%;
-    --primary-foreground: 75 90% 95.3%;
-    --ring: 74.9 83.1% 54.1%;
-    --loader-gradient-start: #e9fac8;
-    --loader-gradient-end: #a9e34b;
-    --loader-glow-primary: #c0eb75;
-    --loader-glow-secondary: #94d82d;
-  }
 
   .theme-cyan {
-    --primary: 198.8 93.4% 52.4%;
-    --primary-foreground: 204 100% 96.9%;
-    --ring: 198.8 93.4% 52.4%;
-    --loader-gradient-start: #a5d8ff;
-    --loader-gradient-end: #339af0;
-    --loader-glow-primary: #4dabf7;
-    --loader-glow-secondary: #228be6;
-  }
-  .dark.theme-cyan {
     --primary: 198.8 93.4% 52.4%;
     --primary-foreground: 204 100% 96.9%;
     --ring: 198.8 93.4% 52.4%;
@@ -242,15 +161,6 @@
     --loader-glow-primary: #91a7ff;
     --loader-glow-secondary: #5c7cfa;
   }
-  .dark.theme-indigo {
-    --primary: 236.9 81.3% 63.3%;
-    --primary-foreground: 240 100% 97.1%;
-    --ring: 236.9 81.3% 63.3%;
-    --loader-gradient-start: #dbe4ff;
-    --loader-gradient-end: #748ffc;
-    --loader-glow-primary: #91a7ff;
-    --loader-glow-secondary: #5c7cfa;
-  }
 
   .theme-grape {
     --primary: 288.1 72.8% 57.5%;
@@ -261,26 +171,8 @@
     --loader-glow-primary: #e599f7;
     --loader-glow-secondary: #cc5de8;
   }
-  .dark.theme-grape {
-    --primary: 288.1 72.8% 57.5%;
-    --primary-foreground: 286.7 100% 97.3%;
-    --ring: 288.1 72.8% 57.5%;
-    --loader-gradient-start: #f3d9fa;
-    --loader-gradient-end: #da77f2;
-    --loader-glow-primary: #e599f7;
-    --loader-glow-secondary: #cc5de8;
-  }
 
   .theme-spring-green {
-    --primary: 145 100% 45%;
-    --primary-foreground: 145 100% 95%;
-    --ring: 145 100% 45%;
-    --loader-gradient-start: #adffdc;
-    --loader-gradient-end: #00e676;
-    --loader-glow-primary: #00ff7f;
-    --loader-glow-secondary: #00c853;
-  }
-  .dark.theme-spring-green {
     --primary: 145 100% 45%;
     --primary-foreground: 145 100% 95%;
     --ring: 145 100% 45%;
