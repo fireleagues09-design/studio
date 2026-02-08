@@ -142,7 +142,7 @@ const BestiePage = () => {
 
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950/95 overflow-hidden backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950 overflow-hidden">
       <div className="falling-emojis">
         {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
