@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -98,9 +99,7 @@ export default function RegisterPage() {
         let errorMessage = error.message || "Could not create your account. Please try again.";
         
         if (error.code === 'auth/email-already-in-use') {
-            // This error is now more likely to mean an orphan auth account exists,
-            // but for the user, the message is the same as if they were fully registered.
-            errorMessage = 'This email is already registered. Please log in.';
+            errorMessage = 'An account with this email already exists but is not verified. Please check your email (and spam folder) for the verification link, or try logging in to resend it.';
         } else if (error.code === 'auth/quota-exceeded') {
             errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
             setIsEmailServiceDown(true);
@@ -271,3 +270,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
