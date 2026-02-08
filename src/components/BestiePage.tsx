@@ -2,7 +2,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const EMOJIS = ['🎁', '💖'];
@@ -10,19 +10,21 @@ const EMOJIS = ['🎁', '💖'];
 const BestiePage = () => {
   const [particles, setParticles] = useState<{ id: number; content: string | null; x: number; delay: number; duration: number; type: 'emoji' | 'snow' }[]>([]);
   const [interactionStep, setInteractionStep] = useState(0);
+  const [showContinueAnimation, setShowContinueAnimation] = useState(false);
+  const [showContinueButton, setShowContinueButton] = useState(false);
+  const animationEndedRef = useRef(false);
 
   useEffect(() => {
     const generateParticles = () => {
-      // More snow, less emojis
-      const newParticles = Array.from({ length: 100 }).map((_, i) => {
-        const isEmoji = Math.random() > 0.9; // ~10% chance of being an emoji
+      const newParticles = Array.from({ length: 150 }).map((_, i) => {
+        const isEmoji = Math.random() > 0.95; 
         return {
           id: i,
           content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
           type: isEmoji ? 'emoji' : 'snow',
-          x: Math.random() * 100, // percentage
-          delay: Math.random() * 15, // seconds
-          duration: Math.random() * 7 + 8, // seconds (8 to 15s)
+          x: Math.random() * 100,
+          delay: Math.random() * 15,
+          duration: Math.random() * 7 + 8,
         };
       });
       setParticles(newParticles);
@@ -30,6 +32,19 @@ const BestiePage = () => {
 
     generateParticles();
   }, []);
+
+  useEffect(() => {
+    if (interactionStep === 1) {
+      const timer = setTimeout(() => {
+        setShowContinueAnimation(true);
+        animationEndedRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContinueAnimation(false);
+      setShowContinueButton(false);
+    }
+  }, [interactionStep]);
 
   const handleNoClick = () => {
     setInteractionStep(prev => {
@@ -42,6 +57,15 @@ const BestiePage = () => {
   const handleContinueClick = () => {
     setInteractionStep(2);
   };
+  
+  const handleBallAnimationEnd = () => {
+    if (!animationEndedRef.current) {
+        animationEndedRef.current = true;
+        setTimeout(() => {
+            setShowContinueButton(true);
+        }, 0);
+    }
+  };
 
   const renderContent = () => {
     let title = '';
@@ -51,13 +75,33 @@ const BestiePage = () => {
       case 1:
         title = 'whyyyyyy ???';
         buttons = (
-            <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
-                <Button size="lg" onClick={handleContinueClick}>Continue</Button>
-            </div>
+          <div className="relative flex h-[44px] items-center justify-center">
+            {showContinueAnimation && !showContinueButton && (
+              <>
+                <div
+                  onAnimationEnd={handleBallAnimationEnd}
+                  className="absolute h-4 w-4 rounded-full bg-primary"
+                  style={{ animation: 'snake-left-to-center 1.2s ease-in-out forwards' }}
+                />
+                <div
+                  onAnimationEnd={handleBallAnimationEnd}
+                  className="absolute h-4 w-4 rounded-full bg-primary"
+                  style={{ animation: 'snake-right-to-center 1.2s ease-in-out forwards' }}
+                />
+              </>
+            )}
+            {showContinueButton && (
+              <div style={{ animation: 'continue-button-appear 0.4s ease-out forwards' }}>
+                <Button size="lg" onClick={handleContinueClick}>
+                  Continue
+                </Button>
+              </div>
+            )}
+          </div>
         );
         break;
       case 2:
-      case 3: // Same title for step 3
+      case 3:
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
             <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
@@ -98,7 +142,7 @@ const BestiePage = () => {
 
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950/95 overflow-hidden backdrop-blur-sm">
       <div className="falling-emojis">
         {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
@@ -108,7 +152,6 @@ const BestiePage = () => {
               left: `${x}vw`,
               animationDelay: `${delay}s`,
               animationDuration: `${duration}s`,
-              fontSize: '0.8rem',
             }}
           >
             {content}
