@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -86,7 +87,7 @@ export default function RegisterPage() {
         await setDoc(doc(db, "users", user.uid), {
             username: username,
             email: user.email,
-            isRegistered: false,
+            isRegistered: true,
             emailVerified: false,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
@@ -115,10 +116,9 @@ export default function RegisterPage() {
 
                 const userDocRef = doc(db, "users", user.uid);
                 const userDocSnap = await getDoc(userDocRef);
-                const profileData = userDocSnap.data();
                 
                 // If user has a username, they are fully registered.
-                if (userDocSnap.exists() && profileData?.isRegistered) {
+                if (userDocSnap.exists() && userDocSnap.data()?.isRegistered) {
                     toast({
                         title: "Already Registered",
                         description: "This account is fully registered. Please log in.",
@@ -132,7 +132,7 @@ export default function RegisterPage() {
                     await setDoc(userDocRef, {
                         username: user.displayName || username, // Use existing or new username
                         email: user.email,
-                        isRegistered: false,
+                        isRegistered: true,
                         emailVerified: user.emailVerified,
                         wallet: { deposit: 0, winning: 0, bonus: 0 },
                         registeredOn: serverTimestamp(),
@@ -150,8 +150,8 @@ export default function RegisterPage() {
                     return;
                 }
 
-                // 5. If user is already verified but hasn't completed profile
-                 router.push('/complete-profile');
+                // 5. If user is already verified but somehow not marked as registered.
+                 router.push('/');
 
 
             } catch (signInError: any) {
@@ -202,7 +202,7 @@ export default function RegisterPage() {
             await setDoc(userDocRef, {
                 username: user.displayName || '',
                 email: user.email,
-                isRegistered: false, // User still needs to confirm/set their username
+                isRegistered: true,
                 emailVerified: user.emailVerified,
                 wallet: { deposit: 0, winning: 0, bonus: 0 },
                 registeredOn: serverTimestamp(),
@@ -210,11 +210,11 @@ export default function RegisterPage() {
 
             toast({
                 title: "Account Created!",
-                description: "Let's set up your profile.",
+                description: "Welcome to FireLeagues!",
             });
             
              if (user.emailVerified) {
-                router.push('/complete-profile');
+                router.push('/');
              } else {
                 // This case is rare for Google Auth but good to handle.
                 await sendEmailVerification(user);

@@ -111,19 +111,10 @@ export function Header() {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
-
-                    // Safety Check: If user is not fully registered, force them to complete their profile.
-                    if (profileData.isRegistered === false && !profileData.suspended && pathname !== '/complete-profile') {
-                        router.push('/complete-profile');
-                    }
                 } else {
                     // Document doesn't exist for a logged-in user.
                     // This can happen for a moment during sign-up.
-                    // Force redirect to be safe and ensure profile completion.
                     setProfile(null);
-                    if (pathname !== '/complete-profile' && pathname !== '/auth/verify') {
-                      router.push('/complete-profile');
-                    }
                 }
                  setLoading(false);
               }, 

@@ -42,10 +42,9 @@ export default function LoginPage() {
     try {
         const userDoc = await getDoc(userDocRef);
 
-        // CASE 1: Auth user exists, but Firestore doc is missing (orphan from failed registration)
+        // CASE 1: Auth user exists, but Firestore doc is missing.
+        // This means they are not registered in our system.
         if (!userDoc.exists()) {
-            // Per your request, if the user doesn't exist in Firestore, do not log them in.
-            // Sign them out immediately and redirect to the registration page.
             await signOut(auth);
             toast({
                 title: "Account Not Found",
@@ -56,8 +55,6 @@ export default function LoginPage() {
             return;
         }
         
-        const profileData = userDoc.data();
-
         // CASE 2: Firestore doc exists, but email is not verified
         if (!user.emailVerified) {
             toast({
@@ -69,18 +66,9 @@ export default function LoginPage() {
             return;
         }
         
-        // CASE 3: User is fully authenticated and verified, check if profile is complete
-        if (!profileData.isRegistered) {
-            toast({
-                title: "Welcome Back!",
-                description: "Please complete your profile to continue.",
-            });
-            router.push("/complete-profile");
-        } else {
-            // Normal login
-            toast({ title: "Success", description: "Logged in successfully!" });
-            router.push("/");
-        }
+        // CASE 3: User is fully authenticated and verified. Log them in.
+        toast({ title: "Success", description: "Logged in successfully!" });
+        router.push("/");
 
     } catch (error: any) {
         console.error("Error during login success handling:", error);
