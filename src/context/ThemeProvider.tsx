@@ -91,20 +91,18 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement
     
-    root.classList.remove('light', 'dark')
-    root.classList.add(mode)
+    root.classList.remove('dark');
+    if (mode === 'dark') {
+      root.classList.add('dark');
+    }
 
     // Remove all theme classes
     COLOR_THEME_NAMES.forEach(themeName => {
-        if (themeName !== 'orange') {
-            root.classList.remove(`theme-${themeName}`);
-        }
+        root.classList.remove(`theme-${themeName}`);
     });
 
-    // Add the current theme class if it's not the default
-    if (theme !== 'orange') {
-      root.classList.add(`theme-${theme}`)
-    }
+    // Add the current theme class
+    root.classList.add(`theme-${theme}`)
   }, [theme, mode])
 
   const setTheme = (newTheme: ColorTheme) => {
