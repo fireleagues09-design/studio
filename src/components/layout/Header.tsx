@@ -335,7 +335,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="relative flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               ref={noButtonRef}
@@ -364,8 +364,8 @@ const BestiePage = () => {
       case 'caught':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-            <div className="relative inset-0 overflow-hidden">
-                <Button size="lg" style={{ position: 'absolute', top: '60%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
+            <>
+                <Button size="lg" style={{ position: 'absolute', top: '75%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
                 <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)'}} />
                 <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)'}} />
@@ -380,7 +380,7 @@ const BestiePage = () => {
                 >
                     No
                 </Button>
-            </div>
+            </>
         );
         break;
       
@@ -924,6 +924,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
