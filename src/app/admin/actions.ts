@@ -195,3 +195,26 @@ export async function setBestiePageStatus(
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
+
+export async function setIndividualBestiePageStatus(
+    targetUserId: string,
+    isEnabled: boolean,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const userRef = db.collection('users').doc(targetUserId);
+        await userRef.update({
+            bestiePageActive: isEnabled
+        });
+
+        return { success: true, message: `Bestie page status updated for user.` };
+    } catch (error: any) {
+        console.error('Error updating individual bestie page status:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}

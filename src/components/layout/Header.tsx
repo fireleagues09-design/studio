@@ -78,6 +78,7 @@ type UserProfile = {
     suspended?: boolean;
     isRegistered?: boolean;
     isBestie?: boolean;
+    bestiePageActive?: boolean;
 }
 
 const themes: { name: ColorTheme }[] = [
@@ -565,7 +566,7 @@ export function Header() {
     window.location.href = '/';
   };
 
-  if (profile?.isBestie && isBestiePageEnabled) {
+  if (profile?.isBestie && isBestiePageEnabled && profile.bestiePageActive) {
     return <BestiePage />;
   }
 
