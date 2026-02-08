@@ -111,7 +111,7 @@ const BestiePage = () => {
   // States for 'must_play' (teleport) step
   const [noHoverCount, setNoHoverCount] = useState(0);
   const [noButtonPos, setNoButtonPos] = useState<React.CSSProperties>({});
-  const [noButtonLastSide, setNoButtonLastSide] = useState<'left' | 'right' | null>(null);
+  const noButtonLastSide = useRef<'left' | 'right' | null>(null);
   
   // States for 'chase' step
   const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0 });
@@ -126,6 +126,7 @@ const BestiePage = () => {
   // Timer/Interval refs
   const chaseIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const catchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chasePathIndexRef = useRef(0);
 
   useEffect(() => {
     const generateParticles = () => {
@@ -164,50 +165,34 @@ const BestiePage = () => {
     if (step !== 'chase') {
       if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
       if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
+      chasePathIndexRef.current = 0; // Reset index
       return;
     }
 
     setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1 });
     
-    // Local variable to track quadrant to avoid stale state issues in setInterval
-    let currentQuadrant = -1;
+    const chasePath = [
+      // 1. Left upside corner
+      { top: `${Math.random() * 15 + 10}%`, left: `${Math.random() * 15 + 10}%` }, 
+      // 2. Middle little right
+      { top: `${Math.random() * 20 + 40}%`, left: `${Math.random() * 20 + 55}%` },
+      // 3. Down left
+      { top: `${Math.random() * 15 + 75}%`, left: `${Math.random() * 15 + 10}%` }, 
+      // 4. Down corner right
+      { top: `${Math.random() * 15 + 75}%`, left: `${Math.random() * 15 + 75}%` }, 
+    ];
 
     const startChaseTimeout = setTimeout(() => {
         chaseIntervalRef.current = setInterval(() => {
-            // New quadrant logic to ensure "long distance" runs
-            let nextQuadrant = Math.floor(Math.random() * 4);
-            while (nextQuadrant === currentQuadrant) {
-                nextQuadrant = Math.floor(Math.random() * 4);
-            }
-            currentQuadrant = nextQuadrant;
-
-            let top, left;
-            switch(nextQuadrant) {
-                case 0: // top-left
-                    top = `${Math.random() * 25 + 10}%`; // 10-35
-                    left = `${Math.random() * 25 + 10}%`; // 10-35
-                    break;
-                case 1: // top-right
-                    top = `${Math.random() * 25 + 10}%`; // 10-35
-                    left = `${Math.random() * 25 + 65}%`; // 65-90
-                    break;
-                case 2: // bottom-left
-                    top = `${Math.random() * 25 + 65}%`; // 65-90
-                    left = `${Math.random() * 25 + 10}%`; // 10-35
-                    break;
-                case 3: // bottom-right
-                default:
-                    top = `${Math.random() * 25 + 65}%`; // 65-90
-                    left = `${Math.random() * 25 + 65}%`; // 65-90
-                    break;
-            }
+            const nextPos = chasePath[chasePathIndexRef.current % chasePath.length];
+            chasePathIndexRef.current += 1;
 
             setRunawayPos(currentPos => ({
                 ...currentPos,
-                top: top,
-                left: left,
+                top: nextPos.top,
+                left: nextPos.left,
             }));
-        }, 1500); // Button runs every 1.5 seconds
+        }, 1500);
     }, 500);
 
 
@@ -257,14 +242,14 @@ const BestiePage = () => {
       if (noHoverCount >= 6) {
         setStep('help');
         setNoButtonPos({}); // Reset position
-        setNoButtonLastSide(null);
+        noButtonLastSide.current = null;
         return;
       }
       
       setNoHoverCount(c => c + 1);
 
-      const nextSide = noButtonLastSide === 'left' ? 'right' : 'left';
-      setNoButtonLastSide(nextSide);
+      const nextSide = noButtonLastSide.current === 'left' ? 'right' : 'left';
+      noButtonLastSide.current = nextSide;
       
       const top = Math.random() * 80 + 10; // 10% to 90%
       
@@ -928,4 +913,5 @@ export function Header() {
     </>
   );
 }
+
 
