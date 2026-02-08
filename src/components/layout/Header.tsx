@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -105,6 +104,11 @@ export function Header() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
+            // Immediately redirect if user is not verified and not on the verify page.
+            if (!currentUser.emailVerified && window.location.pathname !== '/auth/verify') {
+                router.replace('/auth/verify');
+            }
+
             const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
@@ -112,8 +116,6 @@ export function Header() {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
                 } else {
-                    // Document doesn't exist for a logged-in user.
-                    // This can happen for a moment during sign-up.
                     setProfile(null);
                 }
                  setLoading(false);
@@ -133,6 +135,13 @@ export function Header() {
 
     return () => unsubscribeAuth();
   }, [pathname, router]);
+
+  // Secondary effect to enforce the verification guard after initial load.
+  useEffect(() => {
+    if (!loading && user && !user.emailVerified && pathname !== '/auth/verify') {
+        router.replace('/auth/verify');
+    }
+  }, [loading, user, pathname, router]);
   
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
@@ -364,7 +373,7 @@ export function Header() {
                       <Skeleton className="h-9 w-24" />
                       <Skeleton className="h-9 w-9 rounded-full" />
                   </div>
-              ) : user ? (
+              ) : user && user.emailVerified ? (
                 <>
                   <Button variant="ghost" size="sm" asChild>
                       <Link href="/wallet">
@@ -471,7 +480,7 @@ export function Header() {
                               <Skeleton className="h-10 w-full" />
                               <Skeleton className="h-10 w-full" />
                           </div>
-                      ) : user ? (
+                      ) : user && user.emailVerified ? (
                          mobileUserMenuItems
                       ) : (
                         <>

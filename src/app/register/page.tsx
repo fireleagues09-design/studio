@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -71,33 +70,34 @@ export default function RegisterPage() {
     setLoading(true);
     
     try {
-        // Step 1: Attempt to create the user in Firebase Auth.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Step 2: Save the chosen username to the Auth user's profile.
         await updateProfile(user, { displayName: username });
-
-        // Step 3: Send the verification email.
-        await sendEmailVerification(user);
         
-        // DO NOT create the Firestore document here. This happens on first login.
-
-        toast({
-            title: 'Almost there!',
-            description: "We've sent a verification link to your email.",
-        });
-        showLoader();
-        router.push('/auth/verify');
+        try {
+            await sendEmailVerification(user);
+            toast({
+                title: 'Almost there!',
+                description: "We've sent a verification link to your email.",
+            });
+            showLoader();
+            router.push('/auth/verify');
+        } catch (emailError: any) {
+             console.error("Failed to send verification email:", emailError);
+             toast({
+                title: "Could Not Send Email",
+                description: "Your account was created, but we failed to send a verification email. Please try logging in to trigger a new link.",
+                variant: "destructive",
+            });
+            router.push('/login');
+        }
 
     } catch (error: any) {
-        // Step 4: Handle the case where the email is already in Firebase Auth.
         if (error.code === 'auth/email-already-in-use') {
              try {
-                // Attempt to sign in to see if they just need to verify.
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 if (!userCredential.user.emailVerified) {
-                    // If they are not verified, send a new link and redirect them.
                     await sendEmailVerification(userCredential.user);
                     toast({
                         title: 'Verification Required',
@@ -106,7 +106,6 @@ export default function RegisterPage() {
                     showLoader();
                     router.push('/auth/verify');
                 } else {
-                    // If they are already verified, they should just log in.
                     toast({
                         title: 'Already Registered',
                         description: "This email is already registered and verified. Please log in.",
@@ -116,7 +115,6 @@ export default function RegisterPage() {
                     router.push('/login');
                 }
              } catch (signInError: any) {
-                 // This catches if the password was wrong for the existing account.
                 toast({
                     title: 'Account Exists',
                     description: 'An account with this email already exists. Please try logging in.',
@@ -133,7 +131,6 @@ export default function RegisterPage() {
             });
             setIsEmailServiceDown(true);
         } else {
-            // Handle other registration errors (e.g., weak password)
             console.error("Error during registration:", error);
             toast({
                 title: "Registration Error",
@@ -150,11 +147,9 @@ export default function RegisterPage() {
     setLoading(true);
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        // The login page will now handle creating the Firestore doc on first login.
-        // So we just need to redirect.
         toast({ title: "Signing in...", description: "Please wait while we set up your account." });
         showLoader();
-        router.push('/login'); // Redirect to login to trigger the success handler
+        router.push('/login');
     } catch (error: any) {
         console.error("Google sign up error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {

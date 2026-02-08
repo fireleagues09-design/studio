@@ -31,7 +31,6 @@ export default function VerifyPage() {
     const [isResending, setIsResending] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
     
-    // Using refs for intervals to easily clear them from anywhere
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
     
@@ -40,8 +39,6 @@ export default function VerifyPage() {
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
 
         try {
-            // Delete the unverified user from Firebase Authentication.
-            // No database document should exist yet, so we don't touch Firestore.
             await deleteUser(targetUser);
         } catch (error) {
              console.error("Failed to delete auth user during cleanup:", error);
@@ -59,7 +56,6 @@ export default function VerifyPage() {
             if (currentUser) {
                 setUser(currentUser);
             } else {
-                // If no one is logged in, they shouldn't be here.
                 router.replace('/login');
             }
         });
@@ -74,7 +70,6 @@ export default function VerifyPage() {
 
     useEffect(() => {
         if (user) {
-             // --- Verification Checker ---
              verificationIntervalRef.current = setInterval(async () => {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
@@ -86,13 +81,11 @@ export default function VerifyPage() {
                             title: "Verification Successful!",
                             description: "Welcome! Redirecting you now...",
                         });
-                        // Redirect to home, which will then handle pushing to complete-profile if needed.
                         router.replace('/');
                     }
                 }
-            }, 3000); // Check every 3 seconds
+            }, 3000); 
 
-            // --- Countdown Timer ---
             timerIntervalRef.current = setInterval(() => {
                 setTimeLeft(prevTime => prevTime - 1);
             }, 1000);
@@ -117,7 +110,6 @@ export default function VerifyPage() {
                 variant: 'destructive'
             });
 
-            // Clean up the unverified user before redirecting
             const currentUser = auth.currentUser;
             if (currentUser && !currentUser.emailVerified) {
                  cleanupUser(currentUser).then(() => {
@@ -138,10 +130,14 @@ export default function VerifyPage() {
                 title: "Link Sent!",
                 description: "A new verification link has been sent to your email.",
             });
-        } catch (error) {
+        } catch (error: any) {
+            let description = "Failed to send a new link. Please try again in a moment.";
+            if (error.code === 'auth/too-many-requests') {
+                description = "You've requested a new link too recently. Please wait a few minutes before trying again."
+            }
             toast({
                 title: "Error",
-                description: "Failed to send a new link. Please try again in a moment.",
+                description: description,
                 variant: "destructive"
             });
         } finally {
@@ -189,7 +185,7 @@ export default function VerifyPage() {
                     </Button>
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="w-full" disabled={isResending}>Cancel Registration</Button>
+                            <Button variant="outline" className="w-full" disabled={isResending || isCancelling}>Cancel Registration</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
