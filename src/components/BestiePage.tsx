@@ -331,7 +331,7 @@ const BestiePage = () => {
         break;
       
       case 'final':
-        title = "Oh dear i did said you that i will remove that button if you try to press it.... so now just go on press no button which gonna fall down from the sky just for you"
+        title = "Oh dear i did said you that i will remove that button if you try to press it.... so now just go on press Yes button which gonna fall down from the sky just for you"
         buttons = (
             <div className="relative h-11">
                 {showFinalFall && (
