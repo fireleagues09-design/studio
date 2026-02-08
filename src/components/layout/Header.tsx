@@ -177,6 +177,10 @@ export function Header() {
     window.location.href = '/';
   };
 
+  if (profile?.isBestie) {
+    return <BestiePage />;
+  }
+
   if (profile?.suspended) {
       return <SuspendedUserPopup onLogout={handleLogout} />;
   }
@@ -359,7 +363,6 @@ export function Header() {
 
   return (
     <>
-      {profile?.isBestie && <BestiePage />}
        {showIncompleteProfilePopup && (
         <Dialog open={true}>
           <DialogContent
@@ -385,8 +388,6 @@ export function Header() {
           </DialogContent>
         </Dialog>
       )}
-
-      {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
 
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center px-4">
