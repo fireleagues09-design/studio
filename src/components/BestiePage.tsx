@@ -9,13 +9,12 @@ const EMOJIS = ['🎁', '💖'];
 const BestiePage = () => {
   const [particles, setParticles] = useState<{ id: number; content: string | null; x: number; delay: number; duration: number; type: 'emoji' | 'snow' }[]>([]);
   const [interactionStep, setInteractionStep] = useState(0);
-  const [showButtons, setShowButtons] = useState(true);
 
   useEffect(() => {
     const generateParticles = () => {
-      // Generate 50 particles total, with a higher chance of being snow
-      const newParticles = Array.from({ length: 50 }).map((_, i) => {
-        const isEmoji = Math.random() > 0.8; // ~20% chance of being an emoji
+      // More snow, less emojis
+      const newParticles = Array.from({ length: 100 }).map((_, i) => {
+        const isEmoji = Math.random() > 0.9; // ~10% chance of being an emoji
         return {
           id: i,
           content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
@@ -32,59 +31,69 @@ const BestiePage = () => {
   }, []);
 
   const handleNoClick = () => {
-    if (interactionStep === 0) {
-      setInteractionStep(1);
-    } else if (interactionStep === 2) {
-      setInteractionStep(3);
-    }
+    setInteractionStep(prev => {
+        if (prev === 0) return 1;
+        if (prev === 2) return 3;
+        return prev;
+    });
   };
 
   const handleContinueClick = () => {
-    setShowButtons(false);
     setInteractionStep(2);
-    setTimeout(() => {
-      setShowButtons(true);
-    }, 100); // Small delay to trigger transition
   };
 
   const renderContent = () => {
+    let title = '';
+    let buttons = null;
+
     switch (interactionStep) {
       case 1:
-        return {
-          title: 'whyyyyyy ???',
-          buttons: <Button size="lg" onClick={handleContinueClick}>Continue</Button>
-        };
+        title = 'whyyyyyy ???';
+        buttons = (
+            <div className="animate-in fade-in slide-in-from-bottom-5 duration-500">
+                <Button size="lg" onClick={handleContinueClick}>Continue</Button>
+            </div>
+        );
+        break;
       case 2:
       case 3: // Same title for step 3
-        return {
-          title: 'You must have to playyyyyy and click yesss only or if you click no button then i will remove the no nutton',
-          buttons: (
-            <div className={cn(
-              "flex gap-4 justify-center transition-opacity duration-500",
-              showButtons ? "opacity-100" : "opacity-0"
-            )}>
+        title = 'You must have to playyyyyy and click yesss only or if you click no button then i will remove the no nutton';
+        buttons = (
+            <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
               <Button size="lg">Yes</Button>
               {interactionStep === 2 && (
                 <Button size="lg" variant="outline" onClick={handleNoClick}>No</Button>
               )}
             </div>
-          )
-        };
+        );
+        break;
       case 0:
       default:
-        return {
-          title: 'Hey wanna play a game',
-          buttons: (
-            <div className="flex gap-4 justify-center">
+        title = 'Hey wanna play a game';
+        buttons = (
+            <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
               <Button size="lg">Yes</Button>
               <Button size="lg" variant="outline" onClick={handleNoClick}>No</Button>
             </div>
-          )
-        };
+        );
+        break;
+    }
+
+    return {
+        titleContent: (
+            <h1 key={interactionStep} className="text-4xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
+                {title}
+            </h1>
+        ),
+        buttonsContent: (
+            <div key={`${interactionStep}-buttons`} className="min-h-[44px]">
+                {buttons}
+            </div>
+        )
     }
   };
 
-  const { title, buttons } = renderContent();
+  const { titleContent, buttonsContent } = renderContent();
 
 
   return (
@@ -98,6 +107,7 @@ const BestiePage = () => {
               left: `${x}vw`,
               animationDelay: `${delay}s`,
               animationDuration: `${duration}s`,
+              fontSize: '0.8rem',
             }}
           >
             {content}
@@ -106,12 +116,8 @@ const BestiePage = () => {
       </div>
       <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
         <div className="text-center p-8 bg-white/50 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg max-w-md">
-          <h1 className="text-4xl font-bold text-primary mb-6">
-            {title}
-          </h1>
-          <div className="min-h-[44px]">
-            {buttons}
-          </div>
+          {titleContent}
+          {buttonsContent}
         </div>
       </div>
     </div>
