@@ -17,6 +17,7 @@ import {
   Gift,
   Palette,
   AlertTriangle,
+  Hand,
 } from "lucide-react";
 import {
   Sheet,
@@ -60,7 +61,6 @@ import {
 } from "@/components/ui/accordion";
 import { useLoading } from "@/context/LoadingContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import BestiePage from "../BestiePage";
 
 
 type WalletData = {
@@ -93,6 +93,290 @@ const themes: { name: ColorTheme }[] = [
   { name: 'grape' },
   { name: 'spring-green' },
 ];
+
+
+const EMOJIS = ['🎁', '💖'];
+
+const BestiePage = () => {
+  const [particles, setParticles] = useState<{ id: number; content: string | null; x: number; delay: number; duration: number; type: 'emoji' | 'snow' }[]>([]);
+  const [step, setStep] = useState('initial'); // 'initial', 'why', 'must_play', 'help', 'chase', 'caught', 'final'
+  
+  // States for 'why' step
+  const [showContinueAnimation, setShowContinueAnimation] = useState(false);
+  const [showContinueButton, setShowContinueButton] = useState(false);
+  const animationEndedRef = useRef(false);
+
+  // States for 'must_play' (teleport) step
+  const [noHoverCount, setNoHoverCount] = useState(0);
+  const [noButtonPos, setNoButtonPos] = useState<React.CSSProperties>({});
+  
+  // States for 'chase' step
+  const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
+  const [handsPos, setHandsPos] = useState({
+    left: { top: '50%', left: 'calc(50% - 6rem)' },
+    right: { top: '50%', left: 'calc(50% + 6rem)' },
+  });
+
+  // State for 'final' step
+  const [showFinalFall, setShowFinalFall] = useState(false);
+
+  // Timer/Interval refs
+  const chaseIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const catchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const generateParticles = () => {
+      const newParticles = Array.from({ length: 150 }).map((_, i) => {
+        const isEmoji = Math.random() > 0.95; 
+        return {
+          id: i,
+          content: isEmoji ? EMOJIS[Math.floor(Math.random() * EMOJIS.length)] : null,
+          type: isEmoji ? 'emoji' : 'snow',
+          x: Math.random() * 100,
+          delay: Math.random() * 15,
+          duration: Math.random() * 7 + 8,
+        };
+      });
+      setParticles(newParticles);
+    };
+    generateParticles();
+  }, []);
+
+  // Effect for 'why' step animation
+  useEffect(() => {
+    if (step === 'why') {
+      const timer = setTimeout(() => {
+        setShowContinueAnimation(true);
+        animationEndedRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowContinueAnimation(false);
+      setShowContinueButton(false);
+    }
+  }, [step]);
+  
+  // Effect for 'chase' step animation
+  useEffect(() => {
+    if (step !== 'chase') {
+      if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
+      if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
+      return;
+    }
+
+    setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
+    
+    chaseIntervalRef.current = setInterval(() => {
+       setRunawayPos(currentPos => ({
+            ...currentPos,
+            top: `${Math.random() * 70 + 15}%`,
+            left: `${Math.random() * 70 + 15}%`,
+        }));
+    }, 700);
+
+    catchTimeoutRef.current = setTimeout(() => {
+        if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
+        setStep('caught');
+    }, 4000);
+
+    return () => {
+      if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
+      if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
+    }
+  }, [step]);
+
+  // Effect to make hands follow the button
+  useEffect(() => {
+     if (step === 'chase' || step === 'caught') {
+        const top = runawayPos.top as string;
+        const left = runawayPos.left as string;
+        setHandsPos({
+            left: { top: top, left: `calc(${left} - 4rem)` },
+            right: { top: top, left: `calc(${left} + 4rem)` }
+        });
+     }
+  }, [runawayPos, step]);
+  
+  // Effect for final fall
+  useEffect(() => {
+    if (step === 'final') {
+        const timer = setTimeout(() => setShowFinalFall(true), 500);
+        return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const handleBallAnimationEnd = () => {
+    if (!animationEndedRef.current) {
+        animationEndedRef.current = true;
+        setTimeout(() => setShowContinueButton(true), 0);
+    }
+  };
+
+  const handleNoHover = () => {
+    if (step === 'must_play' && noHoverCount < 6) {
+      setNoHoverCount(c => c + 1);
+      setNoButtonPos({
+        position: 'absolute',
+        top: `${Math.random() * 80 + 10}%`,
+        left: `${Math.random() * 80 + 10}%`,
+        transition: 'top 0.2s, left 0.2s',
+      });
+    }
+  };
+
+  const handleNoClick = () => {
+    if (step === 'initial') {
+      setStep('why');
+    } else if (step === 'must_play') {
+      if (noHoverCount >= 6) {
+        setStep('help');
+        setNoButtonPos({});
+      }
+    }
+  };
+
+  const renderContent = () => {
+    let title: React.ReactNode = '';
+    let buttons: React.ReactNode = null;
+
+    switch (step) {
+      case 'initial':
+        title = 'Hey wanna play a game';
+        buttons = (
+          <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
+            <Button size="lg">Yes</Button>
+            <Button size="lg" variant="outline" onClick={handleNoClick}>No</Button>
+          </div>
+        );
+        break;
+      
+      case 'why':
+        title = 'whyyyyyy ???';
+        buttons = (
+          <div className="relative flex h-[44px] items-center justify-center">
+            {showContinueAnimation && !showContinueButton && (
+              <>
+                <div
+                  onAnimationEnd={handleBallAnimationEnd}
+                  className="absolute h-4 w-4 rounded-full bg-primary"
+                  style={{ animation: 'snake-left-to-center 1.2s ease-in-out forwards' }}
+                />
+                <div
+                  onAnimationEnd={handleBallAnimationEnd}
+                  className="absolute h-4 w-4 rounded-full bg-primary"
+                  style={{ animation: 'snake-right-to-center 1.2s ease-in-out forwards' }}
+                />
+              </>
+            )}
+            {showContinueButton && (
+              <div style={{ animation: 'continue-button-appear 0.4s ease-out forwards' }}>
+                <Button size="lg" onClick={() => setStep('must_play')}>Continue</Button>
+              </div>
+            )}
+          </div>
+        );
+        break;
+
+      case 'must_play':
+        title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
+        buttons = (
+          <div className="flex gap-4 justify-center relative h-11">
+            <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleNoClick}
+              onMouseEnter={handleNoHover}
+              style={noButtonPos}
+              className={cn("animate-in fade-in slide-in-from-bottom-5 duration-500", noButtonPos.position === 'absolute' && 'z-50')}
+            >
+              No
+            </Button>
+          </div>
+        );
+        break;
+
+      case 'help':
+        buttons = (
+            <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
+                <Button size="lg" onClick={() => setStep('chase')}>Help</Button>
+            </div>
+        );
+        break;
+
+      case 'chase':
+      case 'caught':
+        title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
+        buttons = (
+            <div className="absolute inset-0 overflow-hidden">
+                <Button size="lg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
+                
+                <Hand className="hand" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
+                <Hand className="hand" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
+
+                <Button
+                    id="runaway-no-button"
+                    size="lg"
+                    variant="outline"
+                    onClick={() => { if (step === 'caught') setStep('final'); }}
+                    style={runawayPos}
+                >
+                    No
+                </Button>
+            </div>
+        );
+        break;
+      
+      case 'final':
+        title = "Oh dear i did said you that i will remove that button if you try to press it.... so now just go on press yes button which gonna fall down from the sky just for you"
+        buttons = (
+            <div className="relative h-11">
+                {showFinalFall && (
+                    <Button size="lg" style={{ animation: 'fall-with-wind 1.5s ease-out forwards' }}>
+                        Yes
+                    </Button>
+                )}
+            </div>
+        )
+        break;
+    }
+
+    return (
+      <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between">
+        {title && <h1 key={step} className="text-xl md:text-2xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
+          {title}
+        </h1>}
+        <div className="min-h-[44px] flex items-center justify-center">
+          {buttons}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-[#fff0f3] dark:bg-pink-950 overflow-hidden">
+      <div className="falling-emojis">
+        {particles.map(({ id, content, x, delay, duration, type }) => (
+          <span
+            key={id}
+            className={cn(type === 'emoji' ? 'emoji' : 'snowflake')}
+            style={{
+              left: `${x}vw`,
+              animationDelay: `${delay}s`,
+              animationDuration: `${duration}s`,
+            }}
+          >
+            {content}
+          </span>
+        ))}
+      </div>
+      <div className="relative z-10 flex flex-col items-center justify-center h-full w-full p-4">
+        {renderContent()}
+      </div>
+    </div>
+  );
+};
+
 
 export function Header() {
   const pathname = usePathname();
