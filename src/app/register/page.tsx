@@ -104,11 +104,6 @@ export default function RegisterPage() {
     } catch (error: any) {
         // IMPORTANT PART: Handle existing email
         if (error.code === 'auth/email-already-in-use') {
-            toast({
-                title: 'Account Found',
-                description: 'This email is in use. We will try logging you in to complete your registration.',
-            });
-
             try {
                 // 2. User already exists in Auth -> sign them in
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -143,8 +138,8 @@ export default function RegisterPage() {
                 if (!user.emailVerified) {
                     await sendEmailVerification(user);
                     toast({
-                        title: 'Verification Required',
-                        description: "We've sent a new verification link to your email.",
+                        title: 'Almost there!',
+                        description: "We've sent a verification link to your email.",
                     });
                     router.push('/auth/verify');
                     return;
