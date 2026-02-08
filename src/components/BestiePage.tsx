@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ const BestiePage = () => {
         break;
       case 2:
       case 3: // Same title for step 3
-        title = 'You must have to playyyyyy and click yesss only or if you click no button then i will remove the no nutton';
+        title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
             <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-5 duration-500">
               <Button size="lg">Yes</Button>
