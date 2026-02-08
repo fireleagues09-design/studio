@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
 import { signInWithEmailAndPassword, signInWithPopup, UserCredential, sendEmailVerification } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -41,19 +41,35 @@ export default function LoginPage() {
     const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    if (!userDoc.exists()) {
-        await auth.signOut();
-        toast({
-            title: "Login Failed",
-            description: "No account found with this email. Please sign up first.",
-            variant: "destructive"
-        });
-        router.push('/register');
-        return;
-    }
+    if (userDoc.exists()) {
+        // Existing user, normal login.
+        toast({ title: "Success", description: "Logged in successfully!" });
+        router.push("/");
+    } else {
+        // This is a new user logging in for the first time after email verification,
+        // or a new user signing up with Google on the login page.
+        try {
+            const userData = {
+                email: user.email,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+                isRegistered: false, // This flag will trigger the username prompt
+                ...(user.phoneNumber && { phone: user.phoneNumber }),
+            };
 
-    toast({ title: "Success", description: "Logged in successfully!" });
-    router.push("/");
+            await setDoc(userDocRef, userData);
+
+            toast({
+                title: "Account Ready!",
+                description: "Let's complete your profile.",
+            });
+            router.push("/complete-profile");
+        } catch (error: any) {
+            console.error("Error creating user profile on first login:", error);
+            await auth.signOut();
+            toast({ title: "Login Error", description: error.message || 'Failed to initialize your profile.', variant: 'destructive' });
+        }
+    }
   };
   
   const handleEmailLogin = async () => {
