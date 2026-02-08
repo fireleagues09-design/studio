@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -266,9 +267,9 @@ const BestiePage = () => {
       let left;
 
       if (nextSide === 'left') {
-          left = Math.random() * 25; // 0vw to 25vw
+          left = Math.random() * 20 + 5; // 5vw to 25vw
       } else { // right
-          left = Math.random() * 25 + 75; // 75vw to 100vw
+          left = Math.random() * 20 + 75; // 75vw to 95vw
       }
       
       setNoButtonPos({
@@ -921,6 +922,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
