@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -25,6 +24,9 @@ export default function PendingVerificationPage() {
                     <CardTitle className="text-2xl">Check Your Email</CardTitle>
                     <CardDescription>
                         We've sent a verification link to your email address. Please click the link to activate your account and complete your registration.
+                        <span className="block pt-2">
+                            If you don't see the email in your inbox, please check your spam folder.
+                        </span>
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="text-center">
