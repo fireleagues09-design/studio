@@ -125,7 +125,7 @@ export default function RegisterPage() {
                     variant: 'destructive',
                 });
              }
-        } else if (error.code === 'auth/quota-exceeded') {
+        } else if (error.code === 'auth/quota-exceeded' || error.code === 'auth/too-many-requests') {
             setLoading(false);
             toast({
                 title: "Registration Error",
