@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -155,11 +156,7 @@ export default function RegisterPage() {
             emailVerified: false,
         });
         
-        const actionCodeSettings = {
-            url: `${window.location.origin}/login`,
-            handleCodeInApp: true,
-        };
-        await sendEmailVerification(user, actionCodeSettings);
+        await sendEmailVerification(user);
 
         toast({
             title: 'Almost there!',
