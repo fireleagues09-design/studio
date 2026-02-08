@@ -166,8 +166,6 @@ export default function RegisterPage() {
             handleCodeInApp: true,
         };
         await sendEmailVerification(user, actionCodeSettings);
-        
-        await auth.signOut();
 
         toast({
             title: 'Almost there!',
