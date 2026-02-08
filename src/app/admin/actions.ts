@@ -1,4 +1,3 @@
-
 'use server';
 
 import { auth, db, storage } from '@/lib/firebase-admin';
@@ -172,5 +171,27 @@ export async function updateTransaction(
     } catch (error: any) {
         console.error(`Error updating transaction ${transactionId}:`, error);
         return { success: false, message: error.message || "An unknown error occurred."};
+    }
+}
+
+export async function setBestiePageStatus(
+    isEnabled: boolean,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const settingsRef = db.collection('settings').doc('featureControls');
+        await settingsRef.set({
+            isBestiePageEnabled: isEnabled
+        }, { merge: true });
+
+        return { success: true, message: `Bestie page status updated.` };
+    } catch (error: any) {
+        console.error('Error updating bestie page status:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }

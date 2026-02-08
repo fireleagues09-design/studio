@@ -483,9 +483,16 @@ export function Header() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const { showLoader } = useLoading();
   const [showIncompleteProfilePopup, setShowIncompleteProfilePopup] = useState(false);
+  const [isBestiePageEnabled, setIsBestiePageEnabled] = useState(false);
   
   useEffect(() => {
     setLoading(true);
+
+    const settingsDocRef = doc(db, 'settings', 'featureControls');
+    const unsubscribeSettings = onSnapshot(settingsDocRef, (doc) => {
+        setIsBestiePageEnabled(doc.exists() && doc.data().isBestiePageEnabled === true);
+    });
+    
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
@@ -529,7 +536,10 @@ export function Header() {
         }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+        unsubscribeAuth();
+        unsubscribeSettings();
+    };
   }, [pathname, router, setTheme]);
 
   // Secondary effect to enforce the verification guard after initial load.
@@ -555,7 +565,7 @@ export function Header() {
     window.location.href = '/';
   };
 
-  if (profile?.isBestie) {
+  if (profile?.isBestie && isBestiePageEnabled) {
     return <BestiePage />;
   }
 
@@ -961,14 +971,3 @@ export function Header() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

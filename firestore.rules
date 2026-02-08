@@ -80,5 +80,13 @@ service cloud.firestore {
         // Logs are immutable from the client.
         allow update, delete: if false;
     }
+    
+    // Rules for the 'settings' collection
+    match /settings/{settingId} {
+      // Anyone can read settings.
+      allow read: if true;
+      // Only admins can write settings.
+      allow write: if isAdmin();
+    }
   }
 }
