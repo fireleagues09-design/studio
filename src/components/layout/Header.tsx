@@ -114,7 +114,7 @@ const BestiePage = () => {
   const [noButtonLastSide, setNoButtonLastSide] = useState<'left' | 'right' | null>(null);
   
   // States for 'chase' step
-  const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
+  const [runawayPos, setRunawayPos] = useState<React.CSSProperties>({ top: '50%', left: '50%', position: 'absolute', opacity: 0 });
   const [handsPos, setHandsPos] = useState({
     left: { top: '50%', left: 'calc(50% - 6rem)' },
     right: { top: '50%', left: 'calc(50% + 6rem)' },
@@ -167,55 +167,60 @@ const BestiePage = () => {
       return;
     }
 
-    setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1, transition: 'top 0.5s ease-out, left 0.5s ease-out' });
+    setRunawayPos({ top: '50%', left: '50%', position: 'absolute', opacity: 1 });
     
     // Local variable to track quadrant to avoid stale state issues in setInterval
     let currentQuadrant = -1;
 
-    chaseIntervalRef.current = setInterval(() => {
-       // New quadrant logic to ensure "long distance" runs
-       let nextQuadrant = Math.floor(Math.random() * 4);
-       while (nextQuadrant === currentQuadrant) {
-         nextQuadrant = Math.floor(Math.random() * 4);
-       }
-       currentQuadrant = nextQuadrant;
+    const startChaseTimeout = setTimeout(() => {
+        chaseIntervalRef.current = setInterval(() => {
+            // New quadrant logic to ensure "long distance" runs
+            let nextQuadrant = Math.floor(Math.random() * 4);
+            while (nextQuadrant === currentQuadrant) {
+                nextQuadrant = Math.floor(Math.random() * 4);
+            }
+            currentQuadrant = nextQuadrant;
 
-       let top, left;
-       switch(nextQuadrant) {
-           case 0: // top-left
-               top = `${Math.random() * 25 + 10}%`; // 10-35
-               left = `${Math.random() * 25 + 10}%`; // 10-35
-               break;
-           case 1: // top-right
-               top = `${Math.random() * 25 + 10}%`; // 10-35
-               left = `${Math.random() * 25 + 65}%`; // 65-90
-               break;
-           case 2: // bottom-left
-               top = `${Math.random() * 25 + 65}%`; // 65-90
-               left = `${Math.random() * 25 + 10}%`; // 10-35
-               break;
-           case 3: // bottom-right
-           default:
-               top = `${Math.random() * 25 + 65}%`; // 65-90
-               left = `${Math.random() * 25 + 65}%`; // 65-90
-               break;
-       }
+            let top, left;
+            switch(nextQuadrant) {
+                case 0: // top-left
+                    top = `${Math.random() * 25 + 10}%`; // 10-35
+                    left = `${Math.random() * 25 + 10}%`; // 10-35
+                    break;
+                case 1: // top-right
+                    top = `${Math.random() * 25 + 10}%`; // 10-35
+                    left = `${Math.random() * 25 + 65}%`; // 65-90
+                    break;
+                case 2: // bottom-left
+                    top = `${Math.random() * 25 + 65}%`; // 65-90
+                    left = `${Math.random() * 25 + 10}%`; // 10-35
+                    break;
+                case 3: // bottom-right
+                default:
+                    top = `${Math.random() * 25 + 65}%`; // 65-90
+                    left = `${Math.random() * 25 + 65}%`; // 65-90
+                    break;
+            }
 
-       setRunawayPos(currentPos => ({
-            ...currentPos,
-            top: top,
-            left: left,
-        }));
-    }, 700);
+            setRunawayPos(currentPos => ({
+                ...currentPos,
+                top: top,
+                left: left,
+            }));
+        }, 1500); // Button runs every 1.5 seconds
+    }, 500);
+
 
     catchTimeoutRef.current = setTimeout(() => {
         if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
+        clearTimeout(startChaseTimeout);
         setStep('caught');
-    }, 4000);
+    }, 20000);
 
     return () => {
       if (chaseIntervalRef.current) clearInterval(chaseIntervalRef.current);
       if (catchTimeoutRef.current) clearTimeout(catchTimeoutRef.current);
+      clearTimeout(startChaseTimeout);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -335,7 +340,7 @@ const BestiePage = () => {
       case 'must_play':
         title = 'You must have to playyyyyy and click yesss only!!!!!! or if you click no button then i will remove the no button';
         buttons = (
-          <div className="flex gap-4 justify-center">
+          <div className="relative flex gap-4 justify-center">
             <Button size="lg" className="animate-in fade-in slide-in-from-bottom-5 duration-500">Yes</Button>
             <Button
               size="lg"
@@ -366,8 +371,8 @@ const BestiePage = () => {
             <div className="absolute inset-0 overflow-hidden">
                 <Button size="lg" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-120%, -50%)' }}>Yes</Button>
                 
-                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
-                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.5s ease-out, left 0.5s ease-out'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.left, transform: 'scaleX(-1) rotate(-30deg) translate(50%, -50%)', transition: 'top 0.8s ease-out, left 0.8s ease-out'}} />
+                <Hand className="absolute w-12 h-12 text-primary/70 drop-shadow-lg" style={{...handsPos.right, transform: 'rotate(30deg) translate(-50%, -50%)', transition: 'top 0.8s ease-out, left 0.8s ease-out'}} />
 
                 <Button
                     id="runaway-no-button"
@@ -398,7 +403,7 @@ const BestiePage = () => {
     }
 
     return (
-      <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between relative">
+      <div className="relative text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl shadow-lg min-h-[160px] flex flex-col justify-between">
         {title && <h1 key={step} className="text-xl md:text-2xl font-bold text-primary mb-6 animate-in fade-in zoom-in-95 duration-500">
           {title}
         </h1>}
@@ -410,7 +415,7 @@ const BestiePage = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-pink-100 dark:bg-pink-950 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-pink-100 dark:bg-pink-950/95 backdrop-blur-sm overflow-hidden">
       <div className="falling-emojis">
         {particles.map(({ id, content, x, delay, duration, type }) => (
           <span
@@ -923,6 +928,7 @@ export function Header() {
     </>
   );
 }
+
 
 
 
