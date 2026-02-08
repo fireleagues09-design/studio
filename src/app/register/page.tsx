@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -16,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, User as FirebaseUser, updateProfile } from "firebase/auth";
+import { signInWithPopup, createUserWithEmailAndPassword, sendEmailVerification, User as FirebaseUser, updateProfile, signInWithEmailAndPassword } from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
@@ -63,25 +62,21 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    let user: FirebaseUser | null = null;
+    let userToCleanUp: FirebaseUser | null = null;
     
     try {
-        // Check if a user document with this email already exists in Firestore.
         const usersQuery = query(collection(db, "users"), where("email", "==", email), limit(1));
         const userDocSnapshot = await getDocs(usersQuery);
 
         if (!userDocSnapshot.empty) {
-            // A user document exists, so they are fully registered.
             throw new Error("This email is already registered. Please log in.");
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        user = userCredential.user;
+        userToCleanUp = userCredential.user;
 
-        // Save username to auth profile; will be used on complete-profile page
-        await updateProfile(user, { displayName: username });
-        
-        await sendEmailVerification(user);
+        await updateProfile(userToCleanUp, { displayName: username });
+        await sendEmailVerification(userToCleanUp);
 
         toast({
             title: 'Almost there!',
@@ -91,26 +86,67 @@ export default function RegisterPage() {
         router.push('/auth/verify');
 
     } catch (error: any) {
-        if (user) {
-            await user.delete().catch(e => console.error("Critical: Failed to delete orphaned user:", e));
-        }
-        
-        console.error("Error during registration:", error);
-        let errorMessage = error.message || "Could not create your account. Please try again.";
-        
         if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'An account with this email already exists but is not verified. Please check your email (and spam folder) for the verification link, or try logging in to resend it.';
-        } else if (error.code === 'auth/quota-exceeded') {
-            errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
-            setIsEmailServiceDown(true);
-        } else if (error.code === 'auth/operation-not-allowed') {
-            errorMessage = 'Email/Password sign-up is not enabled. Please enable it in your Firebase project authentication settings.';
+            try {
+                // Attempt to sign in the user, as they may be unverified.
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                
+                const user = userCredential.user;
+
+                if (!user.emailVerified) {
+                    await sendEmailVerification(user);
+                    toast({
+                        title: 'Verification Link Sent',
+                        description: "Your account exists but isn't verified. We've sent a new verification link.",
+                    });
+                    router.push('/auth/verify');
+                } else {
+                    // This case should be handled by the Firestore check at the start,
+                    // but as a fallback, we direct them to complete their profile.
+                     toast({
+                        title: 'Account Already Verified',
+                        description: "Please complete your profile to continue.",
+                    });
+                    router.push('/complete-profile');
+                }
+                // Stop further execution in this block
+                return;
+
+            } catch (signInError: any) {
+                let errorMessage = "This email is already in use. Please log in or use a different email.";
+                if(signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
+                    errorMessage = "This email is already in use. If this is your account, please log in with the correct password."
+                }
+                toast({
+                    title: "Registration Failed",
+                    description: errorMessage,
+                    variant: "destructive",
+                });
+            }
+        } else {
+            // Handle other registration errors
+            if (userToCleanUp) {
+                await userToCleanUp.delete().catch(e => console.error("Critical: Failed to delete orphaned user:", e));
+            }
+            
+            console.error("Error during registration:", error);
+            let errorMessage = error.message || "Could not create your account. Please try again.";
+
+            if (error.code === 'auth/quota-exceeded') {
+                errorMessage = 'Our email service is temporarily at its limit. Please sign up with Google or try again later.';
+                setIsEmailServiceDown(true);
+            } else if (error.code === 'auth/operation-not-allowed') {
+                errorMessage = 'Email/Password sign-up is not enabled. Please enable it in your Firebase project authentication settings.';
+            } else if (error.message) {
+                 errorMessage = error.message;
+            }
+
+            toast({
+                title: "Registration Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
         }
-        toast({
-            title: "Registration Error",
-            description: errorMessage,
-            variant: "destructive",
-        });
     } finally {
         setLoading(false);
     }
@@ -270,5 +306,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    
