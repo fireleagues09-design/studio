@@ -15,6 +15,7 @@ export type Theme =
   | 'cyan'
   | 'indigo'
   | 'grape'
+  | 'spring-green'
 
 export const THEME_NAMES: Theme[] = [
   'orange',
@@ -29,6 +30,7 @@ export const THEME_NAMES: Theme[] = [
   'cyan',
   'indigo',
   'grape',
+  'spring-green',
 ]
 
 type ThemeProviderProps = {

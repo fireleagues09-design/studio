@@ -81,6 +81,7 @@ const themes: { name: Theme; color: string }[] = [
   { name: 'cyan', color: 'hsl(198.8 93.4% 52.4%)' },
   { name: 'indigo', color: 'hsl(236.9 81.3% 63.3%)' },
   { name: 'grape', color: 'hsl(288.1 72.8% 57.5%)' },
+  { name: 'spring-green', color: 'hsl(145 100% 45%)' },
 ];
 
 export function Header() {

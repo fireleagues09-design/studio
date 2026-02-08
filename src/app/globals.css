@@ -269,6 +269,25 @@
     --loader-glow-primary: #e599f7;
     --loader-glow-secondary: #cc5de8;
   }
+
+  .theme-spring-green {
+    --primary: 145 100% 45%;
+    --primary-foreground: 145 100% 95%;
+    --ring: 145 100% 45%;
+    --loader-gradient-start: #adffdc;
+    --loader-gradient-end: #00e676;
+    --loader-glow-primary: #00ff7f;
+    --loader-glow-secondary: #00c853;
+  }
+  .dark.theme-spring-green {
+    --primary: 145 100% 45%;
+    --primary-foreground: 145 100% 95%;
+    --ring: 145 100% 45%;
+    --loader-gradient-start: #adffdc;
+    --loader-gradient-end: #00e676;
+    --loader-glow-primary: #00ff7f;
+    --loader-glow-secondary: #00c853;
+  }
 }
 
 @layer base {
