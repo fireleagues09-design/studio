@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -60,8 +61,7 @@ export default function CompleteProfilePage() {
                 description: error.message || 'Could not set username.',
                 variant: 'destructive',
             });
-        } finally {
-            setLoading(false);
+             setLoading(false);
         }
     };
 
@@ -104,6 +104,7 @@ export default function CompleteProfilePage() {
                                 onChange={(e) => setUsernameState(e.target.value)}
                                 placeholder="6-12 characters"
                                 required
+                                disabled={loading}
                             />
                             <p className="text-xs text-muted-foreground">Must be 6-12 characters long, letters and numbers only.</p>
                         </div>
@@ -112,8 +113,12 @@ export default function CompleteProfilePage() {
                                 {loading ? 'Saving...' : 'Save and Continue'}
                             </Button>
                             <Button type="button" variant="outline" onClick={handleLogout} disabled={loading} className="w-full">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Logout
+                                {loading ? 'Logging out...' : (
+                                    <>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        Logout
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </form>
