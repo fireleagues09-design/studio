@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -15,12 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, sendEmailVerification, signOut } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { GoogleLogo } from "@/components/GoogleLogo";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -90,41 +89,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-      setLoading(true);
-      try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-            // Returning Google user
-            toast({ title: "Success", description: "Logged in successfully!" });
-        } else {
-            // First-time Google user, create their document
-            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: username,
-                email: user.email,
-                isRegistered: true,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-            toast({ title: "Welcome!", description: "Your account has been created." });
-        }
-        router.push('/');
-
-      } catch (error: any) {
-        console.error("Google login error:", error);
-        if (error.code !== 'auth/popup-closed-by-user') {
-            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
-        }
-        setLoading(false); // Stop loading indicator on login failure
-      }
-  }
-
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
       <Card className="w-full max-w-sm mx-auto bg-card border-border shadow-lg">
@@ -135,10 +99,13 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-              <GoogleLogo className="mr-2 h-4 w-4" />
-              {loading ? 'Processing...' : 'Sign in with Google'}
-            </Button>
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Feature Update</AlertTitle>
+                <AlertDescription>
+                    Google Login/Registration is coming soon!
+                </AlertDescription>
+            </Alert>
             
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -13,17 +12,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth, googleProvider } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { 
-    signInWithPopup, 
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
     updateProfile, 
     signInWithEmailAndPassword
 } from "firebase/auth";
-import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -145,23 +142,6 @@ export default function RegisterPage() {
     }
   };
 
-  const startGoogleSignUp = async () => {
-    setLoading(true);
-    try {
-        await signInWithPopup(auth, googleProvider);
-        toast({ title: "Signing in...", description: "Please wait while we check your account." });
-        showLoader();
-        // Redirect to login which will handle new vs returning user
-        router.push('/login'); 
-    } catch (error: any) {
-        setLoading(false);
-        console.error("Google sign up error:", error);
-        if (error.code !== 'auth/popup-closed-by-user') {
-            toast({ title: "Sign-up Failed", description: error.message || "Could not sign up with Google.", variant: "destructive" });
-        }
-    }
-  };
-
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
       <Card className="w-full max-w-sm mx-auto bg-card border-border shadow-lg">
@@ -172,10 +152,13 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Button variant="outline" className="w-full" onClick={startGoogleSignUp} disabled={loading}>
-              <GoogleLogo className="mr-2 h-4 w-4" />
-              Sign up with Google
-            </Button>
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Feature Update</AlertTitle>
+                <AlertDescription>
+                    Google Login/Registration is coming soon!
+                </AlertDescription>
+            </Alert>
 
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
@@ -193,7 +176,7 @@ export default function RegisterPage() {
                     <Info className="h-4 w-4" />
                     <AlertTitle>Email Registration Unavailable</AlertTitle>
                     <AlertDescription>
-                        Our email service is temporarily down. Please use Google Sign-Up above or try again later.
+                        Our email service is temporarily down. Please try again later.
                     </AlertDescription>
                 </Alert>
             )}
