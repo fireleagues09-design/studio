@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import Link from "next/link";
@@ -46,7 +44,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
@@ -129,10 +127,39 @@ export function Header() {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
+                    setLoading(false);
                 } else {
-                    setProfile(null);
+                    // Document doesn't exist. If user is verified, this means registration was
+                    // interrupted after verification. Let's create the profile to fix it.
+                    if (currentUser.emailVerified) {
+                        const createProfile = async () => {
+                            try {
+                                const username = currentUser.displayName || currentUser.email?.split('@')[0] || `user${currentUser.uid.substring(0, 5)}`;
+                                await setDoc(userDocRef, {
+                                    username: username,
+                                    email: currentUser.email,
+                                    isRegistered: true,
+                                    emailVerified: true,
+                                    wallet: { deposit: 0, winning: 0, bonus: 0 },
+                                    registeredOn: new Date(),
+                                });
+                                // The onSnapshot listener will automatically pick up the new document
+                                // and call setProfile, then setLoading(false). We don't do it here.
+                            } catch (error) {
+                                console.error("Header: Failed to auto-create profile for verified user:", error);
+                                // If profile creation fails, log out to prevent being stuck.
+                                await auth.signOut();
+                                setLoading(false);
+                            }
+                        };
+                        createProfile();
+                    } else {
+                       // This is a normal part of the registration flow (user exists in Auth but not Firestore yet).
+                       // No profile to set. Let the app continue to the verify page.
+                       setProfile(null);
+                       setLoading(false);
+                    }
                 }
-                 setLoading(false);
               }, 
               (error) => {
                  console.error("Error fetching user profile:", error);
