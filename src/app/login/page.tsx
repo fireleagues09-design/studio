@@ -47,31 +47,34 @@ export default function LoginPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        // If user document does not exist in Firestore, they are not registered.
-        if (!userDoc.exists()) {
-            toast({
-                title: "Login Failed",
-                description: "Account not found. Please register first.",
-                variant: "destructive",
-            });
-            await signOut(auth); // Sign out the orphaned auth user
-            router.push('/register');
-            return; // Redirecting, so loader on next page will take over.
-        }
-        
-        // If doc exists, but email is not verified, guide them to verification.
+        // If email is not verified, guide them to verification.
         if (!user.emailVerified) {
             toast({
                 title: "Verification Required",
-                description: "Your email is not verified yet. We've sent a new verification link.",
+                description: "Your email is not verified. Please check your inbox for the verification link.",
             });
             await sendEmailVerification(user);
             router.push('/auth/verify');
             return; 
         }
 
-        // Successful login
-        toast({ title: "Success", description: "Logged in successfully!" });
+        // If user is verified but document does not exist, create it.
+        if (!userDoc.exists()) {
+            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+            await setDoc(userDocRef, {
+                username: username,
+                email: user.email,
+                isRegistered: true,
+                emailVerified: true,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+             toast({ title: "Welcome!", description: "Your profile has been set up." });
+        } else {
+            // Successful login for existing user
+            toast({ title: "Success", description: "Logged in successfully!" });
+        }
+        
         router.push("/");
 
     } catch (error: any) {
