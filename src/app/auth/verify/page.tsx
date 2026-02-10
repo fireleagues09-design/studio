@@ -77,8 +77,6 @@ export default function VerifyPage() {
                         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
                         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
                         
-                        showLoader();
-
                         toast({
                             title: "Verification Successful!",
                             description: "Welcome! Creating your profile now...",
@@ -102,7 +100,6 @@ export default function VerifyPage() {
                                 description: "Your email is verified, but we couldn't create your profile. Please contact support.",
                                 variant: "destructive"
                              });
-                             hideLoader();
                              await signOut(auth);
                              router.replace('/login');
                         }
@@ -120,7 +117,7 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         }
 
-    }, [user, router, toast, showLoader, hideLoader]);
+    }, [user, router, toast]);
     
 
     useEffect(() => {
@@ -135,7 +132,6 @@ export default function VerifyPage() {
                     variant: 'destructive'
                 });
 
-                showLoader();
                 try {
                     const currentUser = auth.currentUser;
                     if (currentUser && !currentUser.emailVerified) {
@@ -144,12 +140,11 @@ export default function VerifyPage() {
                     router.replace('/register');
                 } catch (error) {
                     console.error("Error during timeout cleanup:", error);
-                    hideLoader();
                 }
             };
             handleTimeout();
         }
-    }, [timeLeft, router, toast, showLoader, hideLoader]);
+    }, [timeLeft, router, toast]);
 
     const handleResend = async () => {
         if (!user || isResending) return;
