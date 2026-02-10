@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -44,8 +45,6 @@ export default function VerifyPage() {
 
 
     useEffect(() => {
-        hideLoader();
-
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 // If a user lands here but is already verified, send them to the homepage.
@@ -57,6 +56,7 @@ export default function VerifyPage() {
             } else {
                 router.replace('/login');
             }
+            hideLoader();
         });
         
         return () => {
