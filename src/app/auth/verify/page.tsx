@@ -84,13 +84,10 @@ export default function VerifyPage() {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
 >>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
             if (currentUser) {
-                // Get the very latest user state from Firebase servers
                 await currentUser.reload();
-                // If a user lands here but is already verified, complete their registration.
-                if (currentUser.emailVerified) {
-                    await handleRegistrationCompletion(currentUser);
-                    return;
-                }
+                // Set the user and let the interval logic on this page handle verification.
+                // This prevents an immediate redirect if the user is already verified,
+                // ensuring they see the page content as intended.
                 setUser(currentUser);
             } else {
                 router.replace('/login');
@@ -103,7 +100,7 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         };
-    }, [router, hideLoader, handleRegistrationCompletion]);
+    }, [router, hideLoader]);
 
 
     useEffect(() => {
