@@ -66,6 +66,7 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
+    showLoader();
     
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -78,12 +79,10 @@ export default function RegisterPage() {
             title: 'Almost there!',
             description: "We've sent a verification link to your email.",
         });
-        showLoader();
         router.push('/auth/verify');
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            setLoading(true); // Keep loading indicator on for the recovery flow
              try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 if (!userCredential.user.emailVerified) {
@@ -92,7 +91,6 @@ export default function RegisterPage() {
                         title: 'Almost there!',
                         description: "We've sent a new verification link to your email.",
                     });
-                    showLoader();
                     router.push('/auth/verify');
                 } else {
                      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
@@ -101,7 +99,6 @@ export default function RegisterPage() {
                             title: 'Already Registered',
                             description: "This email is already registered and verified. Please log in.",
                         });
-                        showLoader();
                         router.push('/login');
                      } else {
                          // This case is unlikely but handles if Firestore doc is missing for a verified user
@@ -110,12 +107,12 @@ export default function RegisterPage() {
                             title: 'Almost there!',
                             description: "Your account needs final setup. We've sent a new verification link.",
                         });
-                        showLoader();
                         router.push('/auth/verify');
                      }
                 }
              } catch (signInError: any) {
-                setLoading(false); // Stop loading if sign-in fails (e.g. wrong password)
+                setLoading(false);
+                hideLoader();
                 toast({
                     title: 'Account Exists',
                     description: 'An account with this email already exists, but the password was incorrect. Please try logging in.',
@@ -124,6 +121,7 @@ export default function RegisterPage() {
              }
         } else if (error.code === 'auth/quota-exceeded' || error.code === 'auth/too-many-requests') {
             setLoading(false);
+            hideLoader();
             toast({
                 title: "Registration Error",
                 description: 'Our email service is temporarily at its limit. Please sign up with Google or try again later.',
@@ -132,6 +130,7 @@ export default function RegisterPage() {
             setIsEmailServiceDown(true);
         } else {
             setLoading(false);
+            hideLoader();
             console.error("Error during registration:", error);
             toast({
                 title: "Registration Error",

@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { hideLoader } = useLoading();
+  const { showLoader, hideLoader } = useLoading();
 
   useEffect(() => {
     hideLoader();
@@ -40,6 +40,7 @@ export default function LoginPage() {
         return;
     }
     setLoading(true);
+    showLoader();
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
@@ -86,6 +87,7 @@ export default function LoginPage() {
         }
         toast({ title: "Login Failed", description, variant: "destructive" });
         setLoading(false); // Stop loading indicator on login failure
+        hideLoader();
     }
   };
 
