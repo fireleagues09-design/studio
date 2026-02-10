@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function VerifyPage() {
     const router = useRouter();
@@ -36,6 +36,7 @@ export default function VerifyPage() {
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+    // This function now assumes the user document does NOT exist.
     const handleRegistrationCompletion = useCallback(async (userToRegister: FirebaseUser) => {
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -44,22 +45,18 @@ export default function VerifyPage() {
 
         const userDocRef = doc(db, 'users', userToRegister.uid);
         try {
-            const userDoc = await getDoc(userDocRef);
-            // Only create doc if it doesn't exist to avoid overwriting data
-            if (!userDoc.exists()) {
-                 toast({
-                    title: "Verification Successful!",
-                    description: "Welcome! Creating your profile now...",
-                });
-                await setDoc(userDocRef, {
-                    username: userToRegister.displayName,
-                    email: userToRegister.email,
-                    isRegistered: true,
-                    emailVerified: true,
-                    wallet: { deposit: 0, winning: 0, bonus: 0 },
-                    registeredOn: new Date(),
-                });
-            }
+            toast({
+                title: "Verification Successful!",
+                description: "Welcome! Creating your profile now...",
+            });
+            await setDoc(userDocRef, {
+                username: userToRegister.displayName,
+                email: userToRegister.email,
+                isRegistered: true,
+                emailVerified: true,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: new Date(),
+            });
             router.replace('/');
         } catch (dbError) {
              console.error("Failed to create user document after verification:", dbError);
@@ -85,9 +82,13 @@ export default function VerifyPage() {
 >>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
             if (currentUser) {
                 await currentUser.reload();
-                // Set the user and let the interval logic on this page handle verification.
-                // This prevents an immediate redirect if the user is already verified,
-                // ensuring they see the page content as intended.
+                // If user is already verified and lands here, something is wrong.
+                // The login page should have handled them. We log them out to prevent loops.
+                if (currentUser.emailVerified) {
+                    toast({title: "Already Verified", description: "Your account is already verified. Please log in."});
+                    router.replace('/login');
+                    return;
+                }
                 setUser(currentUser);
             } else {
                 router.replace('/login');
@@ -100,7 +101,7 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         };
-    }, [router, hideLoader]);
+    }, [router, hideLoader, toast]);
 
 
     useEffect(() => {

@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { showLoader, hideLoader } = useLoading();
+  const { showLoader, hideLoader, showLoader } = useLoading();
 
   useEffect(() => {
     hideLoader();
@@ -48,18 +48,38 @@ export default function LoginPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        // If the user's profile doesn't exist in the database, registration is incomplete.
-        // Send them to the verification page to create the profile.
+        // If the user's profile doesn't exist, registration is incomplete.
         if (!userDoc.exists()) {
-            toast({
-                title: "Registration Incomplete",
-                description: "Please complete your registration by verifying your email.",
-            });
-            router.push('/auth/verify');
+            // Case 1: User is already verified but has no DB profile. 
+            // This is an inconsistent state. We fix it by creating their profile now.
+            if (user.emailVerified) {
+                toast({
+                    title: "Completing Registration",
+                    description: "Finalizing your account setup...",
+                });
+                await setDoc(userDocRef, {
+                    username: user.displayName,
+                    email: user.email,
+                    isRegistered: true,
+                    emailVerified: true,
+                    wallet: { deposit: 0, winning: 0, bonus: 0 },
+                    registeredOn: serverTimestamp(),
+                });
+                 toast({ title: "Success", description: "Logged in successfully!" });
+                 router.push("/");
+            } else {
+                // Case 2: User has not verified their email. Send them to the verify page.
+                toast({
+                    title: "Verification Required",
+                    description: "Your registration is incomplete. Please verify your email.",
+                });
+                await sendEmailVerification(user);
+                router.push('/auth/verify');
+            }
             return;
         }
         
-        // If the profile exists, but the email is not verified, guide them to verification.
+        // If profile exists, but email somehow not verified (edge case), send to verification.
         if (!user.emailVerified) {
             toast({
                 title: "Verification Required",
@@ -70,11 +90,12 @@ export default function LoginPage() {
             return; 
         }
 
-        // Successful login for existing user
+        // Standard successful login for existing user
         toast({ title: "Success", description: "Logged in successfully!" });
         router.push("/");
 
     } catch (error: any) {
+        hideLoader();
         if (error.code === 'auth/invalid-credential') {
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
@@ -108,9 +129,45 @@ export default function LoginPage() {
             toast({ title: "Login Failed", description: "An unexpected error occurred during login. Please try again.", variant: "destructive" });
         }
         setLoading(false);
-        hideLoader();
     }
   };
+
+  const handleGoogleLogin = async () => {
+      setLoading(true);
+      showLoader();
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+            // Returning Google user
+            toast({ title: "Success", description: "Logged in successfully!" });
+        } else {
+            // First-time Google user, create their document
+            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+            await setDoc(userDocRef, {
+                username: username,
+                email: user.email,
+                isRegistered: true,
+                emailVerified: true,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+            toast({ title: "Welcome!", description: "Your account has been created." });
+        }
+        router.push('/');
+
+      } catch (error: any) {
+        hideLoader();
+        console.error("Google login error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
+        }
+        setLoading(false); // Stop loading indicator on login failure
+      }
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
