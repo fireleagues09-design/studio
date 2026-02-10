@@ -69,27 +69,37 @@ export default function LoginPage() {
         setLoading(false);
         console.error("Error signing in:", error);
 
-        let errorMessage = "An unknown error occurred. Please try again.";
         if (error.code === 'auth/invalid-credential') {
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) {
-                    errorMessage = "No account found with this email. Please register first.";
+                    toast({
+                        title: "Account Not Found",
+                        description: "No account with this email exists. Redirecting to registration...",
+                    });
+                    router.push('/register');
+                    return; 
                 } else {
-                    errorMessage = "Incorrect password. Please try again.";
+                    toast({ 
+                        title: "Login Failed", 
+                        description: "Incorrect password. Please try again.", 
+                        variant: "destructive" 
+                    });
                 }
             } catch (fetchError) {
-                errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                 toast({ 
+                    title: "Login Failed", 
+                    description: "An error occurred while checking your email. Please try again.", 
+                    variant: "destructive" 
+                });
             }
         } else {
-            errorMessage = error.message || errorMessage;
+            toast({ 
+                title: "Login Failed", 
+                description: error.message || "An unknown error occurred. Please try again.", 
+                variant: "destructive" 
+            });
         }
-
-        toast({ 
-            title: "Login Failed", 
-            description: errorMessage, 
-            variant: "destructive" 
-        });
     }
   };
 
