@@ -18,6 +18,7 @@ import {
   Palette,
   AlertTriangle,
   Hand,
+  DropdownMenuSeparator,
 } from "lucide-react";
 import {
   Sheet,
@@ -33,7 +34,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -108,19 +108,20 @@ export function Header() {
   const { theme, setTheme, mode, setMode } = useTheme();
   const { showLoader } = useLoading();
   
+  const handleLogout = async () => {
+    showLoader();
+    setSheetOpen(false);
+    await auth.signOut();
+    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    window.location.href = '/';
+  };
+
   useEffect(() => {
     setLoading(true);
     
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
-            // Immediately redirect if user is not verified and not on the verify page.
-            if (!currentUser.emailVerified && window.location.pathname !== '/auth/verify') {
-                router.replace('/auth/verify');
-                setLoading(false);
-                return;
-            }
-
             const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
@@ -168,14 +169,6 @@ export function Header() {
     { href: user ? "/tournaments" : "/register", label: "Tournaments" },
   ];
   
-  const handleLogout = async () => {
-    showLoader();
-    setSheetOpen(false);
-    await auth.signOut();
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    window.location.href = '/';
-  };
-
   const renderThemeSwatches = () => (
     <div className="flex flex-wrap justify-start gap-1 px-1">
       {themes.map((t) => (
@@ -216,7 +209,7 @@ export function Header() {
         >
           <div className={cn(
             'w-7 h-7 rounded-full border-2 p-0.5',
-             theme === t.name ? 'border-primary' : 'border-muted'
+             theme === t.name ? 'border-muted' : 'border-muted'
           )}>
             <div className="w-full h-full rounded-full bg-primary" />
           </div>
