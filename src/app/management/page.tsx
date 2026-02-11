@@ -103,7 +103,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                         Make changes to "{tournament.name}".
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-6">
                      <div className="grid gap-2">
                         <Label htmlFor="name">Tournament Name</Label>
                         <Input id="name" value={name} onChange={e => setName(e.target.value)} />

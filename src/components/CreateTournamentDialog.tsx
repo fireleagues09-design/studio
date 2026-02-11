@@ -146,7 +146,7 @@ export function CreateTournamentDialog() {
                         Fill in the details for the new tournament.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-6">
                      <div className="grid gap-2">
                         <Label htmlFor="create-name">Tournament Name</Label>
                         <Input id="create-name" value={name} onChange={e => setName(e.target.value)} required />
