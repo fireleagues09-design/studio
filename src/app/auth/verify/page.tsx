@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function VerifyPage() {
     const router = useRouter();
@@ -35,21 +35,60 @@ export default function VerifyPage() {
     
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    
-    const cleanupUser = useCallback(async (targetUser: FirebaseUser) => {
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
-        await signOut(auth);
 
-    }, []);
+    const handleRegistrationCompletion = useCallback(async (userToRegister: FirebaseUser) => {
+        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        
+        showLoader();
+
+        const userDocRef = doc(db, 'users', userToRegister.uid);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            // Only create doc if it doesn't exist to avoid overwriting data
+            if (!userDoc.exists()) {
+                 toast({
+                    title: "Verification Successful!",
+                    description: "Welcome! Creating your profile now...",
+                });
+                await setDoc(userDocRef, {
+                    username: userToRegister.displayName,
+                    email: userToRegister.email,
+                    isRegistered: true,
+                    emailVerified: true,
+                    wallet: { deposit: 0, winning: 0, bonus: 0 },
+                    registeredOn: new Date(),
+                });
+            }
+            router.replace('/');
+        } catch (dbError) {
+             console.error("Failed to create user document after verification:", dbError);
+             toast({
+                title: "Profile Creation Failed",
+                description: "Your email is verified, but we couldn't create your profile. Please contact support.",
+                variant: "destructive"
+             });
+             hideLoader();
+             await signOut(auth);
+             router.replace('/login');
+        }
+    }, [router, showLoader, hideLoader, toast]);
 
 
     useEffect(() => {
+<<<<<<< HEAD
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+=======
+        hideLoader();
+
+        const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+>>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
             if (currentUser) {
-                // If a user lands here but is already verified, send them to the homepage.
+                // Get the very latest user state from Firebase servers
+                await currentUser.reload();
+                // If a user lands here but is already verified, complete their registration.
                 if (currentUser.emailVerified) {
-                    router.replace('/');
+                    await handleRegistrationCompletion(currentUser);
                     return;
                 }
                 setUser(currentUser);
@@ -64,7 +103,7 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         };
-    }, [router, hideLoader]);
+    }, [router, hideLoader, handleRegistrationCompletion]);
 
 
     useEffect(() => {
@@ -74,6 +113,7 @@ export default function VerifyPage() {
                 if (currentUser) {
                     await currentUser.reload();
                     if (currentUser.emailVerified) {
+<<<<<<< HEAD
                         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
                         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
                         
@@ -103,12 +143,15 @@ export default function VerifyPage() {
                              await signOut(auth);
                              router.replace('/login');
                         }
+=======
+                        await handleRegistrationCompletion(currentUser);
+>>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
                     }
                 }
             }, 3000); 
 
             timerIntervalRef.current = setInterval(() => {
-                setTimeLeft(prevTime => prevTime - 1);
+                setTimeLeft(prevTime => prevTime > 0 ? prevTime - 1 : 0);
             }, 1000);
         }
         
@@ -117,7 +160,11 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         }
 
+<<<<<<< HEAD
     }, [user, router, toast]);
+=======
+    }, [user, handleRegistrationCompletion]);
+>>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
     
 
     useEffect(() => {
@@ -193,6 +240,10 @@ export default function VerifyPage() {
 
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
+    
+    if (!user) {
+        return null;
+    }
 
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
