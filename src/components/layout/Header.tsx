@@ -19,6 +19,7 @@ import {
   Palette,
   AlertTriangle,
   Hand,
+  Briefcase,
 } from "lucide-react";
 import {
   Sheet,
@@ -75,6 +76,7 @@ type UserProfile = {
     username: string;
     wallet: WalletData;
     isAdmin?: boolean;
+    isEmployee?: boolean;
     suspended?: boolean;
     isRegistered?: boolean;
     isBestie?: boolean;
@@ -236,10 +238,15 @@ export function Header() {
             <span className="ml-auto text-xs">Soon</span>
         </DropdownMenuItem>
         
-        {profile && profile.isAdmin === true && <DropdownMenuSeparator />}
-        {profile && profile.isAdmin === true && (
+        {(profile?.isAdmin || profile?.isEmployee) && <DropdownMenuSeparator />}
+        {profile?.isAdmin && (
             <DropdownMenuItem asChild>
                 <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
+            </DropdownMenuItem>
+        )}
+        {profile?.isEmployee && (
+            <DropdownMenuItem asChild>
+                <Link href="/management" className="cursor-pointer"><Briefcase className="mr-2 h-4 w-4" /><span>Management</span></Link>
             </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -301,10 +308,15 @@ export function Header() {
             <span className="ml-auto text-xs">Soon</span>
         </Button>
 
-        {profile && profile.isAdmin === true && <Separator className="my-2"/>}
-        {profile && profile.isAdmin === true && (
+        {(profile?.isAdmin || profile?.isEmployee) && <Separator className="my-2"/>}
+        {profile?.isAdmin && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
+            </SheetClose>
+        )}
+        {profile?.isEmployee && (
+            <SheetClose asChild>
+                <Button variant="ghost" asChild className="w-full justify-start"><Link href="/management"><Briefcase className="mr-2 h-4 w-4" />Management</Link></Button>
             </SheetClose>
         )}
         
