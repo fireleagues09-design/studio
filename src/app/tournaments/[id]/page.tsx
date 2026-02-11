@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   ClipboardList,
   Lock,
+  CircleDollarSign,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -318,7 +319,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         prizeDistribution,
         roomId,
         roomPassword,
-        status
+        status,
+        entryFee
     } = tournament;
 
     const progress = (slotsFilled / slots) * 100;
@@ -472,6 +474,15 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                   <span className="text-muted-foreground">Total Prize:</span>
                 </div>
                 <strong className="text-lg">₹{prize}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <CircleDollarSign className="h-5 w-5 text-primary" />
+                  <span className="text-muted-foreground">Entry Fee:</span>
+                </div>
+                <strong>
+                  {entryFee === 'FREE' || entryFee === '0' ? 'FREE' : `₹${entryFee}`}
+                </strong>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">

@@ -625,6 +625,7 @@ export default function AdminPage() {
                                             <TableHead>Name</TableHead>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Slots</TableHead>
+                                            <TableHead>Entry Fee</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Prize</TableHead>
                                             <TableHead className="text-center">Actions</TableHead>
@@ -636,6 +637,7 @@ export default function AdminPage() {
                                                 <TableCell className="font-medium">{tournament.name}</TableCell>
                                                 <TableCell>{tournament.date} @ {tournament.time}</TableCell>
                                                 <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
+                                                <TableCell>{tournament.entryFee === 'FREE' || tournament.entryFee === '0' ? 'FREE' : `₹${tournament.entryFee}`}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={
                                                         tournament.status === 'Finished' ? 'destructive' :

@@ -8,6 +8,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import type { Tournament } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
@@ -28,6 +29,7 @@ export default function TournamentCard({ tournament: initialTournament, isAuthen
     image,
     dataAiHint,
     slots,
+    entryFee,
   } = tournament;
   
   const linkHref = isAuthenticated ? `/tournaments/${id}` : '/register';
@@ -44,6 +46,9 @@ export default function TournamentCard({ tournament: initialTournament, isAuthen
   return (
     <Link href={linkHref} className="group">
         <Card className="flex flex-col overflow-hidden transition-transform transform hover:-translate-y-1 hover:shadow-primary/20 hover:shadow-lg w-full aspect-square relative">
+            <Badge className="absolute top-2 right-2 z-10">
+              {entryFee === 'FREE' || entryFee === '0' ? 'FREE' : `₹${entryFee}`}
+            </Badge>
             <Image
             src={image}
             alt={name}
