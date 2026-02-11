@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function VerifyPage() {
     const router = useRouter();
@@ -36,7 +36,7 @@ export default function VerifyPage() {
     const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const verificationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // This function now assumes the user document does NOT exist.
+    // This function handles the final step of creating the user's profile document.
     const handleRegistrationCompletion = useCallback(async (userToRegister: FirebaseUser) => {
         if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -45,18 +45,27 @@ export default function VerifyPage() {
 
         const userDocRef = doc(db, 'users', userToRegister.uid);
         try {
-            toast({
-                title: "Verification Successful!",
-                description: "Welcome! Creating your profile now...",
-            });
-            await setDoc(userDocRef, {
-                username: userToRegister.displayName,
-                email: userToRegister.email,
-                isRegistered: true,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: new Date(),
-            });
+            // Check if the document already exists to prevent overwriting.
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+                toast({
+                    title: "Verification Successful!",
+                    description: "Welcome! Creating your profile now...",
+                });
+                await setDoc(userDocRef, {
+                    username: userToRegister.displayName,
+                    email: userToRegister.email,
+                    isRegistered: true,
+                    emailVerified: true,
+                    wallet: { deposit: 0, winning: 0, bonus: 0 },
+                    registeredOn: serverTimestamp(),
+                });
+            } else {
+                 toast({
+                    title: "Welcome Back!",
+                    description: "Your account is verified and ready.",
+                });
+            }
             router.replace('/');
         } catch (dbError) {
              console.error("Failed to create user document after verification:", dbError);
@@ -73,27 +82,15 @@ export default function VerifyPage() {
 
 
     useEffect(() => {
-<<<<<<< HEAD
-        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-=======
         hideLoader();
 
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
->>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
             if (currentUser) {
-                await currentUser.reload();
-                // If user is already verified and lands here, something is wrong.
-                // The login page should have handled them. We log them out to prevent loops.
-                if (currentUser.emailVerified) {
-                    toast({title: "Already Verified", description: "Your account is already verified. Please log in."});
-                    router.replace('/login');
-                    return;
-                }
                 setUser(currentUser);
             } else {
+                // If there's no user, they should not be on this page.
                 router.replace('/login');
             }
-            hideLoader();
         });
         
         return () => {
@@ -101,53 +98,24 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         };
-    }, [router, hideLoader, toast]);
+    }, [router, hideLoader]);
 
 
     useEffect(() => {
         if (user) {
+             // Start checking for email verification every 3 seconds.
              verificationIntervalRef.current = setInterval(async () => {
                 const currentUser = auth.currentUser;
                 if (currentUser) {
                     await currentUser.reload();
                     if (currentUser.emailVerified) {
-<<<<<<< HEAD
-                        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
-                        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-                        
-                        toast({
-                            title: "Verification Successful!",
-                            description: "Welcome! Creating your profile now...",
-                        });
-                        
-                        const userDocRef = doc(db, 'users', currentUser.uid);
-                        try {
-                             await setDoc(userDocRef, {
-                                username: currentUser.displayName,
-                                email: currentUser.email,
-                                isRegistered: true,
-                                emailVerified: true,
-                                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                                registeredOn: new Date(),
-                            });
-                            router.replace('/');
-                        } catch (dbError) {
-                             console.error("Failed to create user document after verification:", dbError);
-                             toast({
-                                title: "Profile Creation Failed",
-                                description: "Your email is verified, but we couldn't create your profile. Please contact support.",
-                                variant: "destructive"
-                             });
-                             await signOut(auth);
-                             router.replace('/login');
-                        }
-=======
+                        // Once verified, stop checking and complete registration.
                         await handleRegistrationCompletion(currentUser);
->>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
                     }
                 }
             }, 3000); 
 
+            // Start the countdown timer.
             timerIntervalRef.current = setInterval(() => {
                 setTimeLeft(prevTime => prevTime > 0 ? prevTime - 1 : 0);
             }, 1000);
@@ -158,11 +126,7 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         }
 
-<<<<<<< HEAD
-    }, [user, router, toast]);
-=======
     }, [user, handleRegistrationCompletion]);
->>>>>>> 421c79c (dont give this message just give a new verifiy page to complete registra)
     
 
     useEffect(() => {
@@ -180,16 +144,21 @@ export default function VerifyPage() {
                 try {
                     const currentUser = auth.currentUser;
                     if (currentUser && !currentUser.emailVerified) {
-                        await signOut(auth);
+                        await currentUser.delete(); // Delete unverified user from Auth
                     }
+                    await signOut(auth); // Sign out any lingering session
                     router.replace('/register');
                 } catch (error) {
                     console.error("Error during timeout cleanup:", error);
+                    hideLoader();
+                    // Still sign out and redirect even if deletion fails.
+                    await signOut(auth);
+                    router.replace('/register');
                 }
             };
             handleTimeout();
         }
-    }, [timeLeft, router, toast]);
+    }, [timeLeft, router, toast, hideLoader]);
 
     const handleResend = async () => {
         if (!user || isResending) return;
@@ -220,16 +189,18 @@ export default function VerifyPage() {
     }
     
     const handleCancel = async () => {
-        if (isCanceling) return;
+        if (isCanceling || !auth.currentUser) return;
 
         setIsCanceling(true);
         showLoader();
 
         try {
-            await signOut(auth);
+            // Delete the unverified user from Firebase Auth to allow them to re-register.
+            await auth.currentUser.delete();
+            await signOut(auth); // This might be redundant but ensures clean state.
             router.replace('/');
         } catch (error) {
-            console.error("Error on cancel sign out:", error);
+            console.error("Error on cancel registration:", error);
             hideLoader();
             setIsCanceling(false);
             toast({ title: "Error", description: "Could not cancel registration. Please try again.", variant: "destructive"});
@@ -261,7 +232,7 @@ export default function VerifyPage() {
                         Time left: {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                        The page will automatically redirect once your email is verified.
+                        This page will automatically redirect once your email is verified.
                     </p>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-2">
@@ -280,7 +251,7 @@ export default function VerifyPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will cancel your registration process. You can always sign up again later.
+                                    This will cancel your registration process and delete your unverified account. You can sign up again later.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

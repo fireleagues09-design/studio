@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const { showLoader, hideLoader, showLoader } = useLoading();
+  const { showLoader, hideLoader } = useLoading();
 
   useEffect(() => {
     hideLoader();
@@ -48,46 +48,17 @@ export default function LoginPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        // If the user's profile doesn't exist, registration is incomplete.
-        if (!userDoc.exists()) {
-            // Case 1: User is already verified but has no DB profile. 
-            // This is an inconsistent state. We fix it by creating their profile now.
-            if (user.emailVerified) {
-                toast({
-                    title: "Completing Registration",
-                    description: "Finalizing your account setup...",
-                });
-                await setDoc(userDocRef, {
-                    username: user.displayName,
-                    email: user.email,
-                    isRegistered: true,
-                    emailVerified: true,
-                    wallet: { deposit: 0, winning: 0, bonus: 0 },
-                    registeredOn: serverTimestamp(),
-                });
-                 toast({ title: "Success", description: "Logged in successfully!" });
-                 router.push("/");
-            } else {
-                // Case 2: User has not verified their email. Send them to the verify page.
-                toast({
-                    title: "Verification Required",
-                    description: "Your registration is incomplete. Please verify your email.",
-                });
-                await sendEmailVerification(user);
-                router.push('/auth/verify');
-            }
-            return;
-        }
-        
-        // If profile exists, but email somehow not verified (edge case), send to verification.
-        if (!user.emailVerified) {
-            toast({
+        if (!user.emailVerified || !userDoc.exists()) {
+             toast({
                 title: "Verification Required",
-                description: "Your email is not verified. Please check your inbox for the verification link.",
+                description: "Your registration is incomplete. Please verify your email.",
             });
-            await sendEmailVerification(user);
+            // Send verification email again just in case.
+            if (!user.emailVerified) {
+                await sendEmailVerification(user);
+            }
             router.push('/auth/verify');
-            return; 
+            return;
         }
 
         // Standard successful login for existing user
@@ -136,28 +107,28 @@ export default function LoginPage() {
       setLoading(true);
       showLoader();
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        // const result = await signInWithPopup(auth, googleProvider);
+        // const user = result.user;
+        // const userDocRef = doc(db, 'users', user.uid);
+        // const userDoc = await getDoc(userDocRef);
 
-        if (userDoc.exists()) {
-            // Returning Google user
-            toast({ title: "Success", description: "Logged in successfully!" });
-        } else {
-            // First-time Google user, create their document
-            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: username,
-                email: user.email,
-                isRegistered: true,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-            toast({ title: "Welcome!", description: "Your account has been created." });
-        }
-        router.push('/');
+        // if (userDoc.exists()) {
+        //     // Returning Google user
+        //     toast({ title: "Success", description: "Logged in successfully!" });
+        // } else {
+        //     // First-time Google user, create their document
+        //     const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+        //     await setDoc(userDocRef, {
+        //         username: username,
+        //         email: user.email,
+        //         isRegistered: true,
+        //         emailVerified: true,
+        //         wallet: { deposit: 0, winning: 0, bonus: 0 },
+        //         registeredOn: serverTimestamp(),
+        //     });
+        //     toast({ title: "Welcome!", description: "Your account has been created." });
+        // }
+        // router.push('/');
 
       } catch (error: any) {
         hideLoader();

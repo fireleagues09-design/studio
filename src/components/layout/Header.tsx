@@ -20,7 +20,6 @@ import {
   AlertTriangle,
   Hand,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "lucide-react";
 import {
   Sheet,
@@ -39,6 +38,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -106,8 +106,8 @@ export function Header() {
   const [loading, setLoading] = useState(true);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
-  const { theme, setTheme, mode, setMode } = useTheme();
   const { showLoader } = useLoading();
+  const { theme, setTheme, mode, setMode } = useTheme();
   
   const handleLogout = async () => {
     showLoader();
@@ -153,15 +153,9 @@ export function Header() {
     return () => {
         unsubscribeAuth();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, router]);
 
-  // Secondary effect to enforce the verification guard after initial load.
-  useEffect(() => {
-    if (!loading && user && !user.emailVerified && pathname !== '/auth/verify') {
-        router.replace('/auth/verify');
-    }
-  }, [loading, user, pathname, router]);
-  
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
@@ -388,7 +382,7 @@ export function Header() {
                       <Skeleton className="h-9 w-24" />
                       <Skeleton className="h-9 w-9 rounded-full" />
                   </div>
-              ) : user && user.emailVerified && profile ? (
+              ) : user && profile ? (
                 <>
                   <Button variant="ghost" size="sm" asChild>
                       <Link href="/wallet">
@@ -495,7 +489,7 @@ export function Header() {
                               <Skeleton className="h-10 w-full" />
                               <Skeleton className="h-10 w-full" />
                           </div>
-                      ) : user && user.emailVerified && profile ? (
+                      ) : user && profile ? (
                          mobileUserMenuItems
                       ) : (
                         <>
