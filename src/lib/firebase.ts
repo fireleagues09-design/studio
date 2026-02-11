@@ -6,12 +6,12 @@ import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  "projectId": "fireleagues-41911",
-  "appId": "1:959326744237:web:2126f432a51706218f2f8a",
-  "storageBucket": "fireleagues-41911.appspot.com",
-  "apiKey": "AIzaSyDJLgK3vH-s-sLq3wL-cYC2zD9GkP5o9sQ",
-  "authDomain": "fireleagues-41911.firebaseapp.com",
-  "messagingSenderId": "959326744237"
+  "projectId": "fireleagues-drrjw",
+  "appId": "1:388454536362:web:886eafbbcb0bd9ceb7acd3",
+  "storageBucket": "fireleagues-drrjw.appspot.com",
+  "apiKey": "AIzaSyAyQkLAUnzfEnQDZv8fY_sxJ1Epfq_IO4g",
+  "authDomain": "fireleagues-drrjw.firebaseapp.com",
+  "messagingSenderId": "388454536362"
 };
 
 // Initialize Firebase
