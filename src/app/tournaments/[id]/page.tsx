@@ -339,6 +339,25 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 </Button>
             );
         }
+        
+        if (!user.emailVerified) {
+             return (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="w-full">
+                                <Button size="lg" className="w-full font-bold" disabled>
+                                    Register {teamType}
+                                </Button>
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Please verify your email to register for tournaments.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            );
+        }
     
         const buttonState = getButtonState({
             isRegistered,

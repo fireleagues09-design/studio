@@ -22,7 +22,7 @@ import {
     updateProfile,
     signInWithEmailAndPassword
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -74,16 +74,28 @@ export default function RegisterPage() {
         const user = userCredential.user;
 
         await updateProfile(user, { displayName: username });
+
+        // Create Firestore document for the new user
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, {
+            username: username,
+            email: user.email,
+            isRegistered: true,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+        });
         
         await sendEmailVerification(user);
+
         toast({
-            title: 'Almost there!',
-            description: "We've sent a verification link to your email. Please check your inbox and spam folder.",
+            title: 'Registration Successful!',
+            description: "Welcome! A verification link has been sent. Please verify your email to get full access.",
         });
         router.push('/auth/verify');
 
     } catch (error: any) {
         setLoading(false);
+        hideLoader();
         if (error.code === 'auth/email-already-in-use') {
              try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);

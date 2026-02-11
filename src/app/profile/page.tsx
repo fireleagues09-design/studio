@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Gamepad2, PlusCircle } from 'lucide-react';
+import { User, Mail, Gamepad2, PlusCircle, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,7 @@ import { useLoading } from '@/context/LoadingContext';
 import { updateGameProfile } from './actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 // --- TYPES ---
 type GameProfile = {
@@ -164,6 +166,7 @@ export default function ProfilePage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [resending, setResending] = useState(false);
 
     const router = useRouter();
     const { toast } = useToast();
@@ -179,8 +182,6 @@ export default function ProfilePage() {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
                     } else {
-                        // The global handler in Header.tsx will deal with this.
-                        // Setting profile to null prevents render errors.
                         setProfile(null);
                     }
                     setLoading(false);
@@ -211,21 +212,58 @@ export default function ProfilePage() {
         window.location.href = '/';
     };
 
+    const handleResendVerification = async () => {
+        if (!user || resending) return;
+        setResending(true);
+        try {
+            await sendEmailVerification(user);
+            toast({
+                title: "Verification Link Sent",
+                description: "A new verification link has been sent to your email. Please check your inbox and spam folder.",
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to send verification link.",
+                variant: "destructive",
+            });
+        } finally {
+            setResending(false);
+        }
+    };
+
     if (loading || !user) {
         return null;
     }
     
     if (!profile) {
-        // Return null or a loading skeleton while the global logout handler in the header kicks in.
-        // This prevents the page from crashing when profile is null.
         return null;
     }
 
     const freeFireProfile = profile.gameProfiles?.['Free Fire'];
     const bgmiProfile = profile.gameProfiles?.['BGMI'];
+    const isVerified = user.emailVerified;
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
+            {!isVerified && (
+                <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                    <CardHeader>
+                        <CardTitle className="text-amber-700 dark:text-amber-400">Verify Your Account</CardTitle>
+                        <CardDescription>Your account is not verified. Please check your email for the verification link.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">If you didn't receive the email or the link has expired, you can request a new one. Remember to check your spam folder.</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={handleResendVerification} disabled={resending} variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
+                            {resending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {resending ? 'Sending...' : 'Resend Verification Link'}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle className="text-3xl">My Profile</CardTitle>
@@ -242,9 +280,14 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-2">
                         <Label>Email</Label>
-                        <div className="flex items-center gap-2 text-muted-foreground border p-2 rounded-md bg-secondary/50">
+                        <div className="flex items-center gap-3 text-muted-foreground border p-2 rounded-md bg-secondary/50">
                            <Mail className="h-4 w-4" />
-                           <p>{profile.email}</p>
+                           <p className="flex-grow">{profile.email}</p>
+                           {isVerified ? (
+                             <Badge className="bg-green-500 border-transparent text-white hover:bg-green-500/90">Verified</Badge>
+                           ) : (
+                             <Badge variant="destructive">Unverified</Badge>
+                           )}
                         </div>
                     </div>
                 </CardContent>

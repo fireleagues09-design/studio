@@ -125,12 +125,11 @@ export function Header() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
-            // Firestore is the source of truth for a completed registration.
-            // We listen for the user's profile document here.
             const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
                 if (doc.exists()) {
+<<<<<<< HEAD
                     // If the doc exists, the user is fully registered.
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
@@ -138,6 +137,10 @@ export function Header() {
                 } else {
                     // Auth user exists, but no Firestore doc.
                     // Set profile to null and let the specific pages handle the flow.
+=======
+                    setProfile(doc.data() as UserProfile);
+                } else {
+>>>>>>> 490d771 (or else current page as diffrent login page and register page and user c)
                     setProfile(null);
                     setLoading(false);
                 }
@@ -150,7 +153,6 @@ export function Header() {
             );
             return () => unsubscribeProfile();
         } else {
-            // No user is authenticated with Firebase.
             setProfile(null);
             setLoading(false);
         }
@@ -363,6 +365,18 @@ export function Header() {
       {shouldShowBestiePage && <BestiePage />}
       
       {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
+      
+      {user && profile && !user.emailVerified && (
+        <div className="bg-amber-400 text-black">
+            <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                <span>Your account is not fully activated.</span>
+                <Button asChild variant="link" className="p-0 h-auto text-black underline font-bold">
+                    <Link href="/profile">Please verify your email</Link>
+                </Button>
+            </div>
+        </div>
+      )}
 
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top)]">
         <div className="container flex h-16 items-center px-4">
