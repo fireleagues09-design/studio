@@ -37,9 +37,10 @@ service cloud.firestore {
       // Anyone can view tournament details.
       allow read, list: if true;
 
-      // Admins can perform all write operations. Employees can only create.
-      allow create: if isAdmin() || isEmployee();
-      allow update, delete: if isAdmin();
+      // Admins and employees can create and update tournaments.
+      allow create, update: if isAdmin() || isEmployee();
+      // Only admins can delete tournaments.
+      allow delete: if isAdmin();
 
       // Rules for the 'registrations' subcollection
       match /registrations/{userId} {

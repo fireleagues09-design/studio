@@ -3,13 +3,179 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, collection, onSnapshot, getCountFromServer, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, getCountFromServer, query, where, updateDoc, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, TrophyIcon, Users } from 'lucide-react';
+import { Briefcase, Pencil, TrophyIcon, Users } from 'lucide-react';
 import { CreateTournamentDialog } from '@/components/CreateTournamentDialog';
+import type { Tournament as TournamentType } from '@/lib/mock-data';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+
+function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
+    const [name, setName] = useState(tournament.name);
+    const [date, setDate] = useState(tournament.date);
+    const [time, setTime] = useState(tournament.time);
+    const [entryFee, setEntryFee] = useState(tournament.entryFee);
+    const [prize, setPrize] = useState(tournament.prize);
+    const [slots, setSlots] = useState(tournament.slots.toString());
+    const [status, setStatus] = useState<TournamentType['status']>(tournament.status || 'Upcoming');
+    const [roomId, setRoomId] = useState(tournament.roomId || '');
+    const [roomPassword, setRoomPassword] = useState(tournament.roomPassword || '');
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+    
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const tournamentDocRef = doc(db, 'tournaments', tournament.id);
+            await updateDoc(tournamentDocRef, {
+                name,
+                date,
+                time,
+                entryFee,
+                prize,
+                slots: Number(slots),
+                status,
+                roomId,
+                roomPassword,
+            });
+            toast({
+                title: 'Success',
+                description: `Tournament "${name}" has been updated.`
+            });
+            setOpen(false);
+        } catch (error) {
+            console.error("Error updating tournament:", error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update tournament. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Edit Tournament</DialogTitle>
+                    <DialogDescription>
+                        Make changes to "{tournament.name}".
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-4">
+                     <div className="grid gap-2">
+                        <Label htmlFor="name">Tournament Name</Label>
+                        <Input id="name" value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="date">Date</Label>
+                            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="time">Time</Label>
+                            <Input id="time" type="time" value={time} onChange={e => setTime(e.target.value)} />
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="entryFee">Entry Fee</Label>
+                            <Input id="entryFee" value={entryFee} onChange={e => setEntryFee(e.target.value)} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="prize">Prize Pool (INR)</Label>
+                            <Input id="prize" value={prize} onChange={e => setPrize(e.target.value)} />
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                           <Label htmlFor="slots">Total Slots</Label>
+                           <Input id="slots" type="number" value={slots} onChange={e => setSlots(e.target.value)} />
+                        </div>
+                         <div className="grid gap-2">
+                           <Label htmlFor="edit-status">Status</Label>
+                           <Select value={status} onValueChange={(value) => setStatus(value as TournamentType['status'])}>
+                               <SelectTrigger id="edit-status">
+                                   <SelectValue placeholder="Select status" />
+                               </SelectTrigger>
+                               <SelectContent>
+                                   <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                   <SelectItem value="Ongoing">Ongoing</SelectItem>
+                                   <SelectItem value="Finished">Finished</SelectItem>
+                               </SelectContent>
+                           </Select>
+                        </div>
+                    </div>
+
+                    <div className="p-4 border rounded-md space-y-3 bg-secondary/50">
+                        <Label>Room Credentials</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="roomId">Room ID</Label>
+                                <Input id="roomId" value={roomId} onChange={e => setRoomId(e.target.value)} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="roomPassword">Room Password</Label>
+                                <Input id="roomPassword" value={roomPassword} onChange={e => setRoomPassword(e.target.value)} />
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-4 border-t">
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function ManagementPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -17,11 +183,13 @@ export default function ManagementPage() {
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [tournaments, setTournaments] = useState<TournamentType[]>([]);
     const [upcomingTournaments, setUpcomingTournaments] = useState(0);
     const [ongoingTournaments, setOngoingTournaments] = useState(0);
     const [finishedTournaments, setFinishedTournaments] = useState(0);
     const router = useRouter();
     const { hideLoader } = useLoading();
+    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -61,6 +229,14 @@ export default function ManagementPage() {
         });
 
         const tournamentsRef = collection(db, "tournaments");
+        const tournamentsQuery = query(tournamentsRef, orderBy("createdAt", "desc"));
+        const unsubscribeAllTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
+            const tournamentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TournamentType));
+            setTournaments(tournamentsData);
+        }, (error) => {
+            console.error("Error fetching all tournaments:", error);
+            toast({ title: "Error", description: "Could not fetch tournament list.", variant: "destructive" });
+        });
 
         const upcomingQuery = query(tournamentsRef, where("status", "==", "Upcoming"));
         const unsubscribeUpcoming = onSnapshot(upcomingQuery, async () => {
@@ -87,11 +263,12 @@ export default function ManagementPage() {
 
         return () => {
             unsubscribeUsers();
+            unsubscribeAllTournaments();
             unsubscribeUpcoming();
             unsubscribeOngoing();
             unsubscribeFinished();
         };
-    }, [isEmployee, authLoading]);
+    }, [isEmployee, authLoading, toast]);
 
     useEffect(() => {
         // This effect will run when auth and data checks are complete.
@@ -164,17 +341,57 @@ export default function ManagementPage() {
 
              <section className="space-y-8">
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <TrophyIcon className="h-5 w-5 text-primary" />
-                            Tournament Management
-                        </CardTitle>
-                        <CardDescription>
-                            Create new tournaments for the platform.
-                        </CardDescription>
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <TrophyIcon className="h-5 w-5 text-primary" />
+                                Tournament Management
+                            </CardTitle>
+                            <CardDescription>
+                                Create new tournaments for the platform.
+                            </CardDescription>
+                        </div>
+                        <CreateTournamentDialog />
                     </CardHeader>
                     <CardContent>
-                        <CreateTournamentDialog />
+                       <div className="border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Slots</TableHead>
+                                        <TableHead>Entry Fee</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Prize</TableHead>
+                                        <TableHead className="text-center">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {tournaments.map(tournament => (
+                                        <TableRow key={tournament.id}>
+                                            <TableCell className="font-medium">{tournament.name}</TableCell>
+                                            <TableCell>{tournament.date} @ {tournament.time}</TableCell>
+                                            <TableCell>{tournament.slotsFilled} / {tournament.slots}</TableCell>
+                                            <TableCell>{tournament.entryFee === 'FREE' || tournament.entryFee === '0' ? 'FREE' : `₹${tournament.entryFee}`}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={
+                                                    tournament.status === 'Finished' ? 'destructive' :
+                                                    tournament.status === 'Ongoing' ? 'default' :
+                                                    'secondary'
+                                                }>
+                                                    {tournament.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">₹{tournament.prize}</TableCell>
+                                            <TableCell className="text-center">
+                                                <EditTournamentDialog tournament={tournament} />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
 
