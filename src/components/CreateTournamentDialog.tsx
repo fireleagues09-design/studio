@@ -2,8 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { FULL_MAP_RULES } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
+import { createTournamentAction } from '@/app/management/actions';
 
 export function CreateTournamentDialog() {
     const [name, setName] = useState('');
@@ -66,6 +66,17 @@ export function CreateTournamentDialog() {
         e.preventDefault();
         setLoading(true);
 
+        const user = auth.currentUser;
+        if (!user) {
+            toast({
+                title: "Authentication Error",
+                description: "You must be logged in to create a tournament.",
+                variant: "destructive"
+            });
+            setLoading(false);
+            return;
+        }
+
         const finalImageUrl = imageUrl.trim() || `https://picsum.photos/seed/${Math.random()}/600/400`;
         const dataAiHint = 'gaming abstract';
         
@@ -77,11 +88,7 @@ export function CreateTournamentDialog() {
                 finalPrizeDistribution.push({ place: 'Per Kill', prize: prizePerKill });
             }
 
-            const tournamentId = Math.floor(10000000 + Math.random() * 90000000).toString();
-            const tournamentDocRef = doc(db, 'tournaments', tournamentId);
-
-            await setDoc(tournamentDocRef, {
-                id: tournamentId,
+            const tournamentData = {
                 name,
                 date,
                 time,
@@ -92,26 +99,31 @@ export function CreateTournamentDialog() {
                 teamType,
                 status,
                 image: finalImageUrl,
-                slotsFilled: 0,
-                registeredPlayers: [],
                 dataAiHint,
                 rules: rules,
                 prizeDistribution: finalPrizeDistribution,
                 roomId: '',
                 roomPassword: '',
-                createdAt: serverTimestamp()
-            });
-            toast({
-                title: 'Success',
-                description: `Tournament "${name}" has been created.`
-            });
-            resetForm();
-            setOpen(false);
-        } catch (error) {
+            } as Omit<TournamentType, 'id' | 'slotsFilled' | 'registeredPlayers'>;
+
+            const idToken = await user.getIdToken();
+            const result = await createTournamentAction(tournamentData, idToken);
+
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: result.message
+                });
+                resetForm();
+                setOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
             console.error("Error creating tournament:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to create tournament. Please try again.',
+                description: error.message || 'Failed to create tournament. Please try again.',
                 variant: 'destructive',
             });
         } finally {
