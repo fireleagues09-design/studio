@@ -129,18 +129,13 @@ export function Header() {
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
                 if (doc.exists()) {
-<<<<<<< HEAD
                     // If the doc exists, the user is fully registered.
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // Auth user exists, but no Firestore doc.
-                    // Set profile to null and let the specific pages handle the flow.
-=======
-                    setProfile(doc.data() as UserProfile);
-                } else {
->>>>>>> 490d771 (or else current page as diffrent login page and register page and user c)
+                    // This can happen during registration before the doc is created,
+                    // or if registration was interrupted. Page-level logic will handle redirects.
                     setProfile(null);
                     setLoading(false);
                 }
