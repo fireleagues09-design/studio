@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup, sendEmailVerification, signOut, fetchSignInMethodsForEmail } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -48,7 +48,18 @@ export default function LoginPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        // If email is not verified, guide them to verification.
+        // If the user's profile doesn't exist in the database, registration is incomplete.
+        // Send them to the verification page to create the profile.
+        if (!userDoc.exists()) {
+            toast({
+                title: "Registration Incomplete",
+                description: "Please complete your registration by verifying your email.",
+            });
+            router.push('/auth/verify');
+            return;
+        }
+        
+        // If the profile exists, but the email is not verified, guide them to verification.
         if (!user.emailVerified) {
             toast({
                 title: "Verification Required",
@@ -59,23 +70,8 @@ export default function LoginPage() {
             return; 
         }
 
-        // If user is verified but document does not exist, create it.
-        if (!userDoc.exists()) {
-            const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: username,
-                email: user.email,
-                isRegistered: true,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-             toast({ title: "Welcome!", description: "Your profile has been set up." });
-        } else {
-            // Successful login for existing user
-            toast({ title: "Success", description: "Logged in successfully!" });
-        }
-        
+        // Successful login for existing user
+        toast({ title: "Success", description: "Logged in successfully!" });
         router.push("/");
 
     } catch (error: any) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -130,8 +131,9 @@ export function Header() {
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // This can happen during registration before the doc is created,
-                    // or if registration was interrupted. Page-level logic will handle redirects.
+                    // Auth user exists, but no Firestore doc.
+                    // This means registration is incomplete.
+                    // We set the profile to null and let page-level logic on /login or /auth/verify handle the user.
                     setProfile(null);
                     setLoading(false);
                 }
