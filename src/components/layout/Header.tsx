@@ -46,11 +46,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-<<<<<<< HEAD
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-=======
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
->>>>>>> 30ba489 (Alright — I’ll give you a **complete, clean, minimal working example** f)
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
@@ -134,12 +130,6 @@ export function Header() {
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
                 if (doc.exists()) {
-<<<<<<< HEAD
-                    // If the doc exists, the user is fully registered.
-                    const profileData = doc.data() as UserProfile;
-                    setProfile(profileData);
-                    setLoading(false);
-=======
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
 
@@ -147,7 +137,7 @@ export function Header() {
                     if (currentUser.emailVerified && !profileData.emailVerified) {
                         updateDoc(userDocRef, { emailVerified: true });
                     }
->>>>>>> 30ba489 (Alright — I’ll give you a **complete, clean, minimal working example** f)
+                    setLoading(false);
                 } else {
                     // This can happen during registration before the doc is created,
                     // or if registration was interrupted. Page-level logic will handle redirects.
@@ -600,5 +590,3 @@ export function Header() {
     </>
   );
 }
-
-    
