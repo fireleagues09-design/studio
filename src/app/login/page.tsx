@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithPopup, sendEmailVerification, signOut, fetchSignInMethodsForEmail } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
@@ -78,15 +79,39 @@ export default function LoginPage() {
         router.push("/");
 
     } catch (error: any) {
-        let description: string;
         if (error.code === 'auth/invalid-credential') {
-          description = "Invalid email or password. Please check your credentials and try again.";
+            try {
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+                if (methods.length === 0) {
+                    // No account exists with this email.
+                    toast({
+                        title: "Account Not Found",
+                        description: "This email isn't registered. Redirecting to sign up page.",
+                    });
+                    router.push('/register');
+                    return;
+                } else {
+                    // An account exists, so the password was wrong.
+                    toast({
+                        title: "Login Failed",
+                        description: "Incorrect password. Please check your credentials and try again.",
+                        variant: "destructive",
+                    });
+                }
+            } catch (fetchError) {
+                // If checking for email fails, fall back to a generic error message.
+                console.error("Error checking for email existence:", fetchError);
+                toast({
+                    title: "Login Failed",
+                    description: "Invalid email or password. Please try again.",
+                    variant: "destructive",
+                });
+            }
         } else {
-          console.error("Error signing in:", error);
-          description = "An unexpected error occurred during login. Please try again.";
+            console.error("Error signing in:", error);
+            toast({ title: "Login Failed", description: "An unexpected error occurred during login. Please try again.", variant: "destructive" });
         }
-        toast({ title: "Login Failed", description, variant: "destructive" });
-        setLoading(false); // Stop loading indicator on login failure
+        setLoading(false);
         hideLoader();
     }
   };
