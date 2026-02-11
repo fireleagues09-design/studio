@@ -217,12 +217,12 @@
 
 .line.left{
   left:0;
-  animation:leftLoop 3s ease-in-out infinite;
+  animation:leftLoop 1.5s ease-in-out infinite;
 }
 
 .line.right{
   right:0;
-  animation:rightLoop 3s ease-in-out infinite;
+  animation:rightLoop 1.5s ease-in-out infinite;
 }
 
 /* grow → HOLD → shrink */
@@ -253,7 +253,7 @@
   transform:translate(-50%,-50%) scale(0);
   box-shadow:0 0 25px var(--loader-glow-primary),0 0 60px var(--loader-glow-secondary);
 
-  animation:sparkLoop 3s infinite;
+  animation:sparkLoop 1.5s infinite;
 }
 
 @keyframes sparkLoop{
@@ -278,7 +278,7 @@
 
   filter:drop-shadow(0 0 18px var(--loader-glow-primary));
 
-  animation:logoLoop 3s cubic-bezier(.4,0,.2,1) infinite;
+  animation:logoLoop 1.5s cubic-bezier(.4,0,.2,1) infinite;
 }
 
 @keyframes logoLoop{
