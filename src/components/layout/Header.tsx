@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Hand,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "lucide-react";
 import {
   Sheet,
@@ -38,7 +39,6 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -131,9 +131,8 @@ export function Header() {
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // Auth user exists, but no Firestore doc.
-                    // This means registration is incomplete.
-                    // We set the profile to null and let page-level logic on /login or /auth/verify handle the user.
+                    // This can happen during registration before the doc is created,
+                    // or if registration was interrupted. Page-level logic will handle redirects.
                     setProfile(null);
                     setLoading(false);
                 }
