@@ -136,11 +136,8 @@ export function Header() {
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // If the user is authenticated with Firebase but has no
-                    // doc in Firestore, their registration is incomplete.
-                    // We set the profile to null. The login page will handle
-                    // redirecting them to /auth/verify to complete the process.
-                    // This header component should NOT perform any redirects.
+                    // Auth user exists, but no Firestore doc.
+                    // Set profile to null and let the specific pages handle the flow.
                     setProfile(null);
                     setLoading(false);
                 }
@@ -561,3 +558,5 @@ export function Header() {
     </>
   );
 }
+
+    
