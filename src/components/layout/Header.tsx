@@ -35,11 +35,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -125,16 +124,22 @@ export function Header() {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
+            // Firestore is the source of truth for a completed registration.
+            // We listen for the user's profile document here.
             const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
                 if (doc.exists()) {
+                    // If the doc exists, the user is fully registered.
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // Auth user exists, but no Firestore doc.
-                    // Set profile to null and let the specific pages handle the flow.
+                    // If the user is authenticated with Firebase but has no
+                    // doc in Firestore, their registration is incomplete.
+                    // We set the profile to null. The login page will handle
+                    // redirecting them to /auth/verify to complete the process.
+                    // This header component should NOT perform any redirects.
                     setProfile(null);
                     setLoading(false);
                 }
@@ -147,6 +152,7 @@ export function Header() {
             );
             return () => unsubscribeProfile();
         } else {
+            // No user is authenticated with Firebase.
             setProfile(null);
             setLoading(false);
         }
@@ -155,8 +161,7 @@ export function Header() {
     return () => {
         unsubscribeAuth();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]);
+  }, []);
 
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;

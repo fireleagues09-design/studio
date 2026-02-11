@@ -49,20 +49,14 @@ export default function LoginPage() {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-             // This case handles users who exist in Auth but not in Firestore DB.
-             // This means their registration was not completed.
-             toast({
-                title: "Registration Incomplete",
-                description: "Please complete your registration by verifying your email.",
-            });
-            if (!user.emailVerified) {
-                await sendEmailVerification(user);
-            }
+            // Auth user exists, but no Firestore doc. Registration is incomplete.
+            // This is the source of truth. Send them to the verification page to create
+            // their profile, which only happens after they verify their email.
             router.push('/auth/verify');
             return;
         }
 
-        // Standard successful login for existing user
+        // Standard successful login: Auth user exists AND Firestore doc exists.
         toast({ title: "Success", description: "Logged in successfully!" });
         router.push("/");
 
@@ -72,7 +66,7 @@ export default function LoginPage() {
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) {
-                    // No account exists with this email.
+                    // No account exists with this email in Firebase Auth.
                     toast({
                         title: "Account Not Found",
                         description: "This email isn't registered. Redirecting to sign up page.",
@@ -80,7 +74,7 @@ export default function LoginPage() {
                     router.push('/register');
                     return;
                 } else {
-                    // An account exists, so the password was wrong.
+                    // An account exists in Auth, so the password was wrong.
                     toast({
                         title: "Login Failed",
                         description: "Incorrect password. Please check your credentials and try again.",
@@ -88,7 +82,6 @@ export default function LoginPage() {
                     });
                 }
             } catch (fetchError) {
-                // If checking for email fails, fall back to a generic error message.
                 console.error("Error checking for email existence:", fetchError);
                 toast({
                     title: "Login Failed",
