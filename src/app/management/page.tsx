@@ -41,6 +41,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [name, setName] = useState(tournament.name);
@@ -398,16 +399,18 @@ export default function ManagementPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <Briefcase className="h-5 w-5 text-primary" />
-                            Welcome
+                            <Users className="h-5 w-5 text-primary" />
+                            User Management
                         </CardTitle>
                         <CardDescription>
-                            This is the management area. More features will be added here soon.
+                            Search for users by their username, email, or UID.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
-                            <p className="text-muted-foreground">Management content goes here.</p>
+                             <Button asChild>
+                                <Link href="/management/users">Go to User Search</Link>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -415,3 +418,5 @@ export default function ManagementPage() {
         </div>
     );
 }
+
+    
