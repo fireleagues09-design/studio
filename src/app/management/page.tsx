@@ -17,6 +17,7 @@ export default function ManagementPage() {
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [totalTournaments, setTotalTournaments] = useState(0);
     const router = useRouter();
     const { hideLoader } = useLoading();
 
@@ -26,10 +27,12 @@ export default function ManagementPage() {
                 setUser(currentUser);
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists() && userDoc.data().isEmployee) {
+                const userData = userDoc.data();
+                // isEmployee now means "has management access"
+                if (userDoc.exists() && (userData?.isEmployee || userData?.isAdmin)) {
                     setIsEmployee(true);
                 } else {
-                    // If not an employee, redirect to home
+                    // If not an employee or admin, redirect to home
                     router.push('/');
                 }
             } else {
@@ -51,13 +54,24 @@ export default function ManagementPage() {
         const unsubscribeUsers = onSnapshot(usersRef, async () => {
              const countSnapshot = await getCountFromServer(usersRef);
              setTotalUsers(countSnapshot.data().count);
-             setDataLoading(false);
         }, (error) => {
             console.error("Error fetching user count:", error)
+        });
+
+        const tournamentsRef = collection(db, "tournaments");
+        const unsubscribeTournaments = onSnapshot(tournamentsRef, async () => {
+            const countSnapshot = await getCountFromServer(tournamentsRef);
+            setTotalTournaments(countSnapshot.data().count);
+            setDataLoading(false); // Set loading to false after the last fetch completes
+        }, (error) => {
+            console.error("Error fetching tournament count:", error);
             setDataLoading(false);
         });
 
-        return () => unsubscribeUsers();
+        return () => {
+            unsubscribeUsers();
+            unsubscribeTournaments();
+        };
     }, [isEmployee, authLoading]);
 
     useEffect(() => {
@@ -101,6 +115,16 @@ export default function ManagementPage() {
                         <CardContent>
                             <div className="text-2xl font-bold">{totalUsers}</div>
                             <p className="text-xs text-muted-foreground">Registered users on the platform</p>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
+                            <TrophyIcon className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                             <div className="text-2xl font-bold">{totalTournaments}</div>
+                            <p className="text-xs text-muted-foreground">Tournaments hosted so far</p>
                         </CardContent>
                     </Card>
                 </div>
