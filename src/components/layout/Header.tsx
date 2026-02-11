@@ -64,6 +64,7 @@ import {
 import { useLoading } from "@/context/LoadingContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BestiePage from '@/components/BestiePage';
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 
 type WalletData = {
@@ -128,14 +129,14 @@ export function Header() {
         if (currentUser) {
             const userDocRef = doc(db, "users", currentUser.uid);
             const unsubscribeProfile = onSnapshot(userDocRef, 
-              (doc) => {
+              async (doc) => {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
 
                     // Sync Firestore if Auth is verified but Firestore isn't
                     if (currentUser.emailVerified && !profileData.emailVerified) {
-                        updateDoc(userDocRef, { emailVerified: true });
+                       await updateDoc(userDocRef, { emailVerified: true });
                     }
                     setLoading(false);
                 } else {
@@ -385,15 +386,15 @@ export function Header() {
       {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
       
       {user && !user.emailVerified && (
-        <div className="bg-amber-400 text-black">
+        <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" />
                 <span>Your account is not fully activated.</span>
-                <Button variant="link" className="p-0 h-auto text-black underline font-bold" onClick={handleResendVerification}>
-                    Please verify your email
+                <Button variant="link" asChild className="p-0 h-auto text-black underline font-bold cursor-pointer">
+                    <Link href="/profile">Please verify your email</Link>
                 </Button>
             </div>
-        </div>
+        </Alert>
       )}
 
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top)]">
