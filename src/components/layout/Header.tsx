@@ -19,7 +19,6 @@ import {
   Palette,
   AlertTriangle,
   Hand,
-  DropdownMenuSeparator,
 } from "lucide-react";
 import {
   Sheet,
@@ -39,6 +38,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
