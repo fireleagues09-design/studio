@@ -35,11 +35,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
@@ -133,8 +133,8 @@ export function Header() {
                     setProfile(profileData);
                     setLoading(false);
                 } else {
-                    // This can happen during registration before the doc is created,
-                    // or if registration was interrupted. Page-level logic will handle redirects.
+                    // Auth user exists, but no Firestore doc.
+                    // Set profile to null and let the specific pages handle the flow.
                     setProfile(null);
                     setLoading(false);
                 }

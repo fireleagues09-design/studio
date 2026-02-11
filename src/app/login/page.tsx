@@ -48,12 +48,13 @@ export default function LoginPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDoc = await getDoc(userDocRef);
 
-        if (!user.emailVerified || !userDoc.exists()) {
+        if (!userDoc.exists()) {
+             // This case handles users who exist in Auth but not in Firestore DB.
+             // This means their registration was not completed.
              toast({
-                title: "Verification Required",
-                description: "Your registration is incomplete. Please verify your email.",
+                title: "Registration Incomplete",
+                description: "Please complete your registration by verifying your email.",
             });
-            // Send verification email again just in case.
             if (!user.emailVerified) {
                 await sendEmailVerification(user);
             }
