@@ -17,6 +17,9 @@ import { updateGameProfile } from './actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
+
 
 // --- TYPES ---
 type GameProfile = {
@@ -27,6 +30,7 @@ type GameProfile = {
 type UserProfile = {
     username: string;
     email: string;
+    emailVerified?: boolean;
     gameProfiles?: {
         'Free Fire'?: GameProfile;
         'BGMI'?: GameProfile;
@@ -219,7 +223,7 @@ export default function ProfilePage() {
             await sendEmailVerification(user);
             toast({
                 title: "Verification Link Sent",
-                description: "A new verification link has been sent to your email. Please check your inbox and spam folder.",
+                description: "A new verification link has been sent to your email. Please be sure to check your spam or junk folder.",
             });
         } catch (error: any) {
             toast({
@@ -247,21 +251,20 @@ export default function ProfilePage() {
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
             {!isVerified && (
-                <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-                    <CardHeader>
-                        <CardTitle className="text-amber-700 dark:text-amber-400">Verify Your Account</CardTitle>
-                        <CardDescription>Your account is not verified. Please check your email for the verification link.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">If you didn't receive the email or the link has expired, you can request a new one. Remember to check your spam folder.</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button onClick={handleResendVerification} disabled={resending} variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
-                            {resending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {resending ? 'Sending...' : 'Resend Verification Link'}
-                        </Button>
-                    </CardFooter>
-                </Card>
+                <Alert variant="destructive" className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300 [&>svg]:text-amber-600 dark:[&>svg]:text-amber-400">
+                    <AlertTriangle />
+                    <AlertTitle className="font-bold">Verify Your Account to Unlock All Features</AlertTitle>
+                    <AlertDescription>
+                        Your account is not yet verified. Please check your email for a verification link to gain full access to tournament registrations and other features.
+                         <div className="mt-4">
+                            <Button onClick={handleResendVerification} disabled={resending} variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
+                                {resending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {resending ? 'Sending...' : 'Resend Verification Link'}
+                            </Button>
+                        </div>
+                         <p className="text-xs mt-2">If you can't find the email, please be sure to check your spam or junk folder.</p>
+                    </AlertDescription>
+                </Alert>
             )}
 
             <Card>

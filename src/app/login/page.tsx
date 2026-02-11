@@ -71,13 +71,14 @@ export default function LoginPage() {
 
         if (error.code === 'auth/invalid-credential') {
             try {
+                // Check if email exists to distinguish between "not registered" and "wrong password"
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) {
                     toast({
                         title: "Account Not Found",
                         description: "No account with this email exists. Redirecting to registration...",
                     });
-                    router.push('/register');
+                    router.push('/register'); // Redirect as requested
                     return; 
                 } else {
                     toast({ 
@@ -87,7 +88,7 @@ export default function LoginPage() {
                     });
                 }
             } catch (fetchError) {
-                 toast({ 
+                    toast({ 
                     title: "Login Failed", 
                     description: "An error occurred while checking your email. Please try again.", 
                     variant: "destructive" 

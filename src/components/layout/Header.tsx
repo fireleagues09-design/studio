@@ -44,9 +44,13 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
+<<<<<<< HEAD
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
+=======
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+>>>>>>> 30ba489 (Alright — I’ll give you a **complete, clean, minimal working example** f)
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
@@ -81,6 +85,7 @@ type UserProfile = {
     isRegistered?: boolean;
     isBestie?: boolean;
     bestiePageActive?: boolean;
+    emailVerified?: boolean;
 }
 
 const themes: { name: ColorTheme }[] = [
@@ -129,10 +134,20 @@ export function Header() {
             const unsubscribeProfile = onSnapshot(userDocRef, 
               (doc) => {
                 if (doc.exists()) {
+<<<<<<< HEAD
                     // If the doc exists, the user is fully registered.
                     const profileData = doc.data() as UserProfile;
                     setProfile(profileData);
                     setLoading(false);
+=======
+                    const profileData = doc.data() as UserProfile;
+                    setProfile(profileData);
+
+                    // Sync Firestore if Auth is verified but Firestore isn't
+                    if (currentUser.emailVerified && !profileData.emailVerified) {
+                        updateDoc(userDocRef, { emailVerified: true });
+                    }
+>>>>>>> 30ba489 (Alright — I’ll give you a **complete, clean, minimal working example** f)
                 } else {
                     // This can happen during registration before the doc is created,
                     // or if registration was interrupted. Page-level logic will handle redirects.
@@ -158,12 +173,30 @@ export function Header() {
     };
   }, []);
 
+  const handleResendVerification = async () => {
+    if (!user) return;
+    try {
+        await sendEmailVerification(user);
+        toast({
+            title: "Verification Link Sent",
+            description: "A new verification link has been sent. Please be sure to check your inbox and spam folder.",
+        });
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to send verification link.",
+            variant: "destructive",
+        });
+    }
+  };
+
+
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
   const navLinks = [
     { href: "/", label: "Home" },
-    { href: user ? "/tournaments" : "/register", label: "Tournaments" },
+    { href: "/tournaments", label: "Tournaments" },
   ];
   
   const renderThemeSwatches = () => (
@@ -361,13 +394,13 @@ export function Header() {
       
       {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
       
-      {user && profile && !user.emailVerified && (
+      {user && !user.emailVerified && (
         <div className="bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" />
                 <span>Your account is not fully activated.</span>
-                <Button asChild variant="link" className="p-0 h-auto text-black underline font-bold">
-                    <Link href="/profile">Please verify your email</Link>
+                <Button variant="link" className="p-0 h-auto text-black underline font-bold" onClick={handleResendVerification}>
+                    Please verify your email
                 </Button>
             </div>
         </div>

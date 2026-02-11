@@ -75,21 +75,21 @@ export default function RegisterPage() {
 
         await updateProfile(user, { displayName: username });
 
-        // Create Firestore document for the new user
+        // Create Firestore document for the new user with emailVerified set to false
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, {
             username: username,
             email: user.email,
-            isRegistered: true,
+            emailVerified: false, // Explicitly set to false on creation
             wallet: { deposit: 0, winning: 0, bonus: 0 },
-            registeredOn: serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
         
         await sendEmailVerification(user);
 
         toast({
             title: 'Registration Successful!',
-            description: "Welcome! A verification link has been sent. Please verify your email to get full access.",
+            description: "Welcome! A verification link has been sent to your email. Please verify to get full access.",
         });
         router.push('/auth/verify');
 

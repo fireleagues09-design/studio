@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from "next/image";
@@ -55,7 +56,7 @@ export default function Home() {
     }
   }, [loadingTournaments, loadingAuth, hideLoader]);
 
-  const viewAllLink = !loadingAuth && user ? "/tournaments" : "/register";
+  const viewAllLink = "/tournaments";
 
   if (loadingAuth || loadingTournaments) {
     return null;
