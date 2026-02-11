@@ -18,13 +18,13 @@ import { useRouter } from "next/navigation";
 import { 
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
-    updateProfile, 
+    updateProfile,
     signInWithEmailAndPassword
 } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { doc, getDoc } from "firebase/firestore";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -77,11 +77,12 @@ export default function RegisterPage() {
         await sendEmailVerification(user);
         toast({
             title: 'Almost there!',
-            description: "We've sent a verification link to your email.",
+            description: "We've sent a verification link to your email. Please check your inbox and spam folder.",
         });
         router.push('/auth/verify');
 
     } catch (error: any) {
+        setLoading(false);
         if (error.code === 'auth/email-already-in-use') {
              try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -124,7 +125,7 @@ export default function RegisterPage() {
             hideLoader();
             toast({
                 title: "Registration Error",
-                description: 'Our email service is temporarily at its limit. Please sign up with Google or try again later.',
+                description: 'Our email service is temporarily at its limit. Please try again later.',
                 variant: 'destructive'
             });
             setIsEmailServiceDown(true);
