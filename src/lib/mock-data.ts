@@ -171,6 +171,18 @@ export const tournaments: Tournament[] = [
   },
 ];
 
+export const FULL_MAP_RULES = [
+    'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
+    'Always On Screen Recording While Playing FireLeagues Tournament matches ( if your own goods and in any major issues screenshot will not accepted ).',
+    'Minimum Game Level Should be 40.',
+    'Headshot ( % ) Should not be more then 70% in BR Career mode.',
+    'Don\'t Invite Anyone who is not registered to this tournament and don\'t leak ID Password.',
+    'Team-up not allowed.',
+    'Multiple Accounts Are not Allowed and if you create multiple Accounts then it\'ll lead to suspension and all balance will be taken by us permanently.',
+    'Refund Only For those players who\'s eliminated/killed by hackers',
+    'PC & Emulators Players Are Not Allowed to join and play in room match ( only can access website on pc and can only register yourself for tournaments in PC/Emulators/mobile but not allowed to play tournaments )'
+];
+
 
 export type User = {
     id: string;

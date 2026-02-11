@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, Users } from 'lucide-react';
+import { Briefcase, TrophyIcon, Users } from 'lucide-react';
+import { CreateTournamentDialog } from '@/components/CreateTournamentDialog';
 
 export default function ManagementPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -105,22 +106,39 @@ export default function ManagementPage() {
                 </div>
             </section>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Briefcase className="h-5 w-5 text-primary" />
-                        Welcome
-                    </CardTitle>
-                    <CardDescription>
-                        This is the management area. More features will be added here soon.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
-                        <p className="text-muted-foreground">Management content goes here.</p>
-                    </div>
-                </CardContent>
-            </Card>
+             <section className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <TrophyIcon className="h-5 w-5 text-primary" />
+                            Tournament Management
+                        </CardTitle>
+                        <CardDescription>
+                            Create new tournaments for the platform.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <CreateTournamentDialog />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Briefcase className="h-5 w-5 text-primary" />
+                            Welcome
+                        </CardTitle>
+                        <CardDescription>
+                            This is the management area. More features will be added here soon.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex justify-center items-center h-48 bg-secondary rounded-lg">
+                            <p className="text-muted-foreground">Management content goes here.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </section>
         </div>
     );
 }

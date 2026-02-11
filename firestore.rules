@@ -10,6 +10,12 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Helper function to check if the requesting user is an employee.
+    function isEmployee() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isEmployee == true;
+    }
+
     // Rules for the 'users' collection
     match /users/{userId} {
       // Admins can query the entire users collection.
@@ -30,8 +36,9 @@ service cloud.firestore {
       // Anyone can view tournament details.
       allow read, list: if true;
 
-      // Only admins can create, update, or delete tournaments.
-      allow write: if isAdmin();
+      // Admins can perform all write operations. Employees can only create.
+      allow create: if isAdmin() || isEmployee();
+      allow update, delete: if isAdmin();
 
       // Rules for the 'registrations' subcollection
       match /registrations/{userId} {
