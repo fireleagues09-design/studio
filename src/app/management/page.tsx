@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, collection, onSnapshot, getCountFromServer } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, getCountFromServer, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
@@ -17,7 +17,9 @@ export default function ManagementPage() {
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
     const [totalUsers, setTotalUsers] = useState(0);
-    const [totalTournaments, setTotalTournaments] = useState(0);
+    const [upcomingTournaments, setUpcomingTournaments] = useState(0);
+    const [ongoingTournaments, setOngoingTournaments] = useState(0);
+    const [finishedTournaments, setFinishedTournaments] = useState(0);
     const router = useRouter();
     const { hideLoader } = useLoading();
 
@@ -59,18 +61,35 @@ export default function ManagementPage() {
         });
 
         const tournamentsRef = collection(db, "tournaments");
-        const unsubscribeTournaments = onSnapshot(tournamentsRef, async () => {
-            const countSnapshot = await getCountFromServer(tournamentsRef);
-            setTotalTournaments(countSnapshot.data().count);
+
+        const upcomingQuery = query(tournamentsRef, where("status", "==", "Upcoming"));
+        const unsubscribeUpcoming = onSnapshot(upcomingQuery, async () => {
+            const countSnapshot = await getCountFromServer(upcomingQuery);
+            setUpcomingTournaments(countSnapshot.data().count);
+        });
+
+        const ongoingQuery = query(tournamentsRef, where("status", "==", "Ongoing"));
+        const unsubscribeOngoing = onSnapshot(ongoingQuery, async () => {
+            const countSnapshot = await getCountFromServer(ongoingQuery);
+            setOngoingTournaments(countSnapshot.data().count);
+        });
+
+        const finishedQuery = query(tournamentsRef, where("status", "==", "Finished"));
+        const unsubscribeFinished = onSnapshot(finishedQuery, async () => {
+            const countSnapshot = await getCountFromServer(finishedQuery);
+            setFinishedTournaments(countSnapshot.data().count);
             setDataLoading(false); // Set loading to false after the last fetch completes
         }, (error) => {
-            console.error("Error fetching tournament count:", error);
+            console.error("Error fetching tournament counts:", error);
             setDataLoading(false);
         });
 
+
         return () => {
             unsubscribeUsers();
-            unsubscribeTournaments();
+            unsubscribeUpcoming();
+            unsubscribeOngoing();
+            unsubscribeFinished();
         };
     }, [isEmployee, authLoading]);
 
@@ -119,12 +138,25 @@ export default function ManagementPage() {
                     </Card>
                      <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
+                            <CardTitle className="text-sm font-medium">Tournament Overview</CardTitle>
                             <TrophyIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                             <div className="text-2xl font-bold">{totalTournaments}</div>
-                            <p className="text-xs text-muted-foreground">Tournaments hosted so far</p>
+                            <div className="text-2xl font-bold mb-2">{upcomingTournaments + ongoingTournaments + finishedTournaments} Total</div>
+                            <div className="space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Upcoming</span>
+                                    <span className="font-semibold">{upcomingTournaments}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Ongoing</span>
+                                    <span className="font-semibold">{ongoingTournaments}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Finished</span>
+                                    <span className="font-semibold">{finishedTournaments}</span>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
