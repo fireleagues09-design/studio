@@ -15,9 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, sendEmailVerification, signInWithPopup, fetchSignInMethodsForEmail } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { GoogleLogo } from "@/components/GoogleLogo";
 import { Eye, EyeOff, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -67,9 +68,26 @@ export default function LoginPage() {
         hideLoader();
         setLoading(false);
         console.error("Error signing in:", error);
+
+        let errorMessage = "An unknown error occurred. Please try again.";
+        if (error.code === 'auth/invalid-credential') {
+            try {
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+                if (methods.length === 0) {
+                    errorMessage = "No account found with this email. Please register first.";
+                } else {
+                    errorMessage = "Incorrect password. Please try again.";
+                }
+            } catch (fetchError) {
+                errorMessage = "Invalid email or password. Please check your credentials and try again.";
+            }
+        } else {
+            errorMessage = error.message || errorMessage;
+        }
+
         toast({ 
             title: "Login Failed", 
-            description: "Invalid email or password. Please check your credentials and try again.", 
+            description: errorMessage, 
             variant: "destructive" 
         });
     }
