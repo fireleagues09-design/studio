@@ -32,17 +32,52 @@ async function verifyEmployee(idToken: string): Promise<{ isEmployee: boolean; m
     }
 }
 
+
+// New combined authorization function for admins or employees
+async function verifyManager(idToken: string): Promise<{ authorized: boolean; message: string; uid?: string }> {
+    if (!idToken) {
+        return { authorized: false, message: "Authentication token was not provided." };
+    }
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+
+        // 1. Check for admin status directly from token claim first for efficiency.
+        if (decodedToken.isAdmin === true) {
+            return { authorized: true, message: "Success (Admin)", uid: decodedToken.uid };
+        }
+
+        // 2. If not an admin by claim, check Firestore for employee or admin status.
+        const userDocRef = db.collection('users').doc(decodedToken.uid);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) {
+            return { authorized: false, message: `Authorization failed: User document not found for UID ${decodedToken.uid}.` };
+        }
+        
+        const userData = userDoc.data();
+        const isEmployee = userData && (userData.isEmployee === true || userData.isEmployee === 1);
+        const isAdmin = userData && userData.isAdmin === true;
+        
+        if (isEmployee || isAdmin) {
+            return { authorized: true, message: "Success", uid: decodedToken.uid };
+        }
+
+        return { authorized: false, message: "Permission denied. User is not an admin or employee." };
+
+    } catch (error: any) {
+        console.error("Error during manager authorization:", error);
+        return { authorized: false, message: `Server error during authorization: ${error.code || error.message}` };
+    }
+}
+
+
 export async function createTournamentAction(
     tournamentData: Omit<Tournament, 'id' | 'slotsFilled' | 'registeredPlayers'>,
     idToken: string
 ): Promise<{ success: boolean; message: string }> {
-    const employeeCheck = await verifyEmployee(idToken);
-    // Allow admins to create tournaments as well
-    if (!employeeCheck.isEmployee) {
-        const adminCheck = await auth.verifyIdToken(idToken).then(decoded => decoded.isAdmin === true).catch(() => false);
-        if (!adminCheck) {
-            return { success: false, message: employeeCheck.message };
-        }
+    const managerCheck = await verifyManager(idToken);
+    if (!managerCheck.authorized) {
+        return { success: false, message: managerCheck.message };
     }
 
     try {
