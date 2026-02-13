@@ -13,6 +13,7 @@ import { completeRegistration, cancelRegistration } from '@/app/profile/actions'
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { EmailAuthProvider, linkWithCredential } from 'firebase/auth';
 
 const profileSchema = z.object({
   username: z.string()
@@ -53,14 +54,19 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
 
   async function onSubmit(data: ProfileFormValues) {
     const user = auth.currentUser;
-    if (!user) {
-      toast({ title: 'Error', description: 'You are not logged in.', variant: 'destructive' });
+    if (!user || !user.email) {
+      toast({ title: 'Error', description: 'You are not logged in or your email is missing.', variant: 'destructive' });
       return;
     }
     
     try {
+      // Step 1: Link password to the Google account on the client side
+      const credential = EmailAuthProvider.credential(user.email, data.password);
+      await linkWithCredential(user, credential);
+
+      // Step 2: Call the server action to update username and profile status.
       const idToken = await user.getIdToken();
-      const result = await completeRegistration(idToken, data.username.toLowerCase(), data.password);
+      const result = await completeRegistration(idToken, data.username.toLowerCase());
       
       if (result.success) {
         toast({ title: 'Success!', description: 'Your profile is now complete.' });
@@ -69,9 +75,16 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
         throw new Error(result.message);
       }
     } catch (error: any) {
+      let errorMessage = error.message || 'An unknown error occurred.';
+      if (error.code === 'auth/credential-already-in-use') {
+          errorMessage = 'This account is already linked with another user.';
+      } else if (error.code === 'auth/email-already-in-use') {
+          errorMessage = 'This email is already in use by another account.';
+      }
+      
       toast({
         title: 'Update Failed',
-        description: error.message || 'An unknown error occurred.',
+        description: errorMessage,
         variant: 'destructive'
       });
     }
@@ -197,7 +210,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <div className="pt-4 flex flex-col items-start gap-4">
+            <div className="pt-4 flex flex-col gap-3">
               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
                   {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
@@ -208,9 +221,9 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
               <Button
                   type="button"
                   variant="destructive"
-                  size="sm"
                   onClick={handleCancel}
                   disabled={isSubmitting || isCanceling}
+                  className="w-full"
               >
               {isCanceling ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>

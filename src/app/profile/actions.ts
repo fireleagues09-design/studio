@@ -13,8 +13,7 @@ function formatAuthError(error: any): string {
 
 export async function completeRegistration(
     idToken: string,
-    username: string,
-    password: string
+    username: string
 ): Promise<{ success: boolean; message:string }> {
     if (!idToken) {
         return { success: false, message: 'Authorization required.' };
@@ -25,11 +24,6 @@ export async function completeRegistration(
     }
     if (!/^[a-z0-9]+$/.test(username)) {
         return { success: false, message: 'Username can only contain lowercase letters and numbers.' };
-    }
-
-    // Password validation
-    if (!password || password.length < 6) {
-        return { success: false, message: 'Password must be at least 6 characters.' };
     }
 
     try {
@@ -44,9 +38,8 @@ export async function completeRegistration(
             }
         }
         
-        // Update Firebase Auth user with password and display name
+        // Update Firebase Auth user with display name
         await auth.updateUser(userId, {
-            password: password,
             displayName: username
         });
         
