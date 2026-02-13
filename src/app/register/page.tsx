@@ -27,7 +27,7 @@ import {
     type AuthCredential,
     type User
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
@@ -72,7 +72,7 @@ export default function RegisterPage() {
     const providers = user.providerData.map(p => p.providerId);
 
     if (!userDoc.exists()) {
-        // This is the core fix: create the Firestore doc if it's missing for an existing Auth user.
+        // Create the document if it's missing for an existing Auth user.
         const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
         await setDoc(userDocRef, {
             username: newUsername,
@@ -81,12 +81,16 @@ export default function RegisterPage() {
             emailVerified: user.emailVerified,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
+            lastLogin: serverTimestamp(),
             providers: providers,
         });
         toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
     } else {
-        // If doc exists, just ensure the providers list is up-to-date.
-        await updateDoc(userDocRef, { providers });
+        // If doc exists, update lastLogin and providers list.
+        await setDoc(userDocRef, { 
+          providers: providers,
+          lastLogin: serverTimestamp() 
+        }, { merge: true });
         toast({ title: "Success", description: "Logged in successfully!" });
     }
     router.push("/");
@@ -133,6 +137,7 @@ export default function RegisterPage() {
             emailVerified: false,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
+            lastLogin: serverTimestamp(),
             providers: user.providerData.map(p => p.providerId)
         });
         

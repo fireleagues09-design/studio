@@ -17,16 +17,36 @@ service cloud.firestore {
               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isEmployee == 1);
     }
 
+    function isUserAuthenticated() {
+      return request.auth != null;
+    }
+
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can query the entire users collection.
+      // User can read their own profile, admin can read any
+      allow get: if isUserAuthenticated() &&
+                 (request.auth.uid == userId || isAdmin());
+
+      // Admin can list all users
       allow list: if isAdmin();
-      
-      // A user can create, read, or update their own document. Admins can read/update any profile.
-      allow read, create, update: if (request.auth.uid == userId) || isAdmin();
-      
+
+      // User can create their own document
+      allow create: if isUserAuthenticated() &&
+                    request.auth.uid == userId;
+
+      // User can update their own document, and admins can too
+      allow update: if isUserAuthenticated() &&
+                    (request.auth.uid == userId || isAdmin());
+
       // Only admins should be able to delete users.
       allow delete: if isAdmin();
+
+      // Teams Subcollection
+      match /teams/{teamId} {
+        allow read: if true;
+        allow list: if isAdmin();
+        allow create, delete, update: if (isUserAuthenticated() && request.auth.uid == userId) || isAdmin();
+      }
     }
 
     // Rules for the 'tournaments' collection
