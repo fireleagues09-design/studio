@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -196,30 +196,28 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 flex flex-col gap-2">
-                <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
-                    {isSubmitting ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
-                    ) : (
-                    'Create Account'
-                    )}
-                </Button>
-                <div className="flex justify-start">
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleCancel}
-                        disabled={isSubmitting || isCanceling}
-                    >
-                    {isCanceling ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
-                    ) : (
-                        'Cancel & Logout'
-                    )}
-                    </Button>
-                </div>
-            </DialogFooter>
+            <div className="flex flex-col gap-3 pt-4">
+              <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
+                  {isSubmitting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+                  ) : (
+                  'Create Account'
+                  )}
+              </Button>
+              <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={isSubmitting || isCanceling}
+                  className="w-full"
+              >
+              {isCanceling ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
+              ) : (
+                  'Cancel & Logout'
+              )}
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
