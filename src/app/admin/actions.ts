@@ -35,7 +35,7 @@ async function verifyAdmin(idToken: string): Promise<{ isAdmin: boolean; message
 
 function formatAuthError(error: any): string {
     if (typeof error.message === 'string' && (error.message.includes('serviceusage.services.use') || error.message.includes('identitytoolkit.googleapis.com'))) {
-        return 'A project permission error occurred. Please ensure the "Identity Toolkit API" is enabled in your Google Cloud project for Firebase. This is required for user management features.';
+        return 'A project permission error occurred. Please ensure the "Identity Toolkit API" is enabled and that Billing is active for your Google Cloud project. This is required for user management features.';
     }
     return error.message || 'An unknown server error occurred.';
 }
