@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { completeRegistration, cancelRegistration } from '@/app/profile/actions';
+import { completeRegistration } from '@/app/profile/actions';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { Loader2, Eye, EyeOff, LogOut } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const profileSchema = z.object({
   username: z.string()
@@ -38,7 +38,6 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -75,38 +74,6 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
         variant: 'destructive'
       });
     }
-  }
-
-  async function handleCancel() {
-    const user = auth.currentUser;
-    if (!user) {
-      toast({ title: 'Error', description: 'You are not logged in.', variant: 'destructive' });
-      return;
-    }
-
-    setIsCancelling(true);
-    try {
-      const idToken = await user.getIdToken();
-      // This server action will delete the user from Firestore and Auth.
-      const result = await cancelRegistration(idToken);
-      if (result.success) {
-        // Now that the backend has deleted the user, sign them out on the client.
-        await auth.signOut();
-        toast({ title: 'Registration Cancelled', description: 'You have been logged out.' });
-        // The onAuthStateChanged listener in the Header will handle UI updates.
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Cancellation Failed',
-        description: error.message || 'An unknown error occurred.',
-        variant: 'destructive',
-      });
-      // In case of failure, we still want to enable the button.
-      setIsCancelling(false);
-    } 
-    // No finally block needed here, because on success the component will unmount.
   }
 
   return (
@@ -199,21 +166,10 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 flex flex-col gap-3">
-              <Button type="submit" disabled={isSubmitting || isCancelling} className="w-full">
+            <DialogFooter className="pt-4">
+              <Button type="submit" disabled={isSubmitting} className="w-full">
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={handleCancel}
-                disabled={isSubmitting || isCancelling}
-                className="self-start"
-              >
-                {isCancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                Cancel & Logout
               </Button>
             </DialogFooter>
           </form>
