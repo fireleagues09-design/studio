@@ -82,10 +82,15 @@ export default function LoginPage() {
         toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
     } else {
         // If doc exists, update lastLogin and providers list.
-        await setDoc(userDocRef, { 
-          providers: providers,
-          lastLogin: serverTimestamp() 
-        }, { merge: true });
+        try {
+          await setDoc(userDocRef, { 
+            providers: providers,
+            lastLogin: serverTimestamp() 
+          }, { merge: true });
+        } catch (error) {
+          console.warn("Could not update user providers/lastLogin:", error);
+          // This failure is not critical, so we don't show an error toast to the user.
+        }
         toast({ title: "Success", description: "Logged in successfully!" });
     }
     router.push("/");
@@ -133,7 +138,7 @@ export default function LoginPage() {
                 } else {
                     toast({ 
                         title: "Login Failed", 
-                        description: "Incorrect password. Please try again.", 
+                        description: "The entered password is wrong. Please try again.", 
                         variant: "destructive" 
                     });
                 }
@@ -177,7 +182,7 @@ export default function LoginPage() {
         hideLoader();
         setLinkingLoading(false);
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-             toast({ title: "Linking Failed", description: "The password you entered was incorrect. Please try again.", variant: "destructive" });
+             toast({ title: "Linking Failed", description: "The entered password is wrong. Please try again.", variant: "destructive" });
         } else {
              toast({ title: "Linking Failed", description: error.message || "An unknown error occurred.", variant: "destructive" });
         }
