@@ -33,6 +33,13 @@ async function verifyAdmin(idToken: string): Promise<{ isAdmin: boolean; message
     }
 }
 
+function formatAuthError(error: any): string {
+    if (typeof error.message === 'string' && (error.message.includes('serviceusage.services.use') || error.message.includes('identitytoolkit.googleapis.com'))) {
+        return 'A project permission error occurred. Please ensure the "Identity Toolkit API" is enabled in your Google Cloud project for Firebase. This is required for user management features.';
+    }
+    return error.message || 'An unknown server error occurred.';
+}
+
 
 export async function setAdminStatus(
     targetUserId: string, 
@@ -62,7 +69,7 @@ export async function setAdminStatus(
         return { success: true, message: `User status updated successfully.` };
     } catch (error: any) {
         console.error('Error updating admin status:', error);
-        return { success: false, message: error.message || 'An unknown error occurred.' };
+        return { success: false, message: formatAuthError(error) };
     }
 }
 

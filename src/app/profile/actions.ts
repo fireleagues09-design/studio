@@ -4,6 +4,13 @@
 import { auth, db } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
+function formatAuthError(error: any): string {
+    if (typeof error.message === 'string' && (error.message.includes('serviceusage.services.use') || error.message.includes('identitytoolkit.googleapis.com'))) {
+        return 'A project permission error occurred. Please ensure the "Identity Toolkit API" is enabled in your Google Cloud project for Firebase. This is required for user management features.';
+    }
+    return error.message || 'An unknown server error occurred.';
+}
+
 export async function completeRegistration(
     idToken: string,
     username: string,
@@ -53,7 +60,7 @@ export async function completeRegistration(
         return { success: true, message: 'Profile completed successfully!' };
     } catch (error: any) {
         console.error('Error completing registration:', error);
-        return { success: false, message: error.message || 'An unknown server error occurred.' };
+        return { success: false, message: formatAuthError(error) };
     }
 }
 
@@ -115,6 +122,6 @@ export async function cancelRegistration(
         return { success: true, message: 'Registration successfully cancelled.' };
     } catch (error: any) {
         console.error('Error cancelling registration:', error);
-        return { success: false, message: error.message || 'An unknown server error occurred.' };
+        return { success: false, message: formatAuthError(error) };
     }
 }
