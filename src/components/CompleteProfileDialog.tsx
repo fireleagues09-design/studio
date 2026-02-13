@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { completeRegistration } from '@/app/profile/actions';
+import { completeRegistration, cancelRegistration } from '@/app/profile/actions';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -38,6 +37,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -76,6 +76,31 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
     }
   }
 
+  async function handleCancel() {
+    const user = auth.currentUser;
+    if (!user || isCanceling) return;
+
+    setIsCanceling(true);
+    try {
+      const idToken = await user.getIdToken();
+      const result = await cancelRegistration(idToken);
+      if (result.success) {
+        toast({ title: "Registration Cancelled", description: "Your incomplete registration has been removed." });
+        // The onAuthStateChanged listener in the header will handle the logout and redirect.
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Could not cancel registration.",
+        variant: "destructive",
+      });
+      setIsCanceling(false); // Only set to false on error, otherwise the component unmounts.
+    }
+  }
+
+
   return (
     <Dialog open={open}>
       <DialogContent 
@@ -104,6 +129,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                       onChange={(e) => {
                         field.onChange(e.target.value.toLowerCase());
                       }}
+                       disabled={isSubmitting || isCanceling}
                     />
                   </FormControl>
                   <FormMessage />
@@ -122,6 +148,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                         type={showPassword ? "text" : "password"} 
                         placeholder="At least 6 characters" 
                         {...field} 
+                         disabled={isSubmitting || isCanceling}
                       />
                        <Button
                           type="button"
@@ -129,6 +156,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                           size="icon"
                           className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground"
                           onClick={() => setShowPassword((prev) => !prev)}
+                          disabled={isSubmitting || isCanceling}
                         >
                           {showPassword ? <EyeOff /> : <Eye />}
                         </Button>
@@ -150,6 +178,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="Re-enter your password" 
                           {...field} 
+                           disabled={isSubmitting || isCanceling}
                         />
                          <Button
                           type="button"
@@ -157,6 +186,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                           size="icon"
                           className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground"
                           onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          disabled={isSubmitting || isCanceling}
                         >
                           {showConfirmPassword ? <EyeOff /> : <Eye />}
                         </Button>
@@ -166,11 +196,27 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4">
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Account
+            <DialogFooter className="pt-4 flex-col gap-2">
+               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
+                {isSubmitting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
+               <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={isSubmitting || isCanceling}
+                  className="w-full"
+                >
+                  {isCanceling ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
+                  ) : (
+                    'Cancel & Logout'
+                  )}
+                </Button>
             </DialogFooter>
           </form>
         </Form>
