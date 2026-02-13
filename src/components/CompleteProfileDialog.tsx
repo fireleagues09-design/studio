@@ -60,33 +60,44 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
     }
     
     try {
-      // Step 1: Link password to the Google account on the client side
+      // Step 1: Attempt to link the password credential.
       const credential = EmailAuthProvider.credential(user.email, data.password);
       await linkWithCredential(user, credential);
 
-      // Step 2: Call the server action to update username and profile status.
-      const idToken = await user.getIdToken();
-      const result = await completeRegistration(idToken, data.username.toLowerCase());
-      
-      if (result.success) {
-        toast({ title: 'Success!', description: 'Your profile is now complete.' });
-        onSuccess();
-      } else {
-        throw new Error(result.message);
-      }
     } catch (error: any) {
-      let errorMessage = error.message || 'An unknown error occurred.';
-      if (error.code === 'auth/credential-already-in-use') {
-          errorMessage = 'This account is already linked with another user.';
-      } else if (error.code === 'auth/email-already-in-use') {
-          errorMessage = 'This email is already in use by another account.';
+      // Per your instruction, we ignore the error if the provider is already linked
+      // and proceed to update the username. Otherwise, we show the error and stop.
+      if (error.code !== 'auth/provider-already-linked' && error.code !== 'auth/credential-already-in-use') {
+         let errorMessage = error.message || 'An unknown error occurred linking your password.';
+          toast({
+            title: 'Password Link Failed',
+            description: errorMessage,
+            variant: 'destructive'
+          });
+          form.reset({}, { keepValues: true }); // Reset submitting state
+          return; // Stop execution for other errors.
       }
-      
-      toast({
-        title: 'Update Failed',
-        description: errorMessage,
-        variant: 'destructive'
-      });
+      // If password provider is already linked, we just continue.
+    }
+
+    // Step 2: ALWAYS try to save the username via server action.
+    try {
+        const idToken = await user.getIdToken();
+        const result = await completeRegistration(idToken, data.username.toLowerCase());
+        
+        if (result.success) {
+            toast({ title: 'Success!', description: 'Your profile is now complete.' });
+            onSuccess();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+         toast({
+            title: 'Profile Update Failed',
+            description: error.message,
+            variant: 'destructive'
+        });
+        form.reset({}, { keepValues: true });
     }
   }
 
@@ -210,7 +221,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <div className="pt-4 flex flex-col gap-3">
+            <div className="flex flex-col items-start gap-4 pt-4">
               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
                   {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
@@ -223,7 +234,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                   variant="destructive"
                   onClick={handleCancel}
                   disabled={isSubmitting || isCanceling}
-                  className="w-full"
+                  className="w-auto h-auto px-3 py-1 text-xs"
               >
               {isCanceling ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
