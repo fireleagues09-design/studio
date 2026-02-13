@@ -207,9 +207,10 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
               <Button
                   type="button"
                   variant="destructive"
+                  size="sm"
                   onClick={handleCancel}
                   disabled={isSubmitting || isCanceling}
-                  className="w-full"
+                  className="self-start"
               >
               {isCanceling ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
