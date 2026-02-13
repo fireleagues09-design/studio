@@ -103,11 +103,10 @@ export default function LoginPage() {
         if (!user.emailVerified) {
              toast({
                 title: "Verification Required",
-                description: "Your registration is incomplete. Please verify your email.",
+                description: "Your account is not verified. Redirecting you now...",
             });
-            if (!user.emailVerified) {
-                await sendEmailVerification(user);
-            }
+            // The user is redirected to the /auth/verify page, which has a "Resend" button.
+            // Automatically resending here can cause permission errors and is bad UX.
             router.push('/auth/verify');
             return;
         }
