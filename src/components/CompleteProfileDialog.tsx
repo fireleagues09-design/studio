@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -196,7 +197,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <div className="flex flex-col gap-3 pt-4">
+            <div className="pt-4 flex flex-col gap-4">
               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
                   {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
@@ -204,20 +205,21 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                   'Create Account'
                   )}
               </Button>
-              <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleCancel}
-                  disabled={isSubmitting || isCanceling}
-                  className="self-start"
-              >
-              {isCanceling ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
-              ) : (
-                  'Cancel & Logout'
-              )}
-              </Button>
+              <div className="flex justify-start">
+                  <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleCancel}
+                      disabled={isSubmitting || isCanceling}
+                  >
+                  {isCanceling ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
+                  ) : (
+                      'Cancel & Logout'
+                  )}
+                  </Button>
+              </div>
             </div>
           </form>
         </Form>
