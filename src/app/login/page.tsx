@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { Eye, EyeOff, Info } from "lucide-react";
+import { auth, db, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, sendEmailVerification, fetchSignInMethodsForEmail, signInWithPopup } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { GoogleLogo } from "@/components/GoogleLogo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -107,36 +107,35 @@ export default function LoginPage() {
       setLoading(true);
       showLoader();
       try {
-        // const result = await signInWithPopup(auth, googleProvider);
-        // const user = result.user;
-        // const userDocRef = doc(db, 'users', user.uid);
-        // const userDoc = await getDoc(userDocRef);
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
 
-        // if (userDoc.exists()) {
-        //     // Returning Google user
-        //     toast({ title: "Success", description: "Logged in successfully!" });
-        // } else {
-        //     // First-time Google user, create their document
-        //     const username = user.displayName || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-        //     await setDoc(userDocRef, {
-        //         username: username,
-        //         email: user.email,
-        //         isRegistered: true,
-        //         emailVerified: true,
-        //         wallet: { deposit: 0, winning: 0, bonus: 0 },
-        //         registeredOn: serverTimestamp(),
-        //     });
-        //     toast({ title: "Welcome!", description: "Your account has been created." });
-        // }
-        // router.push('/');
+        if (userDoc.exists()) {
+            // Existing user, just log them in. The header will handle profile completion if needed.
+            toast({ title: "Success", description: "Logged in successfully!" });
+        } else {
+            // This is a brand new Google user. Create a partial profile.
+            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
 
+            await setDoc(userDocRef, {
+                username: newUsername,
+                email: user.email,
+                isRegistered: false, // Crucial flag for profile completion step
+                emailVerified: true, // Google email is verified by default
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+            toast({ title: "Welcome!", description: "Just one more step to complete your profile." });
+        }
+        router.push('/');
       } catch (error: any) {
         hideLoader();
-        console.error("Google login error:", error);
+        setLoading(false);
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
         }
-        setLoading(false); // Stop loading indicator on login failure
       }
   }
 
@@ -150,13 +149,10 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Feature Update</AlertTitle>
-                <AlertDescription>
-                    Google Login/Registration is coming soon!
-                </AlertDescription>
-            </Alert>
+           <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+              <GoogleLogo className="mr-2 h-5 w-5" />
+              Continue with Google
+            </Button>
             
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">

@@ -13,19 +13,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, auth } from "@/lib/firebase";
+import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { 
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
     updateProfile,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    signInWithPopup
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { Eye, EyeOff, Info } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { GoogleLogo } from "@/components/GoogleLogo";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -75,12 +76,13 @@ export default function RegisterPage() {
 
         await updateProfile(user, { displayName: username });
 
-        // Create Firestore document for the new user with emailVerified set to false
+        // Create Firestore document for the new user
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, {
             username: username,
             email: user.email,
-            emailVerified: false, // Explicitly set to false on creation
+            isRegistered: true, // Email/pass users are registered but need to verify email
+            emailVerified: false,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             createdAt: serverTimestamp(),
         });
@@ -154,6 +156,42 @@ export default function RegisterPage() {
         }
     }
   };
+  
+  const handleGoogleLogin = async () => {
+      setLoading(true);
+      showLoader();
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+            // Existing user, just log them in. The header will handle profile completion if needed.
+            toast({ title: "Success", description: "Logged in successfully!" });
+        } else {
+            // This is a brand new Google user. Create a partial profile.
+            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+
+            await setDoc(userDocRef, {
+                username: newUsername,
+                email: user.email,
+                isRegistered: false, // Crucial flag for profile completion step
+                emailVerified: true, // Google email is verified by default
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+            });
+            toast({ title: "Welcome!", description: "Just one more step to complete your profile." });
+        }
+        router.push('/');
+      } catch (error: any) {
+        hideLoader();
+        setLoading(false);
+        if (error.code !== 'auth/popup-closed-by-user') {
+            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
+        }
+      }
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
@@ -165,13 +203,10 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Feature Update</AlertTitle>
-                <AlertDescription>
-                    Google Login/Registration is coming soon!
-                </AlertDescription>
-            </Alert>
+            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+              <GoogleLogo className="mr-2 h-5 w-5" />
+              Continue with Google
+            </Button>
 
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
@@ -183,16 +218,6 @@ export default function RegisterPage() {
                 </span>
               </div>
             </div>
-
-            {isEmailServiceDown && (
-                <Alert variant="destructive">
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Email Registration Unavailable</AlertTitle>
-                    <AlertDescription>
-                        Our email service is temporarily down. Please try again later.
-                    </AlertDescription>
-                </Alert>
-            )}
             
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>

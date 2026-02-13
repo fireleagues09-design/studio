@@ -38,7 +38,6 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -65,6 +64,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BestiePage from '@/components/BestiePage';
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { CompleteProfileDialog } from "@/components/CompleteProfileDialog";
 
 
 type WalletData = {
@@ -112,6 +112,7 @@ export function Header() {
   const { toast } = useToast();
   const { showLoader } = useLoading();
   const { theme, setTheme, mode, setMode } = useTheme();
+  const [showCompleteProfileDialog, setShowCompleteProfileDialog] = useState(false);
   
   const handleLogout = async () => {
     showLoader();
@@ -132,6 +133,13 @@ export function Header() {
               async (doc) => {
                 if (doc.exists()) {
                     const profileData = doc.data() as UserProfile;
+                    
+                    if (profileData.isRegistered === false) {
+                        setShowCompleteProfileDialog(true);
+                    } else {
+                        setShowCompleteProfileDialog(false);
+                    }
+
                     setProfile(profileData);
 
                     // Sync Firestore if Auth is verified but Firestore isn't
@@ -155,6 +163,7 @@ export function Header() {
             return () => unsubscribeProfile();
         } else {
             setProfile(null);
+            setShowCompleteProfileDialog(false);
             setLoading(false);
         }
     });
@@ -384,6 +393,11 @@ export function Header() {
       {shouldShowBestiePage && <BestiePage />}
       
       {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
+
+      <CompleteProfileDialog 
+        open={showCompleteProfileDialog} 
+        onSuccess={() => setShowCompleteProfileDialog(false)} 
+      />
       
       {user && !user.emailVerified && (
         <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
