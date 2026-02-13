@@ -38,10 +38,8 @@ export async function completeRegistration(
             }
         }
         
-        // Update Firebase Auth user with display name
-        await auth.updateUser(userId, {
-            displayName: username
-        });
+        // This was the source of the permission error. It is now handled on the client.
+        // The core task of this server action is to validate and securely write the username.
         
         // Update Firestore document
         const userRef = db.collection('users').doc(userId);
@@ -53,7 +51,7 @@ export async function completeRegistration(
         return { success: true, message: 'Profile completed successfully!' };
     } catch (error: any) {
         console.error('Error completing registration:', error);
-        return { success: false, message: formatAuthError(error) };
+        return { success: false, message: error.message || 'An unknown server error occurred.' };
     }
 }
 

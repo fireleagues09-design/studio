@@ -13,7 +13,7 @@ import { completeRegistration, cancelRegistration } from '@/app/profile/actions'
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { EmailAuthProvider, linkWithCredential } from 'firebase/auth';
+import { EmailAuthProvider, linkWithCredential, updateProfile } from 'firebase/auth';
 
 const profileSchema = z.object({
   username: z.string()
@@ -59,14 +59,14 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
       return;
     }
     
+    // Step 1: Link password credential on the client-side
     try {
-      // Step 1: Attempt to link the password credential.
       const credential = EmailAuthProvider.credential(user.email, data.password);
       await linkWithCredential(user, credential);
-
+      // This step links the password to the existing (e.g., Google) account.
     } catch (error: any) {
-      // Per your instruction, we ignore the error if the provider is already linked
-      // and proceed to update the username. Otherwise, we show the error and stop.
+      // It's safe to ignore the error if the provider is already linked.
+      // This happens if the user created an account with email/pass first.
       if (error.code !== 'auth/provider-already-linked' && error.code !== 'auth/credential-already-in-use') {
          let errorMessage = error.message || 'An unknown error occurred linking your password.';
           toast({
@@ -74,13 +74,20 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
             description: errorMessage,
             variant: 'destructive'
           });
-          form.reset({}, { keepValues: true }); // Reset submitting state
+          form.reset({}, { keepValues: true }); // Reset submitting state but keep values
           return; // Stop execution for other errors.
       }
-      // If password provider is already linked, we just continue.
     }
 
-    // Step 2: ALWAYS try to save the username via server action.
+    // Step 2: Update the user's display name on the client-side Auth object
+    try {
+        await updateProfile(user, { displayName: data.username });
+    } catch (error: any) {
+        // This is a non-critical error, so we'll just log it and continue.
+        console.warn("Could not set displayName on Auth user:", error);
+    }
+
+    // Step 3: Call the secure server action to validate and save the username to Firestore
     try {
         const idToken = await user.getIdToken();
         const result = await completeRegistration(idToken, data.username.toLowerCase());
@@ -221,7 +228,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <div className="flex flex-col items-start gap-4 pt-4">
+            <div className="flex flex-col gap-4 pt-4">
               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
                   {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
@@ -229,12 +236,12 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                   'Create Account'
                   )}
               </Button>
-              <Button
+               <Button
                   type="button"
-                  variant="destructive"
+                  variant="link"
                   onClick={handleCancel}
                   disabled={isSubmitting || isCanceling}
-                  className="w-auto h-auto px-3 py-1 text-xs"
+                  className="w-auto h-auto px-3 py-1 text-xs text-destructive hover:text-destructive/80 self-start"
               >
               {isCanceling ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
