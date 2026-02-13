@@ -196,27 +196,29 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 flex-col gap-2">
-               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
+            <DialogFooter className="pt-4 flex flex-col items-stretch gap-3">
+              <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
                 {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
                 ) : (
                   'Create Account'
                 )}
               </Button>
-               <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleCancel}
-                  disabled={isSubmitting || isCanceling}
-                  className="w-full"
-                >
-                  {isCanceling ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
-                  ) : (
-                    'Cancel & Logout'
-                  )}
-                </Button>
+               <div className="w-full flex justify-start">
+                 <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={isSubmitting || isCanceling}
+                  >
+                    {isCanceling ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
+                    ) : (
+                      'Cancel & Logout'
+                    )}
+                  </Button>
+               </div>
             </DialogFooter>
           </form>
         </Form>
