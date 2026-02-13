@@ -128,14 +128,23 @@ export default function LoginPage() {
         if (error.code === 'auth/invalid-credential') {
             try {
                 const methods = await fetchSignInMethodsForEmail(auth, email);
+                
                 if (methods.length === 0) {
+                    // Case A: User truly doesn't exist
                     toast({
                         title: "Account Not Found",
-                        description: "No account with this email exists. Redirecting to registration...",
+                        description: "No account with this email exists. Please register.",
                     });
                     router.push('/register');
-                    return; 
+                } else if (methods.includes('google.com') && !methods.includes('password')) {
+                    // Case C: User exists via Google but has no password
+                    toast({
+                        title: "Sign-in Method Mismatch",
+                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in.",
+                        duration: 6000,
+                    });
                 } else {
+                    // Case B: User exists with a password, so it must be wrong.
                     toast({ 
                         title: "Login Failed", 
                         description: "The entered password is wrong. Please try again.", 
@@ -143,7 +152,8 @@ export default function LoginPage() {
                     });
                 }
             } catch (fetchError) {
-                    toast({ 
+                console.error("Error fetching sign-in methods:", fetchError);
+                toast({ 
                     title: "Login Failed", 
                     description: "An error occurred while checking your email. Please try again.", 
                     variant: "destructive" 
