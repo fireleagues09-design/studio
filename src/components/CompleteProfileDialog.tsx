@@ -12,8 +12,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { completeRegistration, cancelRegistration } from '@/app/profile/actions';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { EmailAuthProvider, linkWithCredential, updateProfile } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useLoading } from '@/context/LoadingContext';
 
 const profileSchema = z.object({
   username: z.string()
@@ -40,6 +42,8 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
+  const router = useRouter();
+  const { showLoader, hideLoader } = useLoading();
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -58,46 +62,38 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
       toast({ title: 'Error', description: 'You are not logged in or your email is missing.', variant: 'destructive' });
       return;
     }
+
+    showLoader();
     
-    // Step 1: Link password credential on the client-side
     try {
-      const credential = EmailAuthProvider.credential(user.email, data.password);
-      await linkWithCredential(user, credential);
-      // This step links the password to the existing (e.g., Google) account.
-    } catch (error: any) {
-      // It's safe to ignore the error if the provider is already linked.
-      // This happens if the user created an account with email/pass first.
-      if (error.code !== 'auth/provider-already-linked' && error.code !== 'auth/credential-already-in-use') {
-         let errorMessage = error.message || 'An unknown error occurred linking your password.';
-          toast({
-            title: 'Password Link Failed',
-            description: errorMessage,
-            variant: 'destructive'
-          });
-          form.reset({}, { keepValues: true }); // Reset submitting state but keep values
-          return; // Stop execution for other errors.
-      }
-    }
-
-    // Step 2: Update the user's display name on the client-side Auth object
-    try {
-        await updateProfile(user, { displayName: data.username });
-    } catch (error: any) {
-        // This is a non-critical error, so we'll just log it and continue.
-        console.warn("Could not set displayName on Auth user:", error);
-    }
-
-    // Step 3: Call the secure server action to validate and save the username to Firestore
-    try {
-        const idToken = await user.getIdToken();
-        const result = await completeRegistration(idToken, data.username.toLowerCase());
-        
-        if (result.success) {
-            toast({ title: 'Success!', description: 'Your profile is now complete.' });
-            onSuccess();
-        } else {
-            throw new Error(result.message);
+      // Step 1: Link password credential on the client-side
+      try {
+        const credential = EmailAuthProvider.credential(user.email, data.password);
+        await linkWithCredential(user, credential);
+      } catch (error: any) {
+        if (error.code !== 'auth/provider-already-linked' && error.code !== 'auth/credential-already-in-use') {
+           throw error;
         }
+      }
+
+      // Step 2: Update the user's display name on the client-side Auth object
+      try {
+          await updateProfile(user, { displayName: data.username });
+      } catch (error: any) {
+          console.warn("Could not set displayName on Auth user:", error);
+      }
+
+      // Step 3: Call the secure server action to validate and save the username to Firestore
+      const idToken = await user.getIdToken();
+      const result = await completeRegistration(idToken, data.username.toLowerCase());
+      
+      if (result.success) {
+          toast({ title: 'Success!', description: 'Your profile is now complete.' });
+          onSuccess();
+          router.push('/');
+      } else {
+          throw new Error(result.message);
+      }
     } catch (error: any) {
          toast({
             title: 'Profile Update Failed',
@@ -105,6 +101,8 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
             variant: 'destructive'
         });
         form.reset({}, { keepValues: true });
+    } finally {
+        hideLoader();
     }
   }
 
@@ -113,12 +111,12 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
     if (!user || isCanceling) return;
 
     setIsCanceling(true);
+    showLoader();
     try {
       const idToken = await user.getIdToken();
       const result = await cancelRegistration(idToken);
       if (result.success) {
         toast({ title: "Registration Cancelled", description: "Your incomplete registration has been removed." });
-        // The onAuthStateChanged listener in the header will handle the logout and redirect.
       } else {
         throw new Error(result.message);
       }
@@ -128,7 +126,9 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
         description: error.message || "Could not cancel registration.",
         variant: "destructive",
       });
-      setIsCanceling(false); // Only set to false on error, otherwise the component unmounts.
+      setIsCanceling(false);
+    } finally {
+      hideLoader();
     }
   }
 
@@ -228,13 +228,9 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <div className="flex flex-col gap-4 pt-4">
+            <div className="flex flex-col gap-2 pt-4">
               <Button type="submit" disabled={isSubmitting || isCanceling} className="w-full">
-                  {isSubmitting ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
-                  ) : (
-                  'Create Account'
-                  )}
+                  {isSubmitting ? 'Submitting...' : 'Create Account'}
               </Button>
                <Button
                   type="button"
@@ -243,11 +239,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                   disabled={isSubmitting || isCanceling}
                   className="w-auto h-auto px-3 py-1 text-xs text-destructive hover:text-destructive/80 self-start"
               >
-              {isCanceling ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Canceling...</>
-              ) : (
-                  'Cancel & Logout'
-              )}
+              {isCanceling ? 'Canceling...' : 'Cancel & Logout'}
               </Button>
             </div>
           </form>
