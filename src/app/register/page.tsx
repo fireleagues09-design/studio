@@ -20,13 +20,14 @@ import {
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
     updateProfile,
-    signInWithEmailAndPassword,
     signInWithPopup,
     GoogleAuthProvider,
     linkWithCredential,
-    type AuthCredential
+    signInWithEmailAndPassword,
+    type AuthCredential,
+    type User
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
@@ -63,6 +64,34 @@ export default function RegisterPage() {
   useEffect(() => {
     hideLoader();
   }, [hideLoader]);
+
+  // This centralized function ensures the Firestore document is always present after a successful auth event.
+  const handleUserAfterLogin = async (user: User) => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    const providers = user.providerData.map(p => p.providerId);
+
+    if (!userDoc.exists()) {
+        // This is the core fix: create the Firestore doc if it's missing for an existing Auth user.
+        const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+        await setDoc(userDocRef, {
+            username: newUsername,
+            email: user.email,
+            isRegistered: false, // Force profile completion if doc was missing
+            emailVerified: user.emailVerified,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+            providers: providers,
+        });
+        toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
+    } else {
+        // If doc exists, just ensure the providers list is up-to-date.
+        await updateDoc(userDocRef, { providers });
+        toast({ title: "Success", description: "Logged in successfully!" });
+    }
+    router.push("/");
+  };
+
 
   const handleEmailRegister = async () => {
     if (!username || !email || !password || !confirmPassword) {
@@ -103,7 +132,8 @@ export default function RegisterPage() {
             isRegistered: true, // Email/pass users are registered but need to verify email
             emailVerified: false,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
-            createdAt: serverTimestamp(),
+            registeredOn: serverTimestamp(),
+            providers: user.providerData.map(p => p.providerId)
         });
         
         await sendEmailVerification(user);
@@ -118,42 +148,12 @@ export default function RegisterPage() {
         setLoading(false);
         hideLoader();
         if (error.code === 'auth/email-already-in-use') {
-             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                if (!userCredential.user.emailVerified) {
-                    await sendEmailVerification(userCredential.user);
-                     toast({
-                        title: 'Almost there!',
-                        description: "We've sent a new verification link to your email.",
-                    });
-                    router.push('/auth/verify');
-                } else {
-                     const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-                     if (userDoc.exists()) {
-                        toast({
-                            title: 'Already Registered',
-                            description: "This email is already registered and verified. Please log in.",
-                        });
-                        router.push('/login');
-                     } else {
-                         // This case is unlikely but handles if Firestore doc is missing for a verified user
-                        await sendEmailVerification(userCredential.user);
-                        toast({
-                            title: 'Almost there!',
-                            description: "Your account needs final setup. We've sent a new verification link.",
-                        });
-                        router.push('/auth/verify');
-                     }
-                }
-             } catch (signInError: any) {
-                setLoading(false);
-                hideLoader();
-                toast({
-                    title: 'Account Exists',
-                    description: 'An account with this email already exists, but the password was incorrect. Please try logging in.',
-                    variant: 'destructive',
-                });
-             }
+             toast({
+                title: 'Account Exists',
+                description: 'An account with this email already exists. Please try logging in.',
+                variant: 'destructive',
+            });
+            router.push('/login');
         } else if (error.code === 'auth/quota-exceeded' || error.code === 'auth/too-many-requests') {
             setLoading(false);
             hideLoader();
@@ -185,28 +185,15 @@ export default function RegisterPage() {
     showLoader();
 
     try {
+        // 1. Sign in with the original method (email/password) to verify ownership
         const userCredential = await signInWithEmailAndPassword(auth, linkingEmail, linkingPassword);
         const user = userCredential.user;
+
+        // 2. Link the new Google credential to the now-signed-in user
         await linkWithCredential(user, linkingCredential);
 
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: newUsername,
-                email: user.email,
-                isRegistered: false,
-                emailVerified: user.emailVerified,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-             toast({ title: "Welcome!", description: "Your account is linked. Let's complete your profile." });
-        } else {
-             toast({ title: "Success!", description: "Your Google account has been linked successfully." });
-        }
-        
-        router.push('/');
+        // 3. Let the unified handler deal with Firestore doc creation/update
+        await handleUserAfterLogin(user);
 
     } catch (error: any) {
         hideLoader();
@@ -224,25 +211,7 @@ export default function RegisterPage() {
       showLoader();
       try {
         const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-            toast({ title: "Success", description: "Logged in successfully!" });
-        } else {
-            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: newUsername,
-                email: user.email,
-                isRegistered: false,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-            toast({ title: "Welcome!", description: "Just one more step to complete your profile." });
-        }
-        router.push('/');
+        await handleUserAfterLogin(result.user);
       } catch (error: any) {
         hideLoader();
         setLoading(false);

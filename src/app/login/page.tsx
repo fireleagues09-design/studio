@@ -23,9 +23,10 @@ import {
     signInWithPopup,
     GoogleAuthProvider,
     linkWithCredential,
-    type AuthCredential
+    type AuthCredential,
+    type User
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
@@ -60,6 +61,34 @@ export default function LoginPage() {
     hideLoader();
   }, [hideLoader]);
 
+  // This centralized function ensures the Firestore document is always present after a successful auth event.
+  const handleUserAfterLogin = async (user: User) => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    const providers = user.providerData.map(p => p.providerId);
+
+    if (!userDoc.exists()) {
+        // This is the core fix: create the Firestore doc if it's missing for an existing Auth user.
+        const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+        await setDoc(userDocRef, {
+            username: newUsername,
+            email: user.email,
+            isRegistered: false, // Force profile completion if doc was missing
+            emailVerified: user.emailVerified,
+            wallet: { deposit: 0, winning: 0, bonus: 0 },
+            registeredOn: serverTimestamp(),
+            providers: providers,
+        });
+        toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
+    } else {
+        // If doc exists, just ensure the providers list is up-to-date.
+        await updateDoc(userDocRef, { providers });
+        toast({ title: "Success", description: "Logged in successfully!" });
+    }
+    router.push("/");
+  };
+
+
   const handleEmailLogin = async () => {
     if (!email || !password) {
         toast({ title: "Error", description: "Please enter email and password.", variant: "destructive" });
@@ -70,9 +99,8 @@ export default function LoginPage() {
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        const userDoc = await getDoc(doc(db, "users", user.uid));
         
-        if (!user.emailVerified || !userDoc.exists()) {
+        if (!user.emailVerified) {
              toast({
                 title: "Verification Required",
                 description: "Your registration is incomplete. Please verify your email.",
@@ -83,10 +111,9 @@ export default function LoginPage() {
             router.push('/auth/verify');
             return;
         }
-
-        // Standard successful login: Auth user exists AND Firestore doc exists.
-        toast({ title: "Success", description: "Logged in successfully!" });
-        router.push("/");
+        
+        // All successful logins are handled by one function now
+        await handleUserAfterLogin(user);
 
     } catch (error: any) {
         hideLoader();
@@ -95,14 +122,13 @@ export default function LoginPage() {
 
         if (error.code === 'auth/invalid-credential') {
             try {
-                // Check if email exists to distinguish between "not registered" and "wrong password"
                 const methods = await fetchSignInMethodsForEmail(auth, email);
                 if (methods.length === 0) {
                     toast({
                         title: "Account Not Found",
                         description: "No account with this email exists. Redirecting to registration...",
                     });
-                    router.push('/register'); // Redirect as requested
+                    router.push('/register');
                     return; 
                 } else {
                     toast({ 
@@ -144,26 +170,8 @@ export default function LoginPage() {
         // 2. Link the new Google credential to the now-signed-in user
         await linkWithCredential(user, linkingCredential);
 
-        // 3. Check for Firestore document and create if it's missing (the core of the fix)
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
-             // This case handles a user who existed in Auth but not Firestore.
-            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: newUsername,
-                email: user.email,
-                isRegistered: false, // Force them to complete profile if username is auto-generated
-                emailVerified: user.emailVerified,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-             toast({ title: "Welcome!", description: "Your account is linked. Let's complete your profile." });
-        } else {
-             toast({ title: "Success!", description: "Your Google account has been linked successfully." });
-        }
-        
-        router.push('/');
+        // 3. Let the unified handler deal with Firestore doc creation/update
+        await handleUserAfterLogin(user);
 
     } catch (error: any) {
         hideLoader();
@@ -182,25 +190,7 @@ export default function LoginPage() {
       showLoader();
       try {
         const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-            toast({ title: "Success", description: "Logged in successfully!" });
-        } else {
-            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
-            await setDoc(userDocRef, {
-                username: newUsername,
-                email: user.email,
-                isRegistered: false,
-                emailVerified: true,
-                wallet: { deposit: 0, winning: 0, bonus: 0 },
-                registeredOn: serverTimestamp(),
-            });
-            toast({ title: "Welcome!", description: "Just one more step to complete your profile." });
-        }
-        router.push('/');
+        await handleUserAfterLogin(result.user);
       } catch (error: any) {
         hideLoader();
         setLoading(false);
