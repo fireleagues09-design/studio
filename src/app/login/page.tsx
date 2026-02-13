@@ -81,12 +81,7 @@ export default function LoginPage() {
         toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
     } else {
         // If doc exists, just ensure the providers list is up-to-date.
-        try {
-            await updateDoc(userDocRef, { providers });
-        } catch (updateError) {
-            console.warn("Could not update providers list on login:", updateError);
-            // Do not re-throw error. Allow login to continue successfully.
-        }
+        await updateDoc(userDocRef, { providers });
         toast({ title: "Success", description: "Logged in successfully!" });
     }
     router.push("/");
