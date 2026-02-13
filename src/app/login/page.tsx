@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { auth, db, googleProvider } from "@/lib/firebase";
 import { 
     signInWithEmailAndPassword, 
-    sendEmailVerification, 
     fetchSignInMethodsForEmail, 
     signInWithPopup,
     GoogleAuthProvider,
