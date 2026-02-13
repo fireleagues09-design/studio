@@ -199,7 +199,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
                 </FormItem>
               )}
             />
-            <DialogFooter className="pt-4 flex flex-col gap-2">
+            <DialogFooter className="pt-4 flex-col gap-3">
               <Button type="submit" disabled={isSubmitting || isCancelling}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Account
