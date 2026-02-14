@@ -142,7 +142,7 @@ export default function RegisterPage() {
         });
         
         const actionCodeSettings = {
-            url: `${window.location.origin}/auth/verify`,
+            url: `${window.location.origin}/`,
             handleCodeInApp: true,
         };
         await sendEmailVerification(user, actionCodeSettings);
