@@ -141,7 +141,11 @@ export default function RegisterPage() {
             providers: user.providerData.map(p => p.providerId)
         });
         
-        await sendEmailVerification(user);
+        const actionCodeSettings = {
+            url: `${window.location.origin}/`,
+            handleCodeInApp: true,
+        };
+        await sendEmailVerification(user, actionCodeSettings);
 
         toast({
             title: 'Registration Successful!',

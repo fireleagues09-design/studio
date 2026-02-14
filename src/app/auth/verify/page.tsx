@@ -167,7 +167,11 @@ export default function VerifyPage() {
         showLoader();
 
         try {
-            await sendEmailVerification(user);
+            const actionCodeSettings = {
+                url: `${window.location.origin}/`,
+                handleCodeInApp: true,
+            };
+            await sendEmailVerification(user, actionCodeSettings);
             toast({
                 title: "Link Sent!",
                 description: "A new verification link has been sent to your email.",

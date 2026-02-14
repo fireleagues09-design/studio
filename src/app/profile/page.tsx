@@ -220,7 +220,11 @@ export default function ProfilePage() {
         if (!user || resending) return;
         setResending(true);
         try {
-            await sendEmailVerification(user);
+            const actionCodeSettings = {
+                url: `${window.location.origin}/`,
+                handleCodeInApp: true,
+            };
+            await sendEmailVerification(user, actionCodeSettings);
             toast({
                 title: "Verification Link Sent",
                 description: "A new verification link has been sent to your email. Please be sure to check your spam or junk folder.",
