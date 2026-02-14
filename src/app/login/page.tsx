@@ -140,7 +140,7 @@ export default function LoginPage() {
                     // Case C: User exists via Google but has no password
                     toast({
                         title: "Sign-in Method Mismatch",
-                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in or enter correct password",
+                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in.",
                         duration: 6000,
                     });
                 } else {
