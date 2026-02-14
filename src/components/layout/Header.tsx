@@ -400,7 +400,7 @@ export function Header() {
         onSuccess={() => setShowCompleteProfileDialog(false)} 
       />
       
-      {user && !user.emailVerified && (
+      {!loading && user && profile && !user.emailVerified && (
         <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" />
