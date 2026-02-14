@@ -221,7 +221,7 @@ export default function ProfilePage() {
         setResending(true);
         try {
             const actionCodeSettings = {
-                url: `${window.location.origin}/profile`,
+                url: `${window.location.origin}/auth/verify`,
                 handleCodeInApp: true,
             };
             await sendEmailVerification(user, actionCodeSettings);
