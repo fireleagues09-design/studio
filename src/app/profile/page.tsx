@@ -250,7 +250,8 @@ export default function ProfilePage() {
 
     const freeFireProfile = profile.gameProfiles?.['Free Fire'];
     const bgmiProfile = profile.gameProfiles?.['BGMI'];
-    const isVerified = user.emailVerified;
+    const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com');
+    const isVerified = user.emailVerified || isGoogleUser;
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl space-y-8">
