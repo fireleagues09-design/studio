@@ -86,7 +86,16 @@ export default function VerifyPage() {
 
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                setUser(currentUser);
+                // Manually reload to get the latest emailVerified status right away.
+                await currentUser.reload();
+                if (currentUser.emailVerified) {
+                    // If user is already verified (e.g., they just clicked the link),
+                    // complete the process immediately.
+                    handleRegistrationCompletion(currentUser);
+                } else {
+                    // Otherwise, set the user state to start the polling process.
+                    setUser(currentUser);
+                }
             } else {
                 // If there's no user, they should not be on this page.
                 router.replace('/login');
@@ -98,11 +107,12 @@ export default function VerifyPage() {
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
             if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
         };
-    }, [router, hideLoader]);
+    }, [router, hideLoader, handleRegistrationCompletion]);
 
 
     useEffect(() => {
-        if (user) {
+        // This effect now only runs if the user is unverified when the page loads.
+        if (user && !user.emailVerified) {
              // Start checking for email verification every 3 seconds.
              verificationIntervalRef.current = setInterval(async () => {
                 const currentUser = auth.currentUser;
@@ -214,6 +224,8 @@ export default function VerifyPage() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     
+    // If we're still waiting for the initial auth check, don't render anything.
+    // This prevents the UI from flashing before we know if the user is verified.
     if (!user) {
         return null;
     }
