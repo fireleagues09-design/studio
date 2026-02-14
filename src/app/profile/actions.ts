@@ -91,28 +91,3 @@ export async function updateGameProfile(
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
-
-export async function cancelRegistration(
-    idToken: string
-): Promise<{ success: boolean; message: string }> {
-    if (!idToken) {
-        return { success: false, message: 'Authorization required.' };
-    }
-
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const userId = decodedToken.uid;
-        
-        // Delete user from Firestore first
-        const userRef = db.collection('users').doc(userId);
-        await userRef.delete();
-
-        // Then delete from Firebase Auth
-        await auth.deleteUser(userId);
-
-        return { success: true, message: 'Registration successfully cancelled.' };
-    } catch (error: any) {
-        console.error('Error cancelling registration:', error);
-        return { success: false, message: formatAuthError(error) };
-    }
-}
