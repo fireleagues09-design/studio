@@ -65,6 +65,7 @@ export default function LoginPage() {
     const userDocRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
     const providers = user.providerData.map(p => p.providerId);
+    const isGoogleUser = providers.includes('google.com');
 
     if (!userDoc.exists()) {
         // Create the document if it's missing for an existing Auth user.
@@ -73,7 +74,7 @@ export default function LoginPage() {
             username: newUsername,
             email: user.email,
             isRegistered: false, // Force profile completion if doc was missing
-            emailVerified: user.emailVerified,
+            emailVerified: user.emailVerified || isGoogleUser, // Force true if it's a Google user.
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
             lastLogin: serverTimestamp(),
@@ -82,11 +83,20 @@ export default function LoginPage() {
         toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
     } else {
         // If doc exists, update lastLogin and providers list.
-        try {
-          await setDoc(userDocRef, { 
+        const existingData = userDoc.data();
+        const updatePayload: {providers: string[]; lastLogin: any; emailVerified?: boolean} = {
             providers: providers,
-            lastLogin: serverTimestamp() 
-          }, { merge: true });
+            lastLogin: serverTimestamp()
+        };
+
+        // Also update emailVerified status on existing users if they log in with Google
+        // and it's not already marked as verified in Firestore.
+        if (isGoogleUser && !existingData.emailVerified) {
+            updatePayload.emailVerified = true;
+        }
+
+        try {
+          await setDoc(userDocRef, updatePayload, { merge: true });
         } catch (error) {
           console.warn("Could not update user providers/lastLogin:", error);
           // This failure is not critical, so we don't show an error toast to the user.
