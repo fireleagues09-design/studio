@@ -118,15 +118,6 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        if (!user.emailVerified) {
-             toast({
-                title: "Verification Required",
-                description: "Your account is not verified. Redirecting you now...",
-            });
-            router.push('/auth/verify');
-            return;
-        }
-        
         // All successful logins are handled by one function now
         await handleUserAfterLogin(user);
 
@@ -150,7 +141,7 @@ export default function LoginPage() {
                     // Case C: User exists via Google but has no password
                     toast({
                         title: "Sign-in Method Mismatch",
-                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in.",
+                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in or enter correct password",
                         duration: 6000,
                     });
                 } else {
@@ -353,3 +344,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

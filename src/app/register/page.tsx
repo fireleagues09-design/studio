@@ -157,7 +157,7 @@ export default function RegisterPage() {
         });
         
         const actionCodeSettings = {
-            url: `${window.location.origin}/auth/verified`,
+            url: `${window.location.origin}/profile`,
             handleCodeInApp: true,
         };
         await sendEmailVerification(user, actionCodeSettings);
@@ -166,7 +166,7 @@ export default function RegisterPage() {
             title: 'Registration Successful!',
             description: "Welcome! A verification link has been sent to your email. Please verify to get full access.",
         });
-        router.push('/auth/verify');
+        router.push('/profile');
 
     } catch (error: any) {
         setLoading(false);
@@ -421,3 +421,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
