@@ -23,7 +23,7 @@ export function Footer() {
             </Link>
           </nav>
            <p className="text-xs text-muted-foreground text-center">
-            &copy; 2024 FireLeagues. All rights reserved.
+            &copy; 2026 FireLeagues. All rights reserved.
           </p>
         </div>
       </div>
