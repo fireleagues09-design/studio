@@ -146,22 +146,24 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                     Add Funds
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-sm">
                 <DialogHeader>
                     <DialogTitle>Add Funds to Wallet</DialogTitle>
                     <DialogDescription>
                         Complete an offline payment and submit the details here.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-4">
-                    <div className="p-4 bg-secondary rounded-lg text-center">
-                        <h3 className="font-semibold mb-2">Payment Instructions</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                           Scan the QR code or use the UPI ID below. After payment, submit the amount and transaction ID.
-                        </p>
+                <div className="space-y-4 pt-2">
+                    <div className="p-3 bg-secondary rounded-lg text-center space-y-3">
+                        <div>
+                            <h3 className="font-semibold">Payment Instructions</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Scan the QR code or use the UPI ID below, then submit the details.
+                            </p>
+                        </div>
 
                         {upiQrCodeUrl ? (
-                            <div className="relative w-40 h-40 mx-auto border rounded-md p-2 bg-white mb-4">
+                            <div className="relative w-32 h-32 mx-auto border rounded-md p-2 bg-white">
                                 <Image
                                     src={upiQrCodeUrl}
                                     alt="Scan to pay"
@@ -170,20 +172,20 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 />
                             </div>
                         ) : (
-                            <div className="w-40 h-40 mx-auto border rounded-md mb-4 bg-background flex items-center justify-center">
+                            <div className="w-32 h-32 mx-auto border rounded-md bg-background flex items-center justify-center">
                                 <p className="text-xs text-muted-foreground text-center p-2">Admin has not set a QR Code yet.</p>
                             </div>
                         )}
                         
                         {upiId ? (
-                            <div className="flex items-center justify-between p-3 bg-background rounded-md">
-                                <p className="text-lg font-mono text-primary break-all">{upiId}</p>
+                            <div className="flex items-center justify-between p-2 bg-background rounded-md">
+                                <p className="font-mono text-primary break-all">{upiId}</p>
                                 <Button variant="ghost" size="icon" onClick={handleCopyUpi}>
                                     <Copy className="h-4 w-4" />
                                 </Button>
                             </div>
                         ) : (
-                             <div className="flex items-center justify-center p-3 bg-background rounded-md">
+                             <div className="flex items-center justify-center p-2 bg-background rounded-md">
                                 <p className="text-sm text-muted-foreground">UPI ID not set by admin.</p>
                             </div>
                         )}
@@ -212,7 +214,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 required 
                             />
                         </div>
-                         <DialogFooter>
+                         <DialogFooter className="pt-2">
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary">Cancel</Button>
                             </DialogClose>
