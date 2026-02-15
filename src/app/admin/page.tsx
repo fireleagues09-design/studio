@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -21,8 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
-import { updateTransaction, setBestiePageStatus } from './actions';
+import { updateTransaction, setBestiePageStatus, updatePaymentDetails } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
@@ -248,6 +249,11 @@ export default function AdminPage() {
     const isMobile = useIsMobile();
     const [isBestiePageEnabled, setIsBestiePageEnabled] = useState(false);
     const [settingsLoading, setSettingsLoading] = useState(true);
+    
+    const [upiId, setUpiId] = useState('');
+    const [upiQrCodeUrl, setUpiQrCodeUrl] = useState('');
+    const [paymentSettingsLoading, setPaymentSettingsLoading] = useState(true);
+    const [isSavingPayment, setIsSavingPayment] = useState(false);
 
     const router = useRouter();
     const { toast } = useToast();
@@ -339,6 +345,15 @@ export default function AdminPage() {
             }
             setSettingsLoading(false);
         });
+        
+        const paymentDocRef = doc(db, 'settings', 'paymentDetails');
+        const unsubscribePayment = onSnapshot(paymentDocRef, (doc) => {
+            if (doc.exists()) {
+                setUpiId(doc.data().upiId || '');
+                setUpiQrCodeUrl(doc.data().upiQrCodeUrl || '');
+            }
+            setPaymentSettingsLoading(false);
+        });
 
 
         // Cleanup listeners
@@ -347,6 +362,7 @@ export default function AdminPage() {
             unsubscribeUsers();
             unsubscribeTransactions();
             unsubscribeSettings();
+            unsubscribePayment();
         };
     }, [isAdmin, user]);
     
@@ -401,6 +417,27 @@ export default function AdminPage() {
             setIsBestiePageEnabled(!enabled);
         } finally {
             setActionLoading(prev => ({ ...prev, bestiePageToggle: false }));
+        }
+    };
+
+    const handlePaymentDetailsSave = async () => {
+        if (!auth.currentUser) {
+            toast({ title: "Authentication Error", description: "You are not logged in.", variant: "destructive" });
+            return;
+        };
+        setIsSavingPayment(true);
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const result = await updatePaymentDetails({ upiId, upiQrCodeUrl }, idToken);
+            if (result.success) {
+                toast({ title: 'Success', description: 'Payment details have been updated.' });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } finally {
+            setIsSavingPayment(false);
         }
     };
 
@@ -474,6 +511,7 @@ export default function AdminPage() {
                                  <SelectItem value="tournaments">Tournaments</SelectItem>
                                  <SelectItem value="users">Users</SelectItem>
                                  <SelectItem value="besties">Besties</SelectItem>
+                                 <SelectItem value="payments">Payments</SelectItem>
                                  <SelectItem value="settings">Settings</SelectItem>
                              </SelectContent>
                          </Select>
@@ -484,6 +522,7 @@ export default function AdminPage() {
                         <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
                         <TabsTrigger value="users">Users</TabsTrigger>
                         <TabsTrigger value="besties">Besties</TabsTrigger>
+                        <TabsTrigger value="payments">Payments</TabsTrigger>
                         <TabsTrigger value="settings">Settings</TabsTrigger>
                     </TabsList>
                  )}
@@ -701,6 +740,73 @@ export default function AdminPage() {
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+                <TabsContent value="payments" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <CreditCard className="h-5 w-5 text-primary" />
+                                Set & Edit Payment Details
+                            </CardTitle>
+                            <CardDescription>
+                                Set the UPI ID and QR code image URL for user deposits.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {paymentSettingsLoading ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-10 w-full" />
+                                    <Skeleton className="h-10 w-full" />
+                                    <Skeleton className="h-40 w-40" />
+                                    <Skeleton className="h-10 w-36" />
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="upi-id">UPI ID</Label>
+                                        <Input
+                                            id="upi-id"
+                                            value={upiId}
+                                            onChange={(e) => setUpiId(e.target.value)}
+                                            placeholder="your-upi-id@bank"
+                                            disabled={isSavingPayment}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="qr-code-url">UPI QR Code Image URL</Label>
+                                        <Input
+                                            id="qr-code-url"
+                                            value={upiQrCodeUrl}
+                                            onChange={(e) => setUpiQrCodeUrl(e.target.value)}
+                                            placeholder="https://ik.imagekit.io/your-project/qr.png"
+                                            disabled={isSavingPayment}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Host your QR image on a service like ImageKit and paste the URL here.
+                                        </p>
+                                    </div>
+
+                                    {upiQrCodeUrl && (
+                                        <div>
+                                            <Label>QR Code Preview</Label>
+                                            <div className="mt-2 relative w-40 h-40 border rounded-md p-2 bg-white">
+                                                <Image
+                                                    src={upiQrCodeUrl}
+                                                    alt="UPI QR Code Preview"
+                                                    fill
+                                                    className="object-contain"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button onClick={handlePaymentDetailsSave} disabled={isSavingPayment}>
+                                        {isSavingPayment ? 'Saving...' : 'Save Payment Details'}
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                  <TabsContent value="settings" className="mt-6 space-y-8">
                     <Card>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,16 +47,30 @@ type Transaction = {
     status: 'Completed' | 'Pending' | 'Failed';
 };
 
-function AddFundsDialog() {
+type PaymentDetails = {
+    upiId: string;
+    upiQrCodeUrl: string;
+}
+
+function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | null }) {
     const [amount, setAmount] = useState('');
     const [transactionId, setTransactionId] = useState('');
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
 
-    const upiId = 'fireleagues@examplebank';
+    const upiId = paymentDetails?.upiId || '';
+    const upiQrCodeUrl = paymentDetails?.upiQrCodeUrl || '';
 
     const handleCopyUpi = () => {
+        if (!upiId) {
+            toast({
+                title: "Error",
+                description: "UPI ID is not set.",
+                variant: "destructive"
+            });
+            return;
+        }
         navigator.clipboard.writeText(upiId);
         toast({
             title: "Copied!",
@@ -130,17 +145,39 @@ function AddFundsDialog() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
-                    <div className="p-4 bg-secondary rounded-lg">
+                    <div className="p-4 bg-secondary rounded-lg text-center">
                         <h3 className="font-semibold mb-2">Payment Instructions</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Transfer the desired amount to the UPI ID below. After the transfer, enter the amount and the transaction ID from your payment app.
+                           Scan the QR code or use the UPI ID below. After payment, submit the amount and transaction ID.
                         </p>
-                        <div className="flex items-center justify-between p-3 bg-background rounded-md">
-                            <p className="text-lg font-mono text-primary">{upiId}</p>
-                            <Button variant="ghost" size="icon" onClick={handleCopyUpi}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        </div>
+
+                        {upiQrCodeUrl ? (
+                            <div className="relative w-40 h-40 mx-auto border rounded-md p-2 bg-white mb-4">
+                                <Image
+                                    src={upiQrCodeUrl}
+                                    alt="Scan to pay"
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-40 h-40 mx-auto border rounded-md mb-4 bg-background flex items-center justify-center">
+                                <p className="text-xs text-muted-foreground text-center p-2">Admin has not set a QR Code yet.</p>
+                            </div>
+                        )}
+                        
+                        {upiId ? (
+                            <div className="flex items-center justify-between p-3 bg-background rounded-md">
+                                <p className="text-lg font-mono text-primary break-all">{upiId}</p>
+                                <Button variant="ghost" size="icon" onClick={handleCopyUpi}>
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ) : (
+                             <div className="flex items-center justify-center p-3 bg-background rounded-md">
+                                <p className="text-sm text-muted-foreground">UPI ID not set by admin.</p>
+                            </div>
+                        )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4 px-1">
@@ -361,6 +398,7 @@ export default function WalletPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(true);
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+    const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
     const router = useRouter();
     const { toast } = useToast();
     const { hideLoader } = useLoading();
@@ -383,7 +421,18 @@ export default function WalletPage() {
                     console.error("Error fetching wallet profile:", error);
                     setLoading(false);
                 });
-                return () => unsubProfile();
+
+                const paymentDocRef = doc(db, 'settings', 'paymentDetails');
+                const unsubPayment = onSnapshot(paymentDocRef, (doc) => {
+                    if (doc.exists()) {
+                        setPaymentDetails(doc.data() as PaymentDetails);
+                    }
+                });
+                
+                return () => {
+                    unsubProfile();
+                    unsubPayment();
+                };
             } else {
                 router.push('/login');
                 setLoading(false);
@@ -482,7 +531,7 @@ export default function WalletPage() {
                                     <p className="text-4xl font-bold text-primary">₹{totalBalance.toFixed(2)}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <AddFundsDialog />
+                                    <AddFundsDialog paymentDetails={paymentDetails} />
                                      <WithdrawFundsDialog user={user} winnings={wallet.winning} />
                                 </div>
                             </div>

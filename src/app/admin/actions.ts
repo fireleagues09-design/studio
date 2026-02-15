@@ -225,3 +225,24 @@ export async function setIndividualBestiePageStatus(
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
+
+
+export async function updatePaymentDetails(
+    details: { upiId: string; upiQrCodeUrl: string },
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const settingsRef = db.collection('settings').doc('paymentDetails');
+        await settingsRef.set(details, { merge: true });
+
+        return { success: true, message: `Payment details updated.` };
+    } catch (error: any) {
+        console.error('Error updating payment details:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}
