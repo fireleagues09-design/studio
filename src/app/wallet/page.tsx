@@ -99,6 +99,15 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
             return;
         }
 
+        if (Number(amount) < 20) {
+            toast({
+                title: 'Invalid Amount',
+                description: 'The minimum deposit amount is ₹20.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setLoading(true);
         try {
             await addDoc(collection(db, 'transactions'), {
@@ -186,7 +195,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                             <Input 
                                 id="amount"
                                 type="number"
-                                placeholder="e.g., 500"
+                                placeholder="Min: ₹20"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 required 
