@@ -416,7 +416,7 @@ export function Header() {
       <Alert className="border-0 rounded-none bg-secondary text-secondary-foreground p-0">
         <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
             <Info className="h-5 w-5 flex-shrink-0" />
-            <span>This website is under devlopment and in its testing phase and please support us to launch our indian esports website</span>
+            <span>This website is under development and in a testing phase. Thank you for your support as we prepare to launch our Indian esports platform.</span>
         </div>
       </Alert>
 
