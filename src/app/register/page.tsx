@@ -157,7 +157,7 @@ export default function RegisterPage() {
         });
         
         const actionCodeSettings = {
-            url: `${window.location.origin}/profile`,
+            url: `${window.location.origin}/verify-email`,
             handleCodeInApp: true,
         };
         await sendEmailVerification(user, actionCodeSettings);
@@ -421,5 +421,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
 
     
