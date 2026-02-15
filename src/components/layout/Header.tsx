@@ -177,7 +177,11 @@ export function Header() {
   const handleResendVerification = async () => {
     if (!user) return;
     try {
-        await sendEmailVerification(user);
+        const actionCodeSettings = {
+            url: `${window.location.origin}/profile`,
+            handleCodeInApp: true,
+        };
+        await sendEmailVerification(user, actionCodeSettings);
         toast({
             title: "Verification Link Sent",
             description: "A new verification link has been sent. Please be sure to check your inbox and spam folder.",
@@ -402,13 +406,13 @@ export function Header() {
         onSuccess={() => setShowCompleteProfileDialog(false)} 
       />
       
-      {!loading && user && profile && !user.emailVerified && !isGoogleUser && (
+      {!loading && user && profile && !profile.emailVerified && (
         <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" />
                 <span>Your account is not fully activated.</span>
-                <Button variant="link" asChild className="p-0 h-auto text-black underline font-bold cursor-pointer">
-                    <Link href="/profile">Please verify your email</Link>
+                <Button variant="link" onClick={handleResendVerification} className="p-0 h-auto text-black underline font-bold cursor-pointer">
+                    Please verify your email
                 </Button>
             </div>
         </Alert>
@@ -608,3 +612,5 @@ export function Header() {
     </>
   );
 }
+
+    
