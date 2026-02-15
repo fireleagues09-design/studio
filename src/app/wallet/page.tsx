@@ -153,8 +153,8 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                         Complete an offline payment and submit the details here.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 pt-2">
-                    <div className="p-3 bg-secondary rounded-lg text-center space-y-3">
+                <div className="space-y-3">
+                    <div className="p-3 bg-secondary rounded-lg text-center space-y-2">
                         <div>
                             <h3 className="font-semibold">Payment Instructions</h3>
                             <p className="text-sm text-muted-foreground">
@@ -163,7 +163,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                         </div>
 
                         {upiQrCodeUrl ? (
-                            <div className="relative w-32 h-32 mx-auto border rounded-md p-2 bg-white">
+                            <div className="relative w-40 h-40 mx-auto border rounded-md p-2 bg-white">
                                 <Image
                                     src={upiQrCodeUrl}
                                     alt="Scan to pay"
@@ -172,7 +172,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 />
                             </div>
                         ) : (
-                            <div className="w-32 h-32 mx-auto border rounded-md bg-background flex items-center justify-center">
+                            <div className="w-40 h-40 mx-auto border rounded-md bg-background flex items-center justify-center">
                                 <p className="text-xs text-muted-foreground text-center p-2">Admin has not set a QR Code yet.</p>
                             </div>
                         )}
@@ -191,7 +191,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                         )}
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4 px-1">
+                    <form onSubmit={handleSubmit} className="space-y-3 px-1">
                         <div className="grid gap-2">
                             <Label htmlFor="amount">Amount (INR)</Label>
                             <Input 
@@ -214,7 +214,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 required 
                             />
                         </div>
-                         <DialogFooter className="pt-2">
+                         <DialogFooter>
                             <DialogClose asChild>
                                 <Button type="button" variant="secondary">Cancel</Button>
                             </DialogClose>
