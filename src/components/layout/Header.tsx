@@ -46,9 +46,15 @@ import {
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { onAuthStateChanged, User as FirebaseUser, sendEmailVerification } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  User as FirebaseUser,
+  sendEmailVerification,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SuspendedUserPopup } from '@/components/SuspendedUserPopup';
@@ -175,6 +181,65 @@ export function Header() {
         unsubscribeAuth();
     };
   }, []);
+
+  // Effect for Android WebView Bridge
+  useEffect(() => {
+    const handleUserAfterLogin = async (user: FirebaseUser) => {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        const providers = user.providerData.map(p => p.providerId);
+        const isGoogleUser = providers.includes('google.com');
+
+        if (!userDoc.exists()) {
+            const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
+            await setDoc(userDocRef, {
+                username: newUsername,
+                email: user.email,
+                isRegistered: false,
+                emailVerified: user.emailVerified || isGoogleUser,
+                wallet: { deposit: 0, winning: 0, bonus: 0 },
+                registeredOn: serverTimestamp(),
+                lastLogin: serverTimestamp(),
+                providers: providers,
+            });
+            toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
+        } else {
+            const existingData = userDoc.data();
+            const updatePayload: {providers: string[]; lastLogin: any; emailVerified?: boolean} = {
+                providers: providers,
+                lastLogin: serverTimestamp()
+            };
+
+            if (isGoogleUser && !existingData.emailVerified) {
+                updatePayload.emailVerified = true;
+            }
+
+            try {
+                await setDoc(userDocRef, updatePayload, { merge: true });
+            } catch (error) {
+                console.warn("Could not update user providers/lastLogin:", error);
+            }
+            toast({ title: "Success", description: "Logged in successfully!" });
+        }
+        router.push("/");
+    };
+
+    (window as any).signInWithGoogleToken = async function (token: string) {
+        try {
+            showLoader();
+            const credential = GoogleAuthProvider.credential(token);
+            const userCredential = await signInWithCredential(auth, credential);
+            await handleUserAfterLogin(userCredential.user);
+        } catch (error: any) {
+            console.error("Google token login failed:", error);
+            toast({ title: "Login Failed", description: error.message || "An unknown error occurred", variant: "destructive" });
+        }
+    };
+
+    return () => {
+        delete (window as any).signInWithGoogleToken;
+    };
+  }, [router, toast, showLoader]);
 
   const handleResendVerification = async () => {
     if (!user) return;
