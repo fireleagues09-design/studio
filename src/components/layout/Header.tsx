@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Hand,
   Briefcase,
+  Tag,
 } from "lucide-react";
 import {
   Sheet,
@@ -266,6 +267,10 @@ export function Header() {
             <Gift className="mr-2 h-4 w-4" />
             <span>Gift Shop</span>
         </DropdownMenuItem>
+        <DropdownMenuItem disabled className="cursor-not-allowed">
+            <Tag className="mr-2 h-4 w-4" />
+            <span>Bonus Code</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
             <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
@@ -332,6 +337,7 @@ export function Header() {
         </SheetClose>
         <Button variant="ghost" className="w-full justify-start" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
+        <Button variant="ghost" className="w-full justify-start" disabled><Tag className="mr-2 h-4 w-4" />Bonus Code</Button>
         
         <Separator className="my-2"/>
         
@@ -406,7 +412,7 @@ export function Header() {
         onSuccess={() => setShowCompleteProfileDialog(false)} 
       />
       
-      {!loading && user && profile && !profile.emailVerified && (
+      {!loading && user && profile && !profile.emailVerified && !isGoogleUser && (
         <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
                 <AlertTriangle className="h-5 w-5 flex-shrink-0" />
@@ -612,5 +618,3 @@ export function Header() {
     </>
   );
 }
-
-    
