@@ -21,6 +21,7 @@ import {
   Hand,
   Briefcase,
   Tag,
+  Info,
 } from "lucide-react";
 import {
   Sheet,
@@ -412,6 +413,13 @@ export function Header() {
         onSuccess={() => setShowCompleteProfileDialog(false)} 
       />
       
+      <Alert className="border-0 rounded-none bg-secondary text-secondary-foreground p-0">
+        <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
+            <Info className="h-5 w-5 flex-shrink-0" />
+            <span>This website is under devlopment and in its testing phase and please support us to launch our indian esports website</span>
+        </div>
+      </Alert>
+
       {!loading && user && profile && !profile.emailVerified && !isGoogleUser && (
         <Alert variant="destructive" className="border-0 rounded-none bg-amber-400 text-black">
             <div className="container mx-auto px-4 py-2 flex items-center justify-center text-center text-sm font-medium gap-2">
