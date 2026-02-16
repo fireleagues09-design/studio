@@ -241,7 +241,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [isRegistered, setIsRegistered] = useState(false);
-    const [showCredentials, setShowCredentials] = useState(false);
     
     const { toast } = useToast();
     const router = useRouter();
@@ -260,15 +259,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             hideLoader();
         }
     }, [loading, loadingAuth, hideLoader]);
-    
-    useEffect(() => {
-        if (user && isRegistered && tournament?.roomId) {
-            setShowCredentials(true);
-        } else {
-            setShowCredentials(false);
-        }
-    }, [isRegistered, tournament, user]);
-
 
     useEffect(() => {
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
@@ -481,7 +471,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                   <span className="text-muted-foreground">Entry Fee:</span>
                 </div>
                 <strong>
-                  {entryFee === 'FREE' || entryFee === '0' ? 'FREE' : `₹${entryFee}`}
+                  {entryFee === 'FREE' || entryFee === '0' ? `FREE` : `₹${entryFee}`}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -532,7 +522,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             </div>
           </Card>
           
-          {showCredentials && <RoomCredentials roomId={roomId!} roomPassword={roomPassword} />}
+          {isRegistered && roomId && <RoomCredentials roomId={roomId} roomPassword={roomPassword} />}
 
           <Card>
             <CardHeader>
