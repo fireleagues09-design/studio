@@ -332,7 +332,9 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             );
         }
         
-        if (!user.emailVerified) {
+        const isVerified = user.emailVerified || user.providerData.some(p => p.providerId === 'google.com');
+
+        if (!isVerified) {
              return (
                 <TooltipProvider>
                     <Tooltip>
