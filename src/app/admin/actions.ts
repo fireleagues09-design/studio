@@ -253,6 +253,7 @@ export async function updatePlayerResult(
     userId: string,
     rank: string,
     prizeWon: number,
+    kills: number,
     idToken: string
 ): Promise<{ success: boolean; message: string }> {
     const adminCheck = await verifyAdmin(idToken);
@@ -264,7 +265,8 @@ export async function updatePlayerResult(
         const registrationRef = db.collection('tournaments').doc(tournamentId).collection('registrations').doc(userId);
         await registrationRef.update({
             rank: rank,
-            prizeWon: prizeWon
+            prizeWon: prizeWon,
+            kills: kills
         });
 
         return { success: true, message: `Result updated for player.` };

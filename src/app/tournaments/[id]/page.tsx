@@ -289,6 +289,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                 <TableHead>Rank</TableHead>
                                 <TableHead>Username</TableHead>
                                 <TableHead>In-Game Name</TableHead>
+                                <TableHead className="text-center">Kills</TableHead>
                                 <TableHead className="text-right">Prize Won</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -310,6 +311,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                         </div>
                                     </TableCell>
                                     <TableCell>{player.inGameName}</TableCell>
+                                    <TableCell className="text-center font-semibold">{player.kills || 0}</TableCell>
                                     <TableCell className="text-right text-green-500 font-bold">
                                         {player.isSuspended ? '-' : (player.prizeWon > 0 ? `₹${player.prizeWon}` : '-')}
                                     </TableCell>

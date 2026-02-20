@@ -32,6 +32,7 @@ type Registration = {
     userPhone?: string; 
     rank?: string;
     prizeWon?: number;
+    kills?: number;
     isSuspended?: boolean;
     suspensionNote?: string;
 };
@@ -134,7 +135,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
     
     // State for editable results
-    const [results, setResults] = useState<{[key: string]: { rank: string, prize: string }}>({});
+    const [results, setResults] = useState<{[key: string]: { rank: string, prize: string, kills: string }}>({});
 
     const router = useRouter();
     const { hideLoader } = useLoading();
@@ -204,7 +205,8 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                     const userDoc = await getDoc(userDocRef);
                     const initialResults = {
                         rank: reg.rank || '',
-                        prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : ''
+                        prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : '',
+                        kills: reg.kills !== undefined ? reg.kills.toString() : ''
                     };
                     
                     setResults(prev => ({ ...prev, [reg.userId]: initialResults }));
@@ -236,7 +238,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         };
     }, [isAdmin, tournamentId, authLoading]);
 
-    const handleResultChange = (userId: string, field: 'rank' | 'prize', value: string) => {
+    const handleResultChange = (userId: string, field: 'rank' | 'prize' | 'kills', value: string) => {
         setResults(prev => ({
             ...prev,
             [userId]: {
@@ -248,12 +250,19 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
 
     const handleSaveResult = async (userId: string) => {
         if (!user) return;
-        const { rank, prize } = results[userId];
+        const { rank, prize, kills } = results[userId];
         
         setActionLoading(prev => ({ ...prev, [userId]: true }));
         try {
             const idToken = await user.getIdToken();
-            const result = await updatePlayerResult(tournamentId, userId, rank, Number(prize || 0), idToken);
+            const result = await updatePlayerResult(
+                tournamentId, 
+                userId, 
+                rank, 
+                Number(prize || 0), 
+                Number(kills || 0),
+                idToken
+            );
             if (result.success) {
                 toast({ title: 'Success', description: 'Player result updated.' });
             } else {
@@ -324,6 +333,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                         <TableHead>In-Game Name</TableHead>
                                         <TableHead>Phone</TableHead>
                                         <TableHead>Rank</TableHead>
+                                        <TableHead>Kills</TableHead>
                                         <TableHead>Prize Won (₹)</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
@@ -345,6 +355,15 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                     placeholder="Rank"
                                                     value={results[reg.userId]?.rank ?? ''}
                                                     onChange={(e) => handleResultChange(reg.userId, 'rank', e.target.value)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    className="w-16 h-8"
+                                                    type="number"
+                                                    placeholder="Kills"
+                                                    value={results[reg.userId]?.kills ?? ''}
+                                                    onChange={(e) => handleResultChange(reg.userId, 'kills', e.target.value)}
                                                 />
                                             </TableCell>
                                             <TableCell>
@@ -376,7 +395,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="h-24 text-center">
+                                            <TableCell colSpan={7} className="h-24 text-center">
                                                 No players have registered for this tournament yet.
                                             </TableCell>
                                         </TableRow>
