@@ -142,7 +142,7 @@ export async function updateTransaction(
     newStatus: 'Completed' | 'Failed',
     userId: string,
     amount: number,
-    type: 'deposit' | 'withdrawal',
+    type: 'deposit' | 'entry_fee' | 'withdrawal' | 'prize',
     idToken: string
 ): Promise<{ success: boolean, message: string }> {
     const adminCheck = await verifyAdmin(idToken);
@@ -272,6 +272,37 @@ export async function updatePlayerResult(
         return { success: true, message: `Result updated for player.` };
     } catch (error: any) {
         console.error('Error updating player result:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}
+
+export async function updateAllPlayerResults(
+    tournamentId: string,
+    results: { userId: string; rank: string; prizeWon: number; kills: number }[],
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const batch = db.batch();
+        const tournamentRef = db.collection('tournaments').doc(tournamentId);
+        
+        for (const res of results) {
+            const registrationRef = tournamentRef.collection('registrations').doc(res.userId);
+            batch.update(registrationRef, {
+                rank: res.rank,
+                prizeWon: res.prizeWon,
+                kills: res.kills
+            });
+        }
+
+        await batch.commit();
+        return { success: true, message: `Results updated for all players.` };
+    } catch (error: any) {
+        console.error('Error updating all player results:', error);
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }

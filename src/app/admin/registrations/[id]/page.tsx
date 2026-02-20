@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updatePlayerResult, updateUserSuspension } from '../../actions';
+import { updateAllPlayerResults, updateUserSuspension } from '../../actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -132,7 +132,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
+    const [saving, setSaving] = useState(false);
     
     // State for editable results
     const [results, setResults] = useState<{[key: string]: { rank: string, prize: string, kills: string }}>({});
@@ -248,30 +248,30 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         }));
     };
 
-    const handleSaveResult = async (userId: string) => {
+    const handleSaveAllResults = async () => {
         if (!user) return;
-        const { rank, prize, kills } = results[userId];
         
-        setActionLoading(prev => ({ ...prev, [userId]: true }));
+        setSaving(true);
         try {
             const idToken = await user.getIdToken();
-            const result = await updatePlayerResult(
-                tournamentId, 
-                userId, 
-                rank, 
-                Number(prize || 0), 
-                Number(kills || 0),
-                idToken
-            );
+            const resultsToSave = Object.entries(results).map(([userId, data]) => ({
+                userId,
+                rank: data.rank,
+                prizeWon: Number(data.prize || 0),
+                kills: Number(data.kills || 0)
+            }));
+
+            const result = await updateAllPlayerResults(tournamentId, resultsToSave, idToken);
             if (result.success) {
-                toast({ title: 'Success', description: 'Player result updated.' });
+                toast({ title: 'Success', description: 'All player results updated successfully.' });
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
             toast({ title: 'Error', description: error.message, variant: 'destructive' });
         } finally {
-            setActionLoading(prev => ({ ...prev, [userId]: false }));
+            setSaving(true); // Short delay to prevent double clicks
+            setTimeout(() => setSaving(false), 500);
         }
     };
 
@@ -315,6 +315,14 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                         <Badge variant={tournament.status === 'Finished' ? 'destructive' : 'default'}>{tournament.status}</Badge>
                     </div>
                 </div>
+                <Button 
+                    onClick={handleSaveAllResults} 
+                    disabled={saving || registrations.length === 0}
+                    className="md:w-auto w-full font-bold"
+                >
+                    <Save className="mr-2 h-4 w-4" />
+                    {saving ? 'Saving...' : 'Save All Results'}
+                </Button>
             </div>
 
              <Card className="mt-8">
@@ -382,15 +390,6 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                     currentlySuspended={reg.isSuspended || false}
                                                     onSuccess={() => {}} // Snapshot will update UI
                                                 />
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    onClick={() => handleSaveResult(reg.userId)}
-                                                    disabled={actionLoading[reg.userId]}
-                                                >
-                                                    <Save className="h-4 w-4 mr-1" />
-                                                    Save
-                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
