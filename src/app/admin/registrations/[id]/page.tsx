@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, use } from 'react';
@@ -116,7 +115,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                     const userDoc = await getDoc(userDocRef);
                     const initialResults = {
                         rank: reg.rank || '',
-                        prize: reg.prizeWon?.toString() || '0'
+                        prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : '0'
                     };
                     
                     setResults(prev => ({ ...prev, [reg.userId]: initialResults }));
@@ -163,7 +162,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         setActionLoading(prev => ({ ...prev, [userId]: true }));
         try {
             const idToken = await user.getIdToken();
-            const result = await updatePlayerResult(tournamentId, userId, rank, Number(prize), idToken);
+            const result = await updatePlayerResult(tournamentId, userId, rank, Number(prize || 0), idToken);
             if (result.success) {
                 toast({ title: 'Success', description: 'Player result updated.' });
             } else {
@@ -248,7 +247,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                 <Input 
                                                     className="w-20 h-8"
                                                     placeholder="Rank"
-                                                    value={results[reg.userId]?.rank || ''}
+                                                    value={results[reg.userId]?.rank ?? ''}
                                                     onChange={(e) => handleResultChange(reg.userId, 'rank', e.target.value)}
                                                 />
                                             </TableCell>
@@ -257,7 +256,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                     className="w-24 h-8"
                                                     type="number"
                                                     placeholder="Prize"
-                                                    value={results[reg.userId]?.prize || '0'}
+                                                    value={results[reg.userId]?.prize ?? ''}
                                                     onChange={(e) => handleResultChange(reg.userId, 'prize', e.target.value)}
                                                 />
                                             </TableCell>
