@@ -250,21 +250,20 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                 return String(a.rank).localeCompare(String(b.rank), undefined, { numeric: true });
             });
 
-            // Fetch usernames and global suspension status
-            const withUsernames = await Promise.all(rankedPlayers.map(async (p) => {
+            // Fetch global suspension status only (hiding site usernames as per request)
+            const withStatus = await Promise.all(rankedPlayers.map(async (p) => {
                 const userDoc = await getDoc(doc(db, 'users', p.userId));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     return { 
                         ...p, 
-                        username: userData.username, 
                         isSuspended: userData.suspended || false 
                     };
                 }
-                return { ...p, username: 'Unknown', isSuspended: false };
+                return { ...p, isSuspended: false };
             }));
 
-            setRankings(withUsernames);
+            setRankings(withStatus);
             setLoading(false);
         });
         return () => unsubscribe();
@@ -287,7 +286,6 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Rank</TableHead>
-                                <TableHead>Username</TableHead>
                                 <TableHead>In-Game Name</TableHead>
                                 <TableHead className="text-center">Kills</TableHead>
                                 <TableHead className="text-right">Prize Won</TableHead>
@@ -300,7 +298,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
                                             <span className={player.isSuspended ? "line-through text-muted-foreground" : "text-primary"}>
-                                                {player.username}
+                                                {player.inGameName}
                                             </span>
                                             {player.isSuspended && (
                                                 <Badge variant="destructive" className="h-5 px-1 py-0 text-[10px]">
@@ -310,7 +308,6 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                             )}
                                         </div>
                                     </TableCell>
-                                    <TableCell>{player.inGameName}</TableCell>
                                     <TableCell className="text-center font-semibold">{player.kills || 0}</TableCell>
                                     <TableCell className="text-right text-green-500 font-bold">
                                         {player.isSuspended ? '-' : (player.prizeWon > 0 ? `₹${player.prizeWon}` : '-')}
