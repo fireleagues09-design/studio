@@ -20,6 +20,7 @@ import { useLoading } from '@/context/LoadingContext';
 type Registration = {
     id: string;
     userId: string;
+    username?: string;
     inGameName: string;
     inGameUid: string;
     registeredAt: any;
@@ -101,17 +102,24 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             }
             const registrationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Registration));
             
-            // Fetch phone numbers for each registered user
-            const registrationsWithPhones = await Promise.all(
+            // Fetch username and phone numbers for each registered user
+            const registrationsWithUserData = await Promise.all(
                 registrationsData.map(async (reg) => {
                     const userDocRef = doc(db, 'users', reg.userId);
                     const userDoc = await getDoc(userDocRef);
-                    const userPhone = userDoc.exists() ? userDoc.data().phone : 'N/A';
-                    return { ...reg, userPhone };
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        return { 
+                            ...reg, 
+                            userPhone: userData.phone || 'N/A',
+                            username: userData.username || 'N/A'
+                        };
+                    }
+                    return { ...reg, userPhone: 'N/A', username: 'N/A' };
                 })
             );
 
-            setRegistrations(registrationsWithPhones);
+            setRegistrations(registrationsWithUserData);
             setDataLoading(false);
         }, (error) => {
             console.error("Error fetching registrations:", error)
@@ -171,6 +179,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Username</TableHead>
                                         <TableHead>In-Game Name</TableHead>
                                         <TableHead>In-Game UID</TableHead>
                                         <TableHead>Phone Number</TableHead>
@@ -180,14 +189,15 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                 <TableBody>
                                     {registrations.length > 0 ? registrations.map(reg => (
                                         <TableRow key={reg.id}>
-                                            <TableCell className="font-medium">{reg.inGameName}</TableCell>
+                                            <TableCell className="font-medium text-primary">{reg.username}</TableCell>
+                                            <TableCell>{reg.inGameName}</TableCell>
                                             <TableCell>{reg.inGameUid}</TableCell>
                                             <TableCell>{reg.userPhone}</TableCell>
                                             <TableCell>{formatDate(reg.registeredAt)}</TableCell>
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="h-24 text-center">
+                                            <TableCell colSpan={5} className="h-24 text-center">
                                                 No players have registered for this tournament yet.
                                             </TableCell>
                                         </TableRow>
