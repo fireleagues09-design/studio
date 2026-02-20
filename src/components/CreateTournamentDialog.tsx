@@ -80,7 +80,8 @@ export function CreateTournamentDialog() {
         const finalImageUrl = imageUrl.trim() || `https://picsum.photos/seed/${Math.random()}/600/400`;
         const dataAiHint = 'gaming abstract';
         
-        const rules = category === 'Classic Full Map' ? FULL_MAP_RULES : [];
+        // Use the same rules for all tournament types
+        const rules = FULL_MAP_RULES;
 
         try {
             const finalPrizeDistribution = prizeDistribution.filter(p => p.place && p.prize);

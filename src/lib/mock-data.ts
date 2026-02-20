@@ -20,6 +20,18 @@ export type Tournament = {
   registeredPlayers?: string[];
 };
 
+export const FULL_MAP_RULES = [
+    'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
+    'Always On Screen Recording While Playing FireLeagues Tournament matches ( if your own goods and in any major issues screenshot will not accepted ).',
+    'Minimum Game Level Should be 40.',
+    'Headshot ( % ) Should not be more then 70% in BR Career mode.',
+    'Don\'t Invite Anyone who is not registered to this tournament and don\'t leak ID Password.',
+    'Team-up not allowed.',
+    'Multiple Accounts Are not Allowed and if you create multiple Accounts then it\'ll lead to suspension and all balance will be taken by us permanently.',
+    'Refund Only For those players who\'s eliminated/killed by hackers',
+    'PC & Emulators Players Are Not Allowed to join and play in room match ( only can access website on pc and can only register yourself for tournaments in PC/Emulators/mobile but not allowed to play tournaments )'
+];
+
 export const MOCK_BANNERS = [
     {
         title: "Championship Series",
@@ -55,7 +67,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "esports game",
     date: "2024-08-15",
     time: "18:00 IST",
-    rules: ["All players must be level 40+", "No emulators allowed", "Only mobile devices", "Teams must check in 30 minutes before match time"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "25,000" },
         { place: "2nd", prize: "15,000" },
@@ -76,7 +88,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "gaming controller",
     date: "2024-08-16",
     time: "20:00 IST",
-    rules: ["4v4 format", "Best of 3 matches", "All standard CS rules apply"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "5,000" },
         { place: "2nd", prize: "3,000" },
@@ -97,7 +109,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "abstract shapes",
     date: "2024-08-18",
     time: "16:00 IST",
-    rules: ["For players below level 30", "Great opportunity to learn and win", "No emulators"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "2,500" },
         { place: "2nd", prize: "1,500" },
@@ -118,7 +130,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "neon lines",
     date: "2024-08-20",
     time: "19:00 IST",
-    rules: ["Single elimination bracket", "All guns allowed", "Fair play is mandatory"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "10,000" },
         { place: "2nd", prize: "6,000" },
@@ -139,7 +151,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "lone wolf",
     date: "2024-08-22",
     time: "17:00 IST",
-    rules: ["Solo mode", "Points based on kills and survival time", "Top 10 players win prizes"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "7,000" },
         { place: "2nd", prize: "4,000" },
@@ -161,7 +173,7 @@ export const tournaments: Tournament[] = [
     dataAiHint: "team huddle",
     date: "2024-08-25",
     time: "21:00 IST",
-    rules: ["Weekly event", "Winners get direct entry to monthly finals", "Standard competitive ruleset"],
+    rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "4,000" },
         { place: "2nd", prize: "2,500" },
@@ -169,18 +181,6 @@ export const tournaments: Tournament[] = [
     ],
     status: 'Upcoming'
   },
-];
-
-export const FULL_MAP_RULES = [
-    'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
-    'Always On Screen Recording While Playing FireLeagues Tournament matches ( if your own goods and in any major issues screenshot will not accepted ).',
-    'Minimum Game Level Should be 40.',
-    'Headshot ( % ) Should not be more then 70% in BR Career mode.',
-    'Don\'t Invite Anyone who is not registered to this tournament and don\'t leak ID Password.',
-    'Team-up not allowed.',
-    'Multiple Accounts Are not Allowed and if you create multiple Accounts then it\'ll lead to suspension and all balance will be taken by us permanently.',
-    'Refund Only For those players who\'s eliminated/killed by hackers',
-    'PC & Emulators Players Are Not Allowed to join and play in room match ( only can access website on pc and can only register yourself for tournaments in PC/Emulators/mobile but not allowed to play tournaments )'
 ];
 
 
