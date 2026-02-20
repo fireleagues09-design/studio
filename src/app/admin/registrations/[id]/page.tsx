@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, use } from 'react';
@@ -11,12 +12,15 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Ban, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updatePlayerResult } from '../../actions';
+import { updatePlayerResult, updateUserSuspension } from '../../actions';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type Registration = {
     id: string;
@@ -28,10 +32,95 @@ type Registration = {
     userPhone?: string; 
     rank?: string;
     prizeWon?: number;
+    isSuspended?: boolean;
+    suspensionNote?: string;
 };
 
 interface RegistrationPageProps {
   params: Promise<{ id: string }>;
+}
+
+function SuspendUserDialog({ 
+    userId, 
+    username, 
+    currentlySuspended, 
+    onSuccess 
+}: { 
+    userId: string, 
+    username: string, 
+    currentlySuspended: boolean, 
+    onSuccess: () => void 
+}) {
+    const [note, setNote] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const { toast } = useToast();
+
+    const handleAction = async () => {
+        if (!auth.currentUser) return;
+        setLoading(true);
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const result = await updateUserSuspension(userId, !currentlySuspended, note, idToken);
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+                onSuccess();
+                setOpen(false);
+                setNote('');
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className={currentlySuspended ? "text-green-500" : "text-destructive"}>
+                    {currentlySuspended ? <CheckCircle className="h-4 w-4 mr-1" /> : <Ban className="h-4 w-4 mr-1" />}
+                    {currentlySuspended ? "Unsuspend" : "Suspend"}
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{currentlySuspended ? "Unsuspend" : "Suspend"} User: {username}</DialogTitle>
+                    <DialogDescription>
+                        {currentlySuspended 
+                            ? "This will allow the user to access the platform again." 
+                            : "This will block the user's access to the entire platform immediately."}
+                    </DialogDescription>
+                </DialogHeader>
+                {!currentlySuspended && (
+                    <div className="space-y-2 py-2">
+                        <Label htmlFor="suspension-note">Reason for Suspension (Note)</Label>
+                        <Textarea 
+                            id="suspension-note"
+                            placeholder="Explain why this user is being suspended..."
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground italic">This note will be shown to the user when they try to log in.</p>
+                    </div>
+                )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="secondary">Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                        variant={currentlySuspended ? "default" : "destructive"} 
+                        onClick={handleAction} 
+                        disabled={loading || (!currentlySuspended && !note.trim())}
+                    >
+                        {loading ? 'Processing...' : (currentlySuspended ? 'Confirm Unsuspend' : 'Confirm Suspension')}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export default function RegistrationsPage({ params }: RegistrationPageProps) {
@@ -115,7 +204,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                     const userDoc = await getDoc(userDocRef);
                     const initialResults = {
                         rank: reg.rank || '',
-                        prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : '0'
+                        prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : ''
                     };
                     
                     setResults(prev => ({ ...prev, [reg.userId]: initialResults }));
@@ -125,7 +214,9 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                         return { 
                             ...reg, 
                             userPhone: userData.phone || 'N/A',
-                            username: userData.username || 'N/A'
+                            username: userData.username || 'N/A',
+                            isSuspended: userData.suspended || false,
+                            suspensionNote: userData.suspensionNote || '',
                         };
                     }
                     return { ...reg, userPhone: 'N/A', username: 'N/A' };
@@ -239,8 +330,13 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                 </TableHeader>
                                 <TableBody>
                                     {registrations.length > 0 ? registrations.map(reg => (
-                                        <TableRow key={reg.id}>
-                                            <TableCell className="font-medium text-primary">{reg.username}</TableCell>
+                                        <TableRow key={reg.id} className={reg.isSuspended ? "bg-destructive/10" : ""}>
+                                            <TableCell className="font-medium text-primary">
+                                                <div className="flex flex-col">
+                                                    <span>{reg.username}</span>
+                                                    {reg.isSuspended && <Badge variant="destructive" className="w-fit scale-75 -ml-2">Suspended</Badge>}
+                                                </div>
+                                            </TableCell>
                                             <TableCell>{reg.inGameName}</TableCell>
                                             <TableCell className="text-xs text-muted-foreground">{reg.userPhone}</TableCell>
                                             <TableCell>
@@ -260,7 +356,13 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                     onChange={(e) => handleResultChange(reg.userId, 'prize', e.target.value)}
                                                 />
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right flex items-center justify-end gap-1">
+                                                <SuspendUserDialog 
+                                                    userId={reg.userId} 
+                                                    username={reg.username || 'N/A'} 
+                                                    currentlySuspended={reg.isSuspended || false}
+                                                    onSuccess={() => {}} // Snapshot will update UI
+                                                />
                                                 <Button 
                                                     variant="ghost" 
                                                     size="sm" 

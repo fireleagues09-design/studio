@@ -273,3 +273,37 @@ export async function updatePlayerResult(
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
+
+export async function updateUserSuspension(
+    userId: string,
+    isSuspended: boolean,
+    note: string,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const userRef = db.collection('users').doc(userId);
+        await userRef.update({
+            suspended: isSuspended,
+            suspensionNote: isSuspended ? note : '',
+        });
+
+        // Log the action
+        await db.collection('adminLogs').add({
+            type: isSuspended ? 'user-suspended' : 'user-unsuspended',
+            target: userId,
+            actor: adminCheck.uid,
+            note: note,
+            createdAt: Timestamp.now(),
+        });
+
+        return { success: true, message: `User ${isSuspended ? 'suspended' : 'unsuspended'} successfully.` };
+    } catch (error: any) {
+        console.error('Error updating user suspension:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}

@@ -88,6 +88,7 @@ type UserProfile = {
     isAdmin?: boolean;
     isEmployee?: boolean;
     suspended?: boolean;
+    suspensionNote?: string;
     isRegistered?: boolean;
     isBestie?: boolean;
     bestiePageActive?: boolean;
@@ -471,7 +472,7 @@ export function Header() {
     <>
       {shouldShowBestiePage && <BestiePage />}
       
-      {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} />}
+      {profile?.suspended && <SuspendedUserPopup onLogout={handleLogout} note={profile.suspensionNote} />}
 
       <CompleteProfileDialog 
         open={showCompleteProfileDialog} 

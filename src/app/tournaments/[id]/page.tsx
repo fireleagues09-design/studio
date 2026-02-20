@@ -24,9 +24,10 @@ import {
   Lock,
   CircleDollarSign,
   Medal,
+  AlertTriangle,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { registerSoloPlayer } from '@/app/actions';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLoading } from '@/context/LoadingContext';
@@ -246,14 +247,21 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
             
             // Filter out those without a rank set
             const rankedPlayers = data.filter(p => p.rank).sort((a, b) => {
-                // Simple natural sort for rank strings like "1", "2", "3" or "1st", "2nd"
                 return String(a.rank).localeCompare(String(b.rank), undefined, { numeric: true });
             });
 
-            // Fetch usernames
+            // Fetch usernames and global suspension status
             const withUsernames = await Promise.all(rankedPlayers.map(async (p) => {
                 const userDoc = await getDoc(doc(db, 'users', p.userId));
-                return { ...p, username: userDoc.exists() ? userDoc.data().username : 'Unknown' };
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    return { 
+                        ...p, 
+                        username: userData.username, 
+                        isSuspended: userData.suspended || false 
+                    };
+                }
+                return { ...p, username: 'Unknown', isSuspended: false };
             }));
 
             setRankings(withUsernames);
@@ -286,12 +294,24 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                         </TableHeader>
                         <TableBody>
                             {rankings.map((player) => (
-                                <TableRow key={player.id}>
+                                <TableRow key={player.id} className={player.isSuspended ? "opacity-60 bg-muted/50" : ""}>
                                     <TableCell className="font-bold">{player.rank}</TableCell>
-                                    <TableCell className="text-primary font-medium">{player.username}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <span className={player.isSuspended ? "line-through text-muted-foreground" : "text-primary"}>
+                                                {player.username}
+                                            </span>
+                                            {player.isSuspended && (
+                                                <Badge variant="destructive" className="h-5 px-1 py-0 text-[10px]">
+                                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                                    Suspended
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>{player.inGameName}</TableCell>
                                     <TableCell className="text-right text-green-500 font-bold">
-                                        {player.prizeWon > 0 ? `₹${player.prizeWon}` : '-'}
+                                        {player.isSuspended ? '-' : (player.prizeWon > 0 ? `₹${player.prizeWon}` : '-')}
                                     </TableCell>
                                 </TableRow>
                             ))}
