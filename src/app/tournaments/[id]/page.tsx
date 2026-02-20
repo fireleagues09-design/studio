@@ -23,9 +23,10 @@ import {
   ClipboardList,
   Lock,
   CircleDollarSign,
+  Medal,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import type { Tournament } from '@/lib/mock-data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { registerSoloPlayer } from '@/app/actions';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLoading } from '@/context/LoadingContext';
@@ -228,12 +229,79 @@ function getButtonState({isRegistered, isFilled, status, teamType}: {isRegistere
     if (isFilled) {
         return { text: 'Registrations Full', disabled: true };
     }
-    // For non-solo tournaments, team registration isn't implemented yet.
     if (teamType !== 'Solo') {
         return { text: `Register ${teamType}`, disabled: true, tooltip: 'Team registration coming soon!'};
     }
     return { text: `Register ${teamType}`, disabled: false };
 };
+
+function Leaderboard({ tournamentId }: { tournamentId: string }) {
+    const [rankings, setRankings] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const rankingsQuery = query(collection(db, `tournaments/${tournamentId}/registrations`), orderBy("rank", "asc"));
+        const unsubscribe = onSnapshot(rankingsQuery, async (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // Filter out those without a rank set
+            const rankedPlayers = data.filter(p => p.rank).sort((a, b) => {
+                // Simple natural sort for rank strings like "1", "2", "3" or "1st", "2nd"
+                return String(a.rank).localeCompare(String(b.rank), undefined, { numeric: true });
+            });
+
+            // Fetch usernames
+            const withUsernames = await Promise.all(rankedPlayers.map(async (p) => {
+                const userDoc = await getDoc(doc(db, 'users', p.userId));
+                return { ...p, username: userDoc.exists() ? userDoc.data().username : 'Unknown' };
+            }));
+
+            setRankings(withUsernames);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [tournamentId]);
+
+    if (loading) return <Skeleton className="h-48 w-full rounded-lg" />;
+    if (rankings.length === 0) return null;
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Medal className="h-5 w-5 text-yellow-500" />
+                    Final Standings & Leaderboard
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Rank</TableHead>
+                                <TableHead>Username</TableHead>
+                                <TableHead>In-Game Name</TableHead>
+                                <TableHead className="text-right">Prize Won</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rankings.map((player) => (
+                                <TableRow key={player.id}>
+                                    <TableCell className="font-bold">{player.rank}</TableCell>
+                                    <TableCell className="text-primary font-medium">{player.username}</TableCell>
+                                    <TableCell>{player.inGameName}</TableCell>
+                                    <TableCell className="text-right text-green-500 font-bold">
+                                        {player.prizeWon > 0 ? `₹${player.prizeWon}` : '-'}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
 function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -317,7 +385,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
 
     const handleRegistrationSuccess = async () => {
         setIsRegistered(true);
-        // Manually update slotsFilled to give instant feedback
         if (tournament) {
             setTournament(prev => prev ? ({ ...prev, slotsFilled: prev.slotsFilled + 1 }) : null);
         }
@@ -390,7 +457,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             return <SoloRegistrationDialog tournament={tournament} user={user} onSuccess={handleRegistrationSuccess} />;
         }
         
-        // Fallback for just-in-case, should be covered by getButtonState
         return null;
     };
 
@@ -420,6 +486,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               </div>
             </div>
           </Card>
+
+          {status === 'Finished' && <Leaderboard tournamentId={id} />}
 
           <Card>
             <CardHeader>

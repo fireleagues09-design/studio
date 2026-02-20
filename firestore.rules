@@ -67,8 +67,11 @@ service cloud.firestore {
         // A user can create their own registration document.
         allow create: if request.auth.uid == userId;
         
-        // No one can update or delete registrations from the client.
-        allow update, delete: if false;
+        // Allow admins to update results (Rank/Prize)
+        allow update: if isAdmin();
+        
+        // No one can delete registrations from the client.
+        allow delete: if false;
       }
     }
 

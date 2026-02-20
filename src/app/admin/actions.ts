@@ -1,3 +1,4 @@
+
 'use server';
 
 import { auth, db, storage } from '@/lib/firebase-admin';
@@ -243,6 +244,32 @@ export async function updatePaymentDetails(
         return { success: true, message: `Payment details updated.` };
     } catch (error: any) {
         console.error('Error updating payment details:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
+    }
+}
+
+export async function updatePlayerResult(
+    tournamentId: string,
+    userId: string,
+    rank: string,
+    prizeWon: number,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) {
+        return { success: false, message: adminCheck.message };
+    }
+
+    try {
+        const registrationRef = db.collection('tournaments').doc(tournamentId).collection('registrations').doc(userId);
+        await registrationRef.update({
+            rank: rank,
+            prizeWon: prizeWon
+        });
+
+        return { success: true, message: `Result updated for player.` };
+    } catch (error: any) {
+        console.error('Error updating player result:', error);
         return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }

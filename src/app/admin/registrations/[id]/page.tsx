@@ -2,20 +2,22 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, collectionGroup } from 'firebase/firestore';
+import { onSnapshot, collection, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { updatePlayerResult } from '../../actions';
 
 type Registration = {
     id: string;
@@ -25,6 +27,8 @@ type Registration = {
     inGameUid: string;
     registeredAt: any;
     userPhone?: string; 
+    rank?: string;
+    prizeWon?: number;
 };
 
 interface RegistrationPageProps {
@@ -39,8 +43,14 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
+    
+    // State for editable results
+    const [results, setResults] = useState<{[key: string]: { rank: string, prize: string }}>({});
+
     const router = useRouter();
     const { hideLoader } = useLoading();
+    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -77,7 +87,6 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
 
         setDataLoading(true);
 
-        // Fetch tournament details
         const tournamentDocRef = doc(db, 'tournaments', tournamentId);
         const unsubscribeTournament = onSnapshot(tournamentDocRef, (doc) => {
              if (doc.exists()) {
@@ -92,7 +101,6 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             setDataLoading(false);
         });
         
-        // Fetch registrations
         const registrationsQuery = query(collection(db, `tournaments/${tournamentId}/registrations`), orderBy("registeredAt", "asc"));
         const unsubscribeRegistrations = onSnapshot(registrationsQuery, async (snapshot) => {
             if (snapshot.empty) {
@@ -102,11 +110,17 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             }
             const registrationsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Registration));
             
-            // Fetch username and phone numbers for each registered user
             const registrationsWithUserData = await Promise.all(
                 registrationsData.map(async (reg) => {
                     const userDocRef = doc(db, 'users', reg.userId);
                     const userDoc = await getDoc(userDocRef);
+                    const initialResults = {
+                        rank: reg.rank || '',
+                        prize: reg.prizeWon?.toString() || '0'
+                    };
+                    
+                    setResults(prev => ({ ...prev, [reg.userId]: initialResults }));
+
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         return { 
@@ -131,6 +145,36 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             unsubscribeRegistrations();
         };
     }, [isAdmin, tournamentId, authLoading]);
+
+    const handleResultChange = (userId: string, field: 'rank' | 'prize', value: string) => {
+        setResults(prev => ({
+            ...prev,
+            [userId]: {
+                ...prev[userId],
+                [field]: value
+            }
+        }));
+    };
+
+    const handleSaveResult = async (userId: string) => {
+        if (!user) return;
+        const { rank, prize } = results[userId];
+        
+        setActionLoading(prev => ({ ...prev, [userId]: true }));
+        try {
+            const idToken = await user.getIdToken();
+            const result = await updatePlayerResult(tournamentId, userId, rank, Number(prize), idToken);
+            if (result.success) {
+                toast({ title: 'Success', description: 'Player result updated.' });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } finally {
+            setActionLoading(prev => ({ ...prev, [userId]: false }));
+        }
+    };
 
      const formatDate = (timestamp: any) => {
         if (!timestamp) return 'N/A';
@@ -164,26 +208,34 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                     Back to Dashboard
                 </Link>
             </Button>
-            <h1 className="text-4xl font-bold tracking-tight">{tournament.name}</h1>
-            <p className="text-muted-foreground mt-1">Registrations List</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-4xl font-bold tracking-tight">{tournament.name}</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="text-muted-foreground">Registrations List</p>
+                        <Badge variant={tournament.status === 'Finished' ? 'destructive' : 'default'}>{tournament.status}</Badge>
+                    </div>
+                </div>
+            </div>
 
              <Card className="mt-8">
                     <CardHeader>
                         <CardTitle>Registered Players ({registrations.length} / {tournament.slots})</CardTitle>
                         <CardDescription>
-                            List of all players who have registered for this solo tournament.
+                            List of all players who have registered. You can rank players and assign prizes if the tournament is finished.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-md">
+                        <div className="border rounded-md overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Username</TableHead>
                                         <TableHead>In-Game Name</TableHead>
-                                        <TableHead>In-Game UID</TableHead>
-                                        <TableHead>Phone Number</TableHead>
-                                        <TableHead>Registered On</TableHead>
+                                        <TableHead>Phone</TableHead>
+                                        <TableHead>Rank</TableHead>
+                                        <TableHead>Prize Won (₹)</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -191,13 +243,39 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                         <TableRow key={reg.id}>
                                             <TableCell className="font-medium text-primary">{reg.username}</TableCell>
                                             <TableCell>{reg.inGameName}</TableCell>
-                                            <TableCell>{reg.inGameUid}</TableCell>
-                                            <TableCell>{reg.userPhone}</TableCell>
-                                            <TableCell>{formatDate(reg.registeredAt)}</TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{reg.userPhone}</TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    className="w-20 h-8"
+                                                    placeholder="Rank"
+                                                    value={results[reg.userId]?.rank || ''}
+                                                    onChange={(e) => handleResultChange(reg.userId, 'rank', e.target.value)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    className="w-24 h-8"
+                                                    type="number"
+                                                    placeholder="Prize"
+                                                    value={results[reg.userId]?.prize || '0'}
+                                                    onChange={(e) => handleResultChange(reg.userId, 'prize', e.target.value)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => handleSaveResult(reg.userId)}
+                                                    disabled={actionLoading[reg.userId]}
+                                                >
+                                                    <Save className="h-4 w-4 mr-1" />
+                                                    Save
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
+                                            <TableCell colSpan={6} className="h-24 text-center">
                                                 No players have registered for this tournament yet.
                                             </TableCell>
                                         </TableRow>
