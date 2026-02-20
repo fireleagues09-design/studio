@@ -22,7 +22,7 @@ export type Tournament = {
 
 export const FULL_MAP_RULES = [
     'You Will Get Room ID & Password 10 to 5 minutes before the match starting time.',
-    'Always On Screen Recording While Playing FireLeagues Tournament matches ( if your own goods and in any major issues screenshot will not accepted ).',
+    'Always On Screen Recording While Playing FireLeagues Tournament matches ( for your own goods and in any major issues screenshot will not accepted ).',
     'Minimum Game Level Should be 40.',
     'Headshot ( % ) Should not be more then 70% in BR Career mode.',
     'Don\'t Invite Anyone who is not registered to this tournament and don\'t leak ID Password.',
@@ -112,7 +112,7 @@ export const tournaments: Tournament[] = [
     rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "2,500" },
-        { place: "2nd", prize: "1,500" },
+        { place: "2,500", prize: "1,500" },
         { place: "3rd", prize: "1,000" },
     ],
     status: 'Upcoming'
