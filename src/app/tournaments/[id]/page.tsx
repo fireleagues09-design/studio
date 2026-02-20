@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -277,7 +276,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Medal className="h-5 w-5 text-yellow-500" />
-                    Final Standings & Leaderboard
+                    Final Standings
                 </CardTitle>
             </CardHeader>
             <CardContent>
