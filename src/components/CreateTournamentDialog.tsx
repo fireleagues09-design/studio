@@ -80,7 +80,7 @@ export function CreateTournamentDialog() {
         const finalImageUrl = imageUrl.trim() || `https://picsum.photos/seed/${Math.random()}/600/400`;
         const dataAiHint = 'gaming abstract';
         
-        // Use the standardized rules for all tournament types as requested
+        // Use the corrected standardized rules for all tournament types
         const rules = FULL_MAP_RULES;
 
         try {

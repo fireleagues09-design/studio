@@ -112,7 +112,7 @@ export const tournaments: Tournament[] = [
     rules: FULL_MAP_RULES,
     prizeDistribution: [
         { place: "1st", prize: "2,500" },
-        { place: "2,500", prize: "1,500" },
+        { place: "2nd", prize: "1,500" },
         { place: "3rd", prize: "1,000" },
     ],
     status: 'Upcoming'
