@@ -146,7 +146,7 @@ export default function SupportPanel() {
           ) : (
             chats.map((c) => {
               const registeredName = c.playerDisplayName || c.userName || "Unknown Player";
-              const fireleaguesHandle = c.userHandle || "unregistered";
+              const fireleaguesHandle = c.userHandle && c.userHandle !== 'unregistered' ? c.userHandle : null;
               
               return (
                 <div
@@ -169,8 +169,10 @@ export default function SupportPanel() {
                       <div className="flex-1 min-w-0">
                           {/* Registered Name in Bold White Text */}
                           <div className="font-bold text-sm truncate text-foreground">{registeredName}</div>
-                          {/* FireLeagues Username in Blue Text */}
-                          <div className="text-[10px] text-blue-400 font-mono truncate">@{fireleaguesHandle}</div>
+                          {/* FireLeagues Username in Blue Text (conditionally hidden) */}
+                          {fireleaguesHandle && (
+                            <div className="text-[10px] text-blue-400 font-mono truncate">@{fireleaguesHandle}</div>
+                          )}
                           <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
                               <span className={cn(
                                   "h-1.5 w-1.5 rounded-full",
@@ -212,8 +214,10 @@ export default function SupportPanel() {
                             <span className="text-foreground">{selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}</span>
                             <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                         </div>
-                        {/* FireLeagues Username in Blue */}
-                        <p className="text-[10px] text-blue-400 font-mono">Handle: @{selectedChat.userHandle || "unknown"}</p>
+                        {/* FireLeagues Username in Blue (conditionally hidden) */}
+                        {selectedChat.userHandle && selectedChat.userHandle !== 'unregistered' && (
+                          <p className="text-[10px] text-blue-400 font-mono">Handle: @{selectedChat.userHandle}</p>
+                        )}
                     </div>
                 </div>
               </div>

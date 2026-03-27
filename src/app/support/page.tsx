@@ -45,9 +45,9 @@ export default function SupportPage() {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                // Strictly separate the Concepts
+                // Separating identity concepts
                 const realName = user.displayName || "No Name Provided";
-                const gamingHandle = userData?.username || "unregistered";
+                const gamingHandle = userData?.username || null; // Avoid "unregistered" string
 
                 const q = query(
                     collection(db, "chats"),
