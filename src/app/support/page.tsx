@@ -230,12 +230,17 @@ export default function SupportPage() {
                                                 "p-3 px-4 rounded-2xl max-w-[85%] md:max-w-[75%] text-sm md:text-base shadow-sm leading-relaxed",
                                                 isMe 
                                                     ? "bg-primary text-primary-foreground rounded-tr-none" 
-                                                    : "bg-background border border-border/50 rounded-tl-none"
+                                                    : "bg-secondary text-secondary-foreground rounded-tl-none"
                                             )}>
+                                                {!isMe && (
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                                        Support Agent
+                                                    </div>
+                                                )}
                                                 {decryptMessage(m.text)}
                                             </div>
-                                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1.5 px-1 opacity-70">
-                                                {isMe ? 'You' : 'Support Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                            <span className="text-[10px] text-muted-foreground mt-1.5 px-1 opacity-70">
+                                                {isMe ? 'You' : 'Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                             </span>
                                         </div>
                                     );

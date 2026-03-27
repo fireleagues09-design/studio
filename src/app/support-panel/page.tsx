@@ -215,20 +215,23 @@ export default function SupportPanelPage() {
                             <ScrollArea className="h-full">
                                 <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
                                     {messages.map(m => {
-                                        // Identity logic for agent view: If senderId matches the agent's UID, it's "Me" (Right)
                                         const isMe = m.senderId === user?.uid;
-                                        
                                         return (
                                             <div key={m.id} className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
                                                 <div className={cn(
-                                                    "p-3 px-4 rounded-2xl max-w-[85%] text-sm shadow-sm",
+                                                    "p-3 px-4 rounded-2xl max-w-[85%] text-sm shadow-sm leading-relaxed",
                                                     isMe 
                                                         ? "bg-primary text-primary-foreground rounded-tr-none" 
-                                                        : "bg-background border border-border/50 rounded-tl-none"
+                                                        : "bg-secondary text-secondary-foreground rounded-tl-none"
                                                 )}>
+                                                    {!isMe && (
+                                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                                            Player
+                                                        </div>
+                                                    )}
                                                     {decryptMessage(m.text)}
                                                 </div>
-                                                <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-70">
+                                                <span className="text-[10px] text-muted-foreground mt-1.5 px-1 opacity-70">
                                                     {isMe ? 'You' : 'Player'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                                 </span>
                                             </div>
