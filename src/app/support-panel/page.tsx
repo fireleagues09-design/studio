@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
