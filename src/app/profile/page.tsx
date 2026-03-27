@@ -8,12 +8,12 @@ import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { User, Mail, Gamepad2, PlusCircle, Loader2 } from 'lucide-react';
+import { User, Mail, Gamepad2, PlusCircle, Loader2, Save, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useLoading } from '@/context/LoadingContext';
-import { updateGameProfile } from './actions';
+import { updateGameProfile, updateRealName } from './actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ type GameProfile = {
 type UserProfile = {
     username: string;
     email: string;
+    realName?: string;
     emailVerified?: boolean;
     gameProfiles?: {
         'Free Fire'?: GameProfile;
@@ -171,6 +172,10 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [resending, setResending] = useState(false);
+    
+    // Real Name State
+    const [localRealName, setLocalRealName] = useState('');
+    const [updatingName, setUpdatingName] = useState(false);
 
     const router = useRouter();
     const { toast } = useToast();
@@ -185,6 +190,7 @@ export default function ProfilePage() {
                     if (doc.exists()) {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
+                        setLocalRealName(profileData.realName || '');
                     } else {
                         setProfile(null);
                     }
@@ -214,6 +220,24 @@ export default function ProfilePage() {
         await auth.signOut();
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
         window.location.href = '/';
+    };
+
+    const handleUpdateRealName = async () => {
+        if (!user || localRealName.trim() === profile?.realName) return;
+        setUpdatingName(true);
+        try {
+            const idToken = await user.getIdToken();
+            const result = await updateRealName(idToken, localRealName);
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } finally {
+            setUpdatingName(false);
+        }
     };
 
     const handleResendVerification = async () => {
@@ -278,6 +302,31 @@ export default function ProfilePage() {
                     <CardDescription>View and manage your account details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="real-name">Real Name</Label>
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    id="real-name" 
+                                    placeholder="Your official name" 
+                                    value={localRealName}
+                                    onChange={e => setLocalRealName(e.target.value)}
+                                    className="pl-9"
+                                    disabled={updatingName}
+                                />
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                onClick={handleUpdateRealName} 
+                                disabled={updatingName || !localRealName.trim() || localRealName === (profile.realName || '')}
+                            >
+                                {updatingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground px-1 italic">This name is used for official identification by our support team.</p>
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
                         <div className="relative">
@@ -345,7 +394,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-    
-
-    

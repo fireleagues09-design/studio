@@ -38,9 +38,6 @@ export async function completeRegistration(
             }
         }
         
-        // This was the source of the permission error. It is now handled on the client.
-        // The core task of this server action is to validate and securely write the username.
-        
         // Update Firestore document
         const userRef = db.collection('users').doc(userId);
         await userRef.update({
@@ -52,6 +49,33 @@ export async function completeRegistration(
     } catch (error: any) {
         console.error('Error completing registration:', error);
         return { success: false, message: error.message || 'An unknown server error occurred.' };
+    }
+}
+
+export async function updateRealName(
+    idToken: string,
+    realName: string
+): Promise<{ success: boolean; message: string }> {
+    if (!idToken) {
+        return { success: false, message: 'Authorization required.' };
+    }
+    const trimmedName = realName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+        return { success: false, message: 'Real name must be at least 2 characters.' };
+    }
+
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const userId = decodedToken.uid;
+        
+        await db.collection('users').doc(userId).update({
+            realName: trimmedName
+        });
+
+        return { success: true, message: 'Real name updated successfully!' };
+    } catch (error: any) {
+        console.error('Error updating real name:', error);
+        return { success: false, message: error.message || 'An unknown error occurred.' };
     }
 }
 

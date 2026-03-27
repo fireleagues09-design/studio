@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -45,9 +46,9 @@ export default function SupportPage() {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                // Separating identity concepts
-                const realName = user.displayName || "No Name Provided";
-                const gamingHandle = userData?.username || null; // Avoid "unregistered" string
+                // Prioritize Real Name from profile over Google Display Name
+                const realName = userData?.realName || user.displayName || "No Name Provided";
+                const gamingHandle = userData?.username || null;
 
                 const q = query(
                     collection(db, "chats"),
