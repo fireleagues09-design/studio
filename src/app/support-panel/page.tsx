@@ -215,21 +215,21 @@ export default function SupportPanelPage() {
                             <ScrollArea className="h-full">
                                 <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
                                     {messages.map(m => {
-                                        // Robust identity logic: check against the chat's userId
-                                        const isFromPlayer = m.senderId === selectedChat.userId;
+                                        // Identity logic for agent view: If senderId matches the agent's UID, it's "Me" (Right)
+                                        const isMe = m.senderId === user?.uid;
                                         
                                         return (
-                                            <div key={m.id} className={cn("flex flex-col", !isFromPlayer ? "items-end" : "items-start")}>
+                                            <div key={m.id} className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
                                                 <div className={cn(
-                                                    "p-3 rounded-2xl max-w-[85%] text-sm shadow-sm",
-                                                    !isFromPlayer 
+                                                    "p-3 px-4 rounded-2xl max-w-[85%] text-sm shadow-sm",
+                                                    isMe 
                                                         ? "bg-primary text-primary-foreground rounded-tr-none" 
                                                         : "bg-background border border-border/50 rounded-tl-none"
                                                 )}>
                                                     {decryptMessage(m.text)}
                                                 </div>
-                                                <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                                    {isFromPlayer ? 'Player' : 'You'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                                <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-70">
+                                                    {isMe ? 'You' : 'Player'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                                 </span>
                                             </div>
                                         );
@@ -245,9 +245,9 @@ export default function SupportPanelPage() {
                                     placeholder="Type a professional reply..." 
                                     value={inputText} 
                                     onChange={e => setInputText(e.target.value)} 
-                                    className="flex-1 bg-muted/30 border-none h-11 rounded-full"
+                                    className="flex-1 bg-muted/30 border-none h-11 rounded-full px-5 focus-visible:ring-1 focus-visible:ring-primary"
                                 />
-                                <Button type="submit" size="icon" disabled={!inputText.trim()} className="rounded-full h-11 w-11 shadow-lg">
+                                <Button type="submit" size="icon" disabled={!inputText.trim()} className="rounded-full h-11 w-11 shadow-lg shrink-0">
                                     <Send className="h-5 w-5" />
                                 </Button>
                             </form>

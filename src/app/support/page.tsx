@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { useLoading } from '@/context/LoadingContext';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type Message = {
     id: string;
@@ -188,16 +189,18 @@ export default function SupportPage() {
         <div className="container mx-auto px-2 md:px-4 py-4 max-w-5xl h-[calc(100vh-5rem)]">
             <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl bg-card/50 backdrop-blur-sm">
                 <CardHeader className="bg-primary text-primary-foreground p-4 md:p-5 flex flex-row items-center justify-between shrink-0">
-                    <div>
+                    <div className="flex flex-col">
                         <CardTitle className="text-lg md:text-xl">Live Support</CardTitle>
-                        {currentChat?.status === 'waiting' ? (
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                <span className="text-[10px] md:text-xs font-medium opacity-90">Searching for staff...</span>
-                            </div>
-                        ) : (
-                            <Badge variant="secondary" className="mt-0.5 h-5 bg-white/20 text-white border-transparent backdrop-blur-md text-[10px]">Support Active</Badge>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                            {currentChat?.status === 'waiting' ? (
+                                <>
+                                    <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                    <span className="text-[10px] md:text-xs font-medium opacity-90">Searching for staff...</span>
+                                </>
+                            ) : (
+                                <Badge variant="secondary" className="h-5 bg-white/20 text-white border-transparent backdrop-blur-md text-[10px]">Support Active</Badge>
+                            )}
+                        </div>
                     </div>
                     <Button 
                         variant="ghost" 
@@ -211,27 +214,31 @@ export default function SupportPage() {
                 
                 <CardContent className="flex-1 p-0 overflow-hidden bg-secondary/5 relative">
                     <ScrollArea className="h-full w-full">
-                        <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+                        <div className="p-4 md:p-6 space-y-6">
                             {messages.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center min-h-[300px] text-center space-y-2 opacity-50">
                                     <BadgeInfo className="h-10 w-10 text-muted-foreground" />
                                     <p className="text-sm font-medium">No messages yet. Say hi!</p>
                                 </div>
                             ) : (
-                                messages.map(m => (
-                                    <div key={m.id} className={`flex flex-col ${m.senderId === user.uid ? 'items-end' : 'items-start'}`}>
-                                        <div className={`p-3 md:p-4 px-4 md:px-5 rounded-2xl max-w-[85%] md:max-w-[75%] text-sm md:text-base shadow-sm leading-relaxed ${
-                                            m.senderId === user.uid 
-                                                ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                                                : 'bg-background border border-border/50 rounded-tl-none'
-                                        }`}>
-                                            {decryptMessage(m.text)}
+                                messages.map(m => {
+                                    const isMe = m.senderId === user.uid;
+                                    return (
+                                        <div key={m.id} className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
+                                            <div className={cn(
+                                                "p-3 px-4 rounded-2xl max-w-[85%] md:max-w-[75%] text-sm md:text-base shadow-sm leading-relaxed",
+                                                isMe 
+                                                    ? "bg-primary text-primary-foreground rounded-tr-none" 
+                                                    : "bg-background border border-border/50 rounded-tl-none"
+                                            )}>
+                                                {decryptMessage(m.text)}
+                                            </div>
+                                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1.5 px-1 opacity-70">
+                                                {isMe ? 'You' : 'Support Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                            </span>
                                         </div>
-                                        <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1.5 px-1 opacity-70">
-                                            {m.senderId === user.uid ? 'You' : 'Support Agent'}
-                                        </span>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                             <div ref={scrollRef} className="h-4" />
                         </div>
@@ -244,7 +251,7 @@ export default function SupportPage() {
                             placeholder="Type your message..." 
                             value={inputText} 
                             onChange={e => setInputText(e.target.value)} 
-                            className="flex-1 rounded-full bg-secondary/30 border-none focus-visible:ring-2 focus-visible:ring-primary h-10 md:h-12 px-4 md:px-6 text-sm md:text-base"
+                            className="flex-1 rounded-full bg-secondary/30 border-none focus-visible:ring-2 focus-visible:ring-primary h-10 md:h-12 px-5 text-sm md:text-base"
                         />
                         <Button 
                             type="submit" 
