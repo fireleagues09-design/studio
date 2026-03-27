@@ -42,14 +42,12 @@ export default function SupportPage() {
 
         const initChat = async () => {
             try {
-                // Fetch the official FireLeagues profile data
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                // Registered Name (Priority: Auth Display Name -> Username -> Player)
-                const registeredName = user.displayName || userData?.username || "Player";
-                // FireLeagues Username Handle
-                const userHandle = userData?.username || registeredName.toLowerCase().replace(/\s/g, '');
+                // Strictly separate the Concepts
+                const realName = user.displayName || "No Name Provided";
+                const gamingHandle = userData?.username || "unregistered";
 
                 const q = query(
                     collection(db, "chats"),
@@ -62,8 +60,8 @@ export default function SupportPage() {
                 const snap = await getDocs(q);
 
                 const chatMetadata = {
-                    playerDisplayName: registeredName,
-                    userHandle: userHandle,
+                    playerDisplayName: realName,
+                    userHandle: gamingHandle,
                     playerPhotoURL: user.photoURL || null,
                     lastMessageTime: serverTimestamp()
                 };
@@ -71,7 +69,6 @@ export default function SupportPage() {
                 if (!snap.empty) {
                     const existingChatId = snap.docs[0].id;
                     setChatId(existingChatId);
-                    // Force sync identity data so agents see correct names and avatars
                     await updateDoc(doc(db, "chats", existingChatId), chatMetadata);
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {

@@ -145,10 +145,8 @@ export default function SupportPanel() {
             </div>
           ) : (
             chats.map((c) => {
-              // Priority: playerDisplayName (Registered Name) -> legacy userName -> "Unknown Player"
               const registeredName = c.playerDisplayName || c.userName || "Unknown Player";
-              // Priority: userHandle (FireLeagues Username) -> sanitized version of registeredName
-              const fireleaguesHandle = c.userHandle || registeredName.toLowerCase().replace(/\s/g, '');
+              const fireleaguesHandle = c.userHandle || "unregistered";
               
               return (
                 <div
