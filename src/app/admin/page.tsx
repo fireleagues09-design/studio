@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
-import { updateTransaction, setBestiePageStatus, updatePaymentDetails } from './actions';
+import { updateTransaction, updatePaymentDetails } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
@@ -429,12 +429,6 @@ export default function AdminPage() {
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
             <div className="flex justify-between items-center">
                 <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
-                <Button asChild className="bg-primary/90 hover:bg-primary font-bold">
-                    <Link href="/admin/support">
-                        <MessageSquare className="mr-2 h-5 w-5" />
-                        Support Panel
-                    </Link>
-                </Button>
             </div>
 
              <section>

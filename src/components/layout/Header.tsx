@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -87,6 +86,7 @@ type UserProfile = {
     username: string;
     wallet: WalletData;
     isAdmin?: boolean;
+    isSupport?: boolean;
     isEmployee?: boolean;
     suspended?: boolean;
     suspensionNote?: string;
@@ -266,10 +266,13 @@ export function Header() {
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
+  const isStaff = profile?.isSupport || profile?.isAdmin;
+
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/tournaments", label: "Tournaments" },
     ...(user ? [{ href: "/support", label: "Support" }] : []),
+    ...(isStaff ? [{ href: "/support-panel", label: "Support Panel", icon: Headset }] : []),
   ];
   
   const renderThemeSwatches = () => (
@@ -326,6 +329,11 @@ export function Header() {
         <DropdownMenuItem asChild>
             <Link href="/support" className="cursor-pointer"><Headset className="mr-2 h-4 w-4" /><span>Live Support</span></Link>
         </DropdownMenuItem>
+        {isStaff && (
+            <DropdownMenuItem asChild>
+                <Link href="/support-panel" className="cursor-pointer"><MessageSquare className="mr-2 h-4 w-4" /><span>Support Panel</span></Link>
+            </DropdownMenuItem>
+        )}
         <DropdownMenuItem disabled className="cursor-not-allowed">
             <ClipboardList className="mr-2 h-4 w-4" />
             <span>Orders</span>
@@ -400,6 +408,11 @@ export function Header() {
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support"><Headset className="mr-2 h-4 w-4" />Live Support</Link></Button>
         </SheetClose>
+        {isStaff && (
+            <SheetClose asChild>
+                <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support-panel"><MessageSquare className="mr-2 h-4 w-4" />Support Panel</Link></Button>
+            </SheetClose>
+        )}
         <Button variant="ghost" className="w-full justify-start" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Tag className="mr-2 h-4 w-4" />Bonus Code</Button>
@@ -498,12 +511,13 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                      "transition-colors hover:text-foreground/80",
+                      "transition-colors hover:text-foreground/80 flex items-center gap-1.5",
                       pathname === link.href
                       ? "text-foreground"
                       : "text-foreground/60"
                   )}
                   >
+                  {link.icon && <link.icon className="h-4 w-4" />}
                   {link.label}
                   </Link>
               ))}
@@ -612,8 +626,9 @@ export function Header() {
                        <SheetClose asChild key={link.href}>
                           <Link
                             href={link.href}
-                            className="text-lg font-medium"
+                            className="text-lg font-medium flex items-center gap-2"
                           >
+                            {link.icon && <link.icon className="h-5 w-5" />}
                             {link.label}
                           </Link>
                       </SheetClose>
