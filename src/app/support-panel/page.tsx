@@ -7,11 +7,11 @@ import {
     collection, doc, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, ArrowLeft, Headset, UserCheck, ChevronLeft, ListFilter, Search } from 'lucide-react';
+import { Send, ArrowLeft, Headset, UserCheck, ChevronLeft, ListFilter, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 
 type Message = {
     id: string;
@@ -61,7 +60,7 @@ export default function SupportPanelPage() {
                 const userDocRef = doc(db, 'users', u.uid);
                 const docSnap = await getDoc(userDocRef);
                 const data = docSnap.data();
-                if (data?.isSupport === true) {
+                if (data?.isSupport === true || data?.isAdmin === true) {
                     setUser(u);
                     setIsAuthorized(true);
                 } else {
@@ -87,8 +86,7 @@ export default function SupportPanelPage() {
                 const updatedSelected = fetchedChats.find(c => c.id === selectedChat.id);
                 if (updatedSelected) {
                     setSelectedChat(updatedSelected);
-                } else if (updatedSelected === undefined && selectedChat.status !== 'closed') {
-                    // Chat was likely closed or deleted
+                } else {
                     setSelectedChat(null);
                     setShowQueueOnMobile(true);
                 }
@@ -99,10 +97,13 @@ export default function SupportPanelPage() {
 
     useEffect(() => {
         if (!selectedChat) return;
-        const unsubMsgs = onSnapshot(query(collection(db, `messages/${selectedChat.id}/chat`), orderBy('createdAt', 'asc')), snap => {
-            setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-        });
+        const unsubMsgs = onSnapshot(
+            query(collection(db, `chats/${selectedChat.id}/messages`), orderBy('createdAt', 'asc')), 
+            snap => {
+                setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
+                setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            }
+        );
         return () => unsubMsgs();
     }, [selectedChat?.id]);
 
@@ -110,8 +111,7 @@ export default function SupportPanelPage() {
         if (!user || (chat.assignedAdmin && chat.assignedAdmin !== user.uid)) return;
         
         if (chat.status === 'waiting') {
-            const chatRef = doc(db, 'chats', chat.id);
-            await updateDoc(chatRef, { 
+            await updateDoc(doc(db, 'chats', chat.id), { 
                 assignedAdmin: user.uid, 
                 status: 'open', 
                 lastMessageTime: serverTimestamp() 
@@ -128,7 +128,7 @@ export default function SupportPanelPage() {
         setInputText('');
         
         try {
-            await addDoc(collection(db, `messages/${selectedChat.id}/chat`), {
+            await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
                 text: encryptMessage(txt),
                 senderId: user.uid,
                 senderType: 'admin',
@@ -138,18 +138,6 @@ export default function SupportPanelPage() {
         } catch (err) {
             console.error("Staff send error:", err);
             toast({ title: "Error", description: "Could not send reply.", variant: "destructive" });
-        }
-    };
-
-    const endSession = async () => {
-        if (!selectedChat) return;
-        try {
-            await updateDoc(doc(db, 'chats', selectedChat.id), { status: 'closed' });
-            setSelectedChat(null);
-            setShowQueueOnMobile(true);
-            toast({ title: "Session Closed", description: "Support session has ended." });
-        } catch (err) {
-            toast({ title: "Error", description: "Could not close session.", variant: "destructive" });
         }
     };
 
@@ -165,21 +153,11 @@ export default function SupportPanelPage() {
                 <div className="p-4 border-b flex items-center justify-between bg-background">
                     <div className="flex items-center gap-2">
                         <Headset className="h-5 w-5 text-primary" />
-                        <h2 className="font-bold">Active Queue</h2>
+                        <h2 className="font-bold">Support Queue</h2>
                     </div>
                     <Badge variant="secondary">{chats.length}</Badge>
                 </div>
                 
-                <div className="p-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search active users..." 
-                            className="pl-9 h-9 bg-background"
-                        />
-                    </div>
-                </div>
-
                 <ScrollArea className="flex-1">
                     <div className="p-2 space-y-1">
                         {chats.length > 0 ? chats.map(c => (
@@ -187,7 +165,7 @@ export default function SupportPanelPage() {
                                 key={c.id} 
                                 onClick={() => pickChat(c)} 
                                 className={cn(
-                                    "w-full text-left p-3 rounded-lg transition-all group border border-transparent",
+                                    "w-full text-left p-3 rounded-lg transition-all border border-transparent",
                                     selectedChat?.id === c.id 
                                         ? "bg-primary/10 border-primary/20 shadow-sm" 
                                         : "hover:bg-accent",
@@ -214,20 +192,11 @@ export default function SupportPanelPage() {
                             </button>
                         )) : (
                             <div className="p-8 text-center text-muted-foreground">
-                                <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-20" />
                                 <p className="text-sm">No active requests</p>
                             </div>
                         )}
                     </div>
                 </ScrollArea>
-                
-                <div className="p-4 border-t bg-background/50">
-                    <Button variant="ghost" size="sm" asChild className="w-full text-xs">
-                        <Link href="/">
-                            <ArrowLeft className="h-3 w-3 mr-2" /> Back to Home
-                        </Link>
-                    </Button>
-                </div>
             </aside>
 
             {/* Main Chat Area */}
@@ -237,57 +206,29 @@ export default function SupportPanelPage() {
             )}>
                 {selectedChat ? (
                     <>
-                        {/* Chat Header */}
                         <header className="h-16 border-b flex items-center justify-between px-4 bg-background z-10">
                             <div className="flex items-center gap-3">
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="lg:hidden"
-                                    onClick={() => setShowQueueOnMobile(true)}
-                                >
+                                <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setShowQueueOnMobile(true)}>
                                     <ChevronLeft className="h-5 w-5" />
                                 </Button>
                                 <div>
                                     <h3 className="font-bold text-sm lg:text-base leading-none">{selectedChat.userName}</h3>
-                                    <p className="text-[10px] text-muted-foreground mt-1 font-mono uppercase tracking-tighter">
-                                        Session: {selectedChat.id}
-                                    </p>
+                                    <p className="text-[10px] text-muted-foreground mt-1 font-mono">Session: {selectedChat.id}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="text-xs h-8 text-destructive hover:bg-destructive/10"
-                                    onClick={endSession}
-                                >
-                                    End Session
-                                </Button>
-                            </div>
+                            <Button variant="outline" size="sm" className="text-destructive h-8" onClick={() => updateDoc(doc(db, 'chats', selectedChat.id), { status: 'closed' })}>
+                                End Session
+                            </Button>
                         </header>
 
-                        {/* Messages */}
                         <div className="flex-1 overflow-hidden bg-muted/5">
                             <ScrollArea className="h-full">
                                 <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
-                                    <div className="flex justify-center">
-                                        <span className="text-[10px] bg-muted px-2 py-1 rounded text-muted-foreground uppercase font-bold tracking-widest">
-                                            Encrypted Session Started
-                                        </span>
-                                    </div>
-                                    
                                     {messages.map(m => (
-                                        <div 
-                                            key={m.id} 
-                                            className={cn(
-                                                "flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300",
-                                                m.senderType === 'admin' ? "items-end" : "items-start"
-                                            )}
-                                        >
+                                        <div key={m.id} className={cn("flex flex-col", m.senderId === user?.uid ? "items-end" : "items-start")}>
                                             <div className={cn(
                                                 "p-3 rounded-2xl max-w-[85%] text-sm shadow-sm",
-                                                m.senderType === 'admin' 
+                                                m.senderId === user?.uid 
                                                     ? "bg-primary text-primary-foreground rounded-tr-none" 
                                                     : "bg-background border border-border/50 rounded-tl-none"
                                             )}>
@@ -303,24 +244,15 @@ export default function SupportPanelPage() {
                             </ScrollArea>
                         </div>
 
-                        {/* Input Area */}
                         <footer className="p-4 border-t bg-background">
-                            <form 
-                                onSubmit={sendMessage} 
-                                className="flex items-center gap-2 max-w-4xl mx-auto"
-                            >
+                            <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-4xl mx-auto">
                                 <Input 
                                     placeholder="Type a professional reply..." 
                                     value={inputText} 
                                     onChange={e => setInputText(e.target.value)} 
-                                    className="flex-1 bg-muted/30 border-none focus-visible:ring-primary h-11 rounded-full"
+                                    className="flex-1 bg-muted/30 border-none h-11 rounded-full"
                                 />
-                                <Button 
-                                    type="submit" 
-                                    size="icon" 
-                                    disabled={!inputText.trim()} 
-                                    className="rounded-full h-11 w-11 shrink-0 shadow-lg"
-                                >
+                                <Button type="submit" size="icon" disabled={!inputText.trim()} className="rounded-full h-11 w-11 shadow-lg">
                                     <Send className="h-5 w-5" />
                                 </Button>
                             </form>
@@ -328,21 +260,9 @@ export default function SupportPanelPage() {
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-12 text-center">
-                        <div className="bg-muted/30 p-8 rounded-full mb-6">
-                            <Headset className="h-16 w-16 opacity-20" />
-                        </div>
+                        <Headset className="h-16 w-16 opacity-20 mb-6" />
                         <h3 className="text-xl font-bold text-foreground mb-2">Workspace Empty</h3>
-                        <p className="max-w-xs text-sm">
-                            Pick a player from the active queue on the left to start a professional assistance session.
-                        </p>
-                        <Button 
-                            variant="outline" 
-                            className="mt-6 lg:hidden"
-                            onClick={() => setShowQueueOnMobile(true)}
-                        >
-                            <ListFilter className="mr-2 h-4 w-4" />
-                            View Active Queue
-                        </Button>
+                        <p className="max-w-xs text-sm">Pick a player from the queue to start a professional assistance session.</p>
                     </div>
                 )}
             </main>

@@ -11,8 +11,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Role checks: These functions read the user's document.
-    // To avoid recursion, we check owner permissions separately in the user collection match.
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -28,7 +26,7 @@ service cloud.firestore {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
              exists(userPath) && 
-             get(userPath).data.get('isSupport', false) == true;
+             (get(userPath).data.get('isSupport', false) == true || get(userPath).data.get('isAdmin', false) == true);
     }
 
     function isEmployee() {
@@ -42,13 +40,8 @@ service cloud.firestore {
     // Users Collection
     // ======================
     match /users/{userId} {
-      // Owner can always read/write their own document. 
-      // No role functions called here to prevent circular recursion.
       allow get, create, update: if isUserAuthenticated() && request.auth.uid == userId;
-      
-      // Staff can read and list other profiles
       allow get, list: if isAdmin() || isEmployee();
-      
       allow delete: if isAdmin();
 
       match /teams/{teamId} {
@@ -62,35 +55,38 @@ service cloud.firestore {
     // ✅ CHAT SUPPORT SYSTEM
     // ======================
     match /chats/{chatId} {
-      // Players create their own sessions. Data must include their userId.
+      // CREATE chat (user starts support chat)
       allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
-      
-      // Players can read/list their own sessions. Support staff can see all active ones.
+
+      // READ chat (user + support staff)
       allow read, list: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        isSupport() ||
-        isAdmin()
+        isSupport()
       );
-      
-      // Both can update status (staff to pick, player to close) or lastMessageTime.
+
+      // UPDATE (staff to pick, user/staff to update lastMessageTime)
       allow update: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        isSupport() ||
-        isAdmin()
+        isSupport()
       );
 
       allow delete: if isAdmin();
-    }
 
-    // Messages Root Collection
-    match /messages/{chatId}/chat/{msgId} {
-      // Access allowed if user is Support, Admin, or the Chat Owner
-      // We check ownership by reading the parent chat document.
-      allow read, write: if isUserAuthenticated() && (
-        isSupport() ||
-        isAdmin() ||
-        get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
-      );
+      // Messages Subcollection
+      match /messages/{messageId} {
+        // Access allowed if user is Support or the Chat Owner
+        allow read, list: if isUserAuthenticated() && (
+          isSupport() ||
+          get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
+        );
+        
+        allow create: if isUserAuthenticated() && (
+          isSupport() ||
+          get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
+        );
+        
+        allow update, delete: if isSupport();
+      }
     }
 
     // ======================
