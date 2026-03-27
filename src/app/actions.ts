@@ -1,3 +1,4 @@
+
 'use server';
 
 import { auth, db } from '@/lib/firebase-admin';
@@ -65,13 +66,14 @@ export async function registerSoloPlayer(
 
 /**
  * Starts a new support chat session with a sequential alphanumeric ID.
- * Starts at 8 characters (Base36) and grows to 9+ naturally.
+ * Only called when the player sends their FIRST message.
  */
 export async function startSupportChatAction(
     idToken: string,
     playerDisplayName: string,
     userHandle: string | null,
-    playerPhotoURL: string | null
+    playerPhotoURL: string | null,
+    encryptedFirstMessage: string
 ): Promise<{ success: boolean; chatId?: string; message?: string }> {
     if (!idToken) return { success: false, message: 'Authorization required.' };
 
@@ -87,7 +89,6 @@ export async function startSupportChatAction(
             /**
              * Starting at 36^7 ensures the first ID generated is 8 characters in Base36.
              * 36^7 = 78,364,164,096. 
-             * We use a slightly higher start (100 billion) to ensure it looks "mixed" from the start.
              * 100,000,000,000 in Base36 is "2B0IK3S0".
              */
             let nextCounter = 100000000000; 
@@ -97,7 +98,6 @@ export async function startSupportChatAction(
                 if (data && typeof data.lastChatCounter === 'number') {
                     nextCounter = data.lastChatCounter + 1;
                 } else if (data && typeof data.lastChatId === 'number') {
-                    // Migration path from previous purely numeric IDs
                     nextCounter = Math.max(nextCounter, data.lastChatId + 1);
                 }
             }
@@ -110,6 +110,7 @@ export async function startSupportChatAction(
             
             const chatDocRef = db.collection('chats').doc(generatedId);
             
+            // 1. Create the Chat Session
             transaction.set(chatDocRef, {
                 playerDisplayName,
                 userHandle,
@@ -118,6 +119,15 @@ export async function startSupportChatAction(
                 status: "waiting",
                 createdAt: FieldValue.serverTimestamp(),
                 lastMessageTime: FieldValue.serverTimestamp()
+            });
+
+            // 2. Add the First Message immediately
+            const messageDocRef = chatDocRef.collection('messages').doc();
+            transaction.set(messageDocRef, {
+                text: encryptedFirstMessage,
+                senderId: userId,
+                senderType: 'player',
+                createdAt: FieldValue.serverTimestamp()
             });
             
             return generatedId;

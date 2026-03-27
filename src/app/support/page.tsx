@@ -30,7 +30,7 @@ export default function SupportPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [view, setView] = useState<'chat' | 'home' | 'history'>('home');
-    const [isStartingChat, setIsStartingChat] = useState(false);
+    const [isPendingFirstMessage, setIsPendingFirstMessage] = useState(false);
     
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const { hideLoader } = useLoading();
@@ -65,6 +65,7 @@ export default function SupportPage() {
                     setChatId(activeSnap.docs[0].id);
                     setActiveChat({ id: activeSnap.docs[0].id, ...docData });
                     setView('chat');
+                    setIsPendingFirstMessage(false);
                 } else {
                     setView('home');
                 }
@@ -144,66 +145,74 @@ export default function SupportPage() {
     };
 
     const startNewChat = async () => {
-        if (!user || isStartingChat) return;
-        setIsStartingChat(true);
-        try {
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.exists() ? userDoc.data() : null;
-            
-            const realName = userData?.realName || user.displayName || "No Name Provided";
-            const gamingHandle = userData?.username || null;
-            const idToken = await user.getIdToken();
-
-            const result = await startSupportChatAction(
-                idToken,
-                realName,
-                gamingHandle,
-                user.photoURL
-            );
-
-            if (result.success && result.chatId) {
-                setChatId(result.chatId);
-                setView('chat');
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (err: any) {
-            console.error("Create chat error:", err);
-            toast({ title: "Error", description: err.message || "Failed to start new chat.", variant: "destructive" });
-        } finally {
-            setIsStartingChat(false);
-        }
+        if (!user) return;
+        // Don't create in Firestore yet. Just enter the UI.
+        setChatId(null);
+        setActiveChat(null);
+        setMessages([]);
+        setIsPendingFirstMessage(true);
+        setView('chat');
     };
 
     const selectHistoryChat = (id: string) => {
         setChatId(id);
         const chat = historyChats.find(c => c.id === id);
         setActiveChat(chat);
+        setIsPendingFirstMessage(false);
         setView('chat');
     };
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!text.trim() || !chatId || !user || isSending || activeChat?.status === 'closed') return;
+        if (!text.trim() || !user || isSending || activeChat?.status === 'closed') return;
 
         const messageText = text.trim();
+        const encrypted = encryptMessage(messageText);
         setText("");
         setIsSending(true);
 
         try {
-            await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(messageText), 
-                senderId: user.uid,
-                senderType: 'player',
-                createdAt: serverTimestamp(),
-            });
+            if (isPendingFirstMessage) {
+                // Fetch latest profile details for metadata
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : null;
+                
+                const realName = userData?.realName || user.displayName || "No Name Provided";
+                const gamingHandle = userData?.username || null;
+                const idToken = await user.getIdToken();
 
-            await updateDoc(doc(db, "chats", chatId), {
-                lastMessageTime: serverTimestamp(),
-            });
-        } catch (err) {
+                // Create chat AND send first message in one action
+                const result = await startSupportChatAction(
+                    idToken,
+                    realName,
+                    gamingHandle,
+                    user.photoURL,
+                    encrypted
+                );
+
+                if (result.success && result.chatId) {
+                    setChatId(result.chatId);
+                    setIsPendingFirstMessage(false);
+                    // Snapshot will pick up the activeChat and messages
+                } else {
+                    throw new Error(result.message);
+                }
+            } else if (chatId) {
+                // Normal message send for existing chat
+                await addDoc(collection(db, `chats/${chatId}/messages`), {
+                    text: encrypted, 
+                    senderId: user.uid,
+                    senderType: 'player',
+                    createdAt: serverTimestamp(),
+                });
+
+                await updateDoc(doc(db, "chats", chatId), {
+                    lastMessageTime: serverTimestamp(),
+                });
+            }
+        } catch (err: any) {
             console.error("Send error:", err);
-            toast({ title: "Error", description: "Failed to send message.", variant: "destructive" });
+            toast({ title: "Error", description: err.message || "Failed to send message.", variant: "destructive" });
         } finally {
             setIsSending(false);
         }
@@ -232,9 +241,9 @@ export default function SupportPage() {
                     </div>
                     <h1 className="text-3xl font-bold">How can we help?</h1>
                     <p className="text-muted-foreground">Our support agents are online and ready to assist you with any tournament or wallet issues.</p>
-                    <Button size="lg" className="rounded-full font-bold px-8 shadow-lg shadow-primary/20" onClick={startNewChat} disabled={isStartingChat}>
-                        {isStartingChat ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
-                        {isStartingChat ? 'Creating Session...' : 'Start New Conversation'}
+                    <Button size="lg" className="rounded-full font-bold px-8 shadow-lg shadow-primary/20" onClick={startNewChat}>
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Start New Conversation
                     </Button>
                 </div>
 
@@ -283,11 +292,13 @@ export default function SupportPage() {
                             <Headset className="h-5 w-5 text-primary" />
                             Live Support
                         </h1>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Session: {chatId}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                            {isPendingFirstMessage ? "New Conversation" : `Session: ${chatId}`}
+                        </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
-                    <div className={cn("h-2 w-2 rounded-full", activeChat?.status === 'closed' ? "bg-muted-foreground" : "bg-green-500 animate-pulse")} />
+                    <div className={cn("h-2 w-2 rounded-full", (activeChat?.status === 'closed' || isPendingFirstMessage) ? "bg-muted-foreground" : "bg-green-500 animate-pulse")} />
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         {activeChat?.status === 'closed' ? 'Closed' : 'Agent Online'}
                     </span>
@@ -305,7 +316,7 @@ export default function SupportPage() {
                         </div>
                         <div>
                             <p className="font-bold text-lg">Connected!</p>
-                            <p className="text-sm">How can we help you today?</p>
+                            <p className="text-sm">Describe your issue below to start the session.</p>
                         </div>
                     </div>
                 ) : (
@@ -345,7 +356,7 @@ export default function SupportPage() {
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             className="w-full border-2 rounded-full px-5 py-6 bg-background focus:ring-2 focus:ring-primary focus:outline-none text-base shadow-lg"
-                            placeholder="Describe your issue..."
+                            placeholder="Type your message..."
                             autoComplete="off"
                         />
                     </div>
