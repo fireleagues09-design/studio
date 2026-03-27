@@ -22,6 +22,7 @@ import {
   Briefcase,
   Tag,
   Info,
+  Headset,
 } from "lucide-react";
 import {
   Sheet,
@@ -158,8 +159,6 @@ export function Header() {
                     }
                     setLoading(false);
                 } else {
-                    // This can happen during registration before the doc is created,
-                    // or if registration was interrupted. Page-level logic will handle redirects.
                     setProfile(null);
                     setLoading(false);
                 }
@@ -196,8 +195,8 @@ export function Header() {
             await setDoc(userDocRef, {
                 username: newUsername,
                 email: user.email,
-                isRegistered: false,
-                emailVerified: user.emailVerified || isGoogleUser,
+                isRegistered: false, // Force profile completion if doc was missing
+                emailVerified: user.emailVerified || isGoogleUser, // Force true if it's a Google user.
                 wallet: { deposit: 0, winning: 0, bonus: 0 },
                 registeredOn: serverTimestamp(),
                 lastLogin: serverTimestamp(),
@@ -270,6 +269,7 @@ export function Header() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/tournaments", label: "Tournaments" },
+    ...(user ? [{ href: "/support", label: "Support" }] : []),
   ];
   
   const renderThemeSwatches = () => (
@@ -281,16 +281,13 @@ export function Header() {
           aria-label={`Set ${t.name} theme`}
           className={cn(
             'p-0.5 rounded-full focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-popover',
-            `theme-${t.name}` // This scopes the CSS variables for the button
+            `theme-${t.name}`
           )}
         >
-          {/* This inner div now has access to the scoped variables */}
           <div className={cn(
             'w-5 h-5 rounded-full border-2 p-0.5',
-            // Check for active theme and apply a ring using the globally set --primary color
             theme === t.name ? 'border-primary' : 'border-transparent'
           )}>
-            {/* This div uses the scoped --primary variable for its background */}
             <div className="w-full h-full rounded-full bg-primary" />
           </div>
         </button>
@@ -326,6 +323,9 @@ export function Header() {
         <DropdownMenuItem asChild>
             <Link href="/profile" className="cursor-pointer"><User className="mr-2 h-4 w-4" /><span>Profile</span></Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+            <Link href="/support" className="cursor-pointer"><Headset className="mr-2 h-4 w-4" /><span>Live Support</span></Link>
+        </DropdownMenuItem>
         <DropdownMenuItem disabled className="cursor-not-allowed">
             <ClipboardList className="mr-2 h-4 w-4" />
             <span>Orders</span>
@@ -341,11 +341,6 @@ export function Header() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
             <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled className="cursor-not-allowed">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            <span>Chat Support</span>
-            <span className="ml-auto text-xs">Soon</span>
         </DropdownMenuItem>
         
         {(profile?.isAdmin || profile?.isEmployee) && <DropdownMenuSeparator />}
@@ -402,6 +397,9 @@ export function Header() {
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start"><Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link></Button>
         </SheetClose>
+        <SheetClose asChild>
+            <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support"><Headset className="mr-2 h-4 w-4" />Live Support</Link></Button>
+        </SheetClose>
         <Button variant="ghost" className="w-full justify-start" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Tag className="mr-2 h-4 w-4" />Bonus Code</Button>
@@ -413,11 +411,6 @@ export function Header() {
                 <Link href="/wallet"><Wallet className="mr-2 h-4 w-4" />Wallet</Link>
             </Button>
         </SheetClose>
-        <Button variant="ghost" className="w-full justify-start" disabled>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            <span>Chat Support</span>
-            <span className="ml-auto text-xs">Soon</span>
-        </Button>
 
         {(profile?.isAdmin || profile?.isEmployee) && <Separator className="my-2"/>}
         {profile?.isAdmin && (

@@ -23,25 +23,12 @@ service cloud.firestore {
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // User can read their own profile, admin can read any
-      allow get: if isUserAuthenticated() &&
-                 (request.auth.uid == userId || isAdmin());
-
-      // Admin can list all users
-      allow list: if isAdmin();
-
-      // User can create their own document
-      allow create: if isUserAuthenticated() &&
-                    request.auth.uid == userId;
-
-      // User can update their own document, and admins can too
-      allow update: if isUserAuthenticated() &&
-                    (request.auth.uid == userId || isAdmin());
-
-      // Only admins should be able to delete users.
+      allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin() || isEmployee();
+      allow create: if isUserAuthenticated() && request.auth.uid == userId;
+      allow update: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
 
-      // Teams Subcollection
       match /teams/{teamId} {
         allow read: if true;
         allow list: if isAdmin();
@@ -49,72 +36,55 @@ service cloud.firestore {
       }
     }
 
+    // Rules for Chat Support
+    match /chats/{chatId} {
+      // Players can read/write their own chats. Admins can read all.
+      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isUserAuthenticated();
+      allow update: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
+        allow create: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
+      }
+    }
+
     // Rules for the 'tournaments' collection
     match /tournaments/{tournamentId} {
-      // Anyone can view tournament details.
       allow read, list: if true;
-
-      // Admins and employees can create and update tournaments.
       allow create, update: if isAdmin() || isEmployee();
-      // Only admins can delete tournaments.
       allow delete: if isAdmin();
 
-      // Rules for the 'registrations' subcollection
       match /registrations/{userId} {
-        // A user can read their own registration. Admins can read any.
         allow read, list: if request.auth.uid == userId || isAdmin();
-        
-        // A user can create their own registration document.
         allow create: if request.auth.uid == userId;
-        
-        // Allow admins to update results (Rank/Prize)
         allow update: if isAdmin();
-        
-        // No one can delete registrations from the client.
         allow delete: if false;
       }
     }
 
     // Rules for the 'transactions' collection
     match /transactions/{transactionId} {
-      // Allow logged-in users to perform queries on the collection.
-      // Read access to individual documents is still enforced below.
       allow list: if request.auth.uid != null;
-      
-      // Users can read their own transactions. Admins can read any.
-      allow read: if get(/databases/$(database)/documents/transactions/$(transactionId)).data.userId == request.auth.uid || isAdmin();
-      
-      // Admins can update transactions (e.g., to change status).
+      allow read: if resource.data.userId == request.auth.uid || isAdmin();
       allow update: if isAdmin();
-      
-      // Users can create their own transaction requests (deposits/withdrawals).
       allow create: if request.auth.uid == request.resource.data.userId;
-      
-      // No one can delete transactions from the client.
       allow delete: if false;
     }
     
-    // Rules for slider collections ('homeSliders', 'landingSliders')
     match /{sliderCollection in ['homeSliders', 'landingSliders']}/{sliderId} {
-        // Anyone can view sliders.
         allow read, list: if true;
-        // Only admins can write (create, update, delete).
         allow write: if isAdmin();
     }
     
-    // Rules for admin-only logs
     match /adminLogs/{logId} {
-        // Only admins can create or read logs.
         allow read, list, create: if isAdmin();
-        // Logs are immutable from the client.
         allow update, delete: if false;
     }
     
-    // Rules for the 'settings' collection
     match /settings/{settingId} {
-      // Anyone can read settings.
       allow read: if true;
-      // Only admins can write settings.
       allow write: if isAdmin();
     }
   }

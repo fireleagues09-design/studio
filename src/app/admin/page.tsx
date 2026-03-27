@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -460,7 +460,15 @@ export default function AdminPage() {
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
-            <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-4xl font-bold tracking-tight">Admin Dashboard</h1>
+                <Button asChild className="bg-primary/90 hover:bg-primary font-bold">
+                    <Link href="/admin/support">
+                        <MessageSquare className="mr-2 h-5 w-5" />
+                        Support Panel
+                    </Link>
+                </Button>
+            </div>
 
              <section>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
