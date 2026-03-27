@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -19,7 +18,6 @@ export const metadata: Metadata = {
 };
 
 // This script prevents the theme from flickering on page load.
-// It runs before React hydrates, applying the theme from localStorage.
 const antiFlickerScript = `
 (function() {
   try {
@@ -63,25 +61,29 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("font-body antialiased")}>
-        <Suspense fallback={null}>
-          <ThemeProvider
-            storageKey="fireleagues-theme"
-            modeStorageKey="fireleagues-mode"
-            defaultTheme="orange"
-          >
-            <LoadingProvider>
-              <div className="relative flex min-h-screen flex-col bg-background">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <FloatingHomeButton />
-              <Toaster />
-              <FullScreenLoader />
+        <ThemeProvider
+          storageKey="fireleagues-theme"
+          modeStorageKey="fireleagues-mode"
+          defaultTheme="orange"
+        >
+          <LoadingProvider>
+            <div className="relative flex min-h-screen flex-col bg-background">
+              <Header />
+              <main className="flex-1">
+                <Suspense fallback={<div className="h-screen bg-background" />}>
+                  {children}
+                </Suspense>
+              </main>
+              <Footer />
+            </div>
+            <FloatingHomeButton />
+            <Toaster />
+            <FullScreenLoader />
+            <Suspense fallback={null}>
               <NavigationEvents />
-            </LoadingProvider>
-          </ThemeProvider>
-        </Suspense>
+            </Suspense>
+          </LoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
