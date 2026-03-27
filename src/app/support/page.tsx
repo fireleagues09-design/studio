@@ -65,6 +65,7 @@ export default function SupportPage() {
             if (u) {
                 setUser(u);
                 try {
+                    // Check for active or waiting sessions
                     const q = query(
                         collection(db, 'chats'), 
                         where('userId', '==', u.uid), 
@@ -90,27 +91,49 @@ export default function SupportPage() {
     useEffect(() => {
         if (!currentChat) return;
         const unsubMsgs = onSnapshot(query(collection(db, `messages/${currentChat.id}/chat`), orderBy('createdAt', 'asc')), snap => {
-            setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
+            const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+            setMessages(msgs);
+            // Small delay to ensure render is complete before scrolling
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }, (error) => {
+            console.error("Messages listener error:", error);
         });
+
         const unsubChat = onSnapshot(doc(db, 'chats', currentChat.id), snap => {
-            if (snap.exists()) setCurrentChat({ id: snap.id, ...snap.data() } as ChatSession);
+            if (snap.exists()) {
+                const data = snap.data() as ChatSession;
+                setCurrentChat({ id: snap.id, ...data });
+                if (data.status === 'closed') {
+                    setShowStartScreen(true);
+                    setCurrentChat(null);
+                    setMessages([]);
+                }
+            }
         });
+
         return () => { unsubMsgs(); unsubChat(); };
     }, [currentChat?.id]);
 
     const startNewChat = async () => {
-        if (!user) return;
+        if (!user) {
+            toast({ title: "Authentication Required", description: "Please login to start a support chat.", variant: "destructive" });
+            return;
+        }
+        
         setIsCreating(true);
         const chatId = Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
         
         let userName = user.displayName || 'Player';
         try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) userName = userDoc.data().username || userName;
-        } catch (e) {}
+            if (userDoc.exists()) {
+                userName = userDoc.data().username || userName;
+            }
+        } catch (e) {
+            console.warn("Could not fetch username for chat, using fallback.", e);
+        }
 
-        const chatData = {
+        const chatData: ChatSession = {
             id: chatId,
             userId: user.uid,
             userName: userName,
@@ -121,11 +144,17 @@ export default function SupportPage() {
         };
 
         try {
+            // Explicitly use userId in the document to match security rules
             await setDoc(doc(db, 'chats', chatId), chatData);
-            setCurrentChat(chatData as ChatSession);
+            setCurrentChat(chatData);
             setShowStartScreen(false);
         } catch (error: any) {
-            toast({ title: "Error", description: "Failed to start chat. Check permissions.", variant: "destructive" });
+            console.error("Chat creation error:", error);
+            toast({ 
+                title: "Permission Denied", 
+                description: "Could not start chat. Please ensure your profile is complete.", 
+                variant: "destructive" 
+            });
         } finally {
             setIsCreating(false);
         }
@@ -134,8 +163,10 @@ export default function SupportPage() {
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!inputText.trim() || !currentChat || !user) return;
+        
         const txt = inputText.trim();
         setInputText('');
+        
         try {
             await addDoc(collection(db, `messages/${currentChat.id}/chat`), {
                 text: encryptMessage(txt),
@@ -143,16 +174,19 @@ export default function SupportPage() {
                 senderType: 'player',
                 createdAt: serverTimestamp(),
             });
-            await updateDoc(doc(db, 'chats', currentChat.id), { lastMessageTime: serverTimestamp() });
+            await updateDoc(doc(db, 'chats', currentChat.id), { 
+                lastMessageTime: serverTimestamp() 
+            });
         } catch (err) {
-            toast({ title: "Error", description: "Message not sent.", variant: "destructive" });
+            console.error("Send message error:", err);
+            toast({ title: "Error", description: "Message not sent. Session might be closed.", variant: "destructive" });
         }
     };
 
     if (loading) return (
         <div className="h-[calc(100vh-10rem)] flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <p className="text-muted-foreground font-medium">Loading Support...</p>
+            <p className="text-muted-foreground font-medium">Connecting to Secure Assist...</p>
         </div>
     );
 
@@ -192,7 +226,7 @@ export default function SupportPage() {
                         className="w-full py-6 text-lg font-bold"
                     >
                         {isCreating ? (
-                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting...</>
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Starting...</>
                         ) : (
                             <><MessageSquarePlus className="mr-2 h-5 w-5" /> Start New Chat</>
                         )}
@@ -221,13 +255,18 @@ export default function SupportPage() {
                                 <Badge variant="secondary" className="mt-1 bg-white/20 text-white border-transparent">Support Active</Badge>
                             )}
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' })}>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-white hover:bg-white/20"
+                            onClick={() => updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' })}
+                        >
                             <XCircle className="h-6 w-6" />
                         </Button>
                     </CardHeader>
                     <CardContent className="flex-1 p-4 bg-secondary/5 overflow-hidden">
                         <ScrollArea className="h-full">
-                            <div className="space-y-4">
+                            <div className="space-y-4 pr-4">
                                 {messages.map(m => (
                                     <div key={m.id} className={`flex flex-col ${m.senderType === 'player' ? 'items-end' : 'items-start'}`}>
                                         <div className={`p-3 rounded-2xl max-w-[85%] text-sm shadow-sm ${
@@ -237,6 +276,9 @@ export default function SupportPage() {
                                         }`}>
                                             {decryptMessage(m.text)}
                                         </div>
+                                        <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                                            {m.senderType === 'player' ? 'You' : 'Support'}
+                                        </span>
                                     </div>
                                 ))}
                                 <div ref={scrollRef} />
@@ -250,7 +292,7 @@ export default function SupportPage() {
                                 value={inputText} 
                                 onChange={e => setInputText(e.target.value)} 
                                 disabled={currentChat.status === 'closed'}
-                                className="rounded-full bg-secondary/20"
+                                className="rounded-full bg-secondary/20 border-none focus-visible:ring-primary"
                             />
                             <Button type="submit" disabled={currentChat.status === 'closed' || !inputText.trim()} size="icon" className="rounded-full shrink-0">
                                 <Send className="h-4 w-4" />

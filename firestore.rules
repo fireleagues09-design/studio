@@ -12,42 +12,43 @@ service cloud.firestore {
     }
 
     // Role checks: These functions read the user's document.
-    // To avoid recursion, the rules for /users/{userId} must allow 
-    // owner access without calling these functions.
+    // To avoid recursion, we check owner permissions separately in the user collection match.
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      let userDoc = /databases/$(database)/documents/users/$(request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
-             exists(userDoc) && 
-             get(userDoc).data.get('isAdmin', false) == true;
+             exists(userPath) && 
+             get(userPath).data.get('isAdmin', false) == true;
     }
 
     function isSupport() {
-      let userDoc = /databases/$(database)/documents/users/$(request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
-             exists(userDoc) && 
-             get(userDoc).data.get('isSupport', false) == true;
+             exists(userPath) && 
+             get(userPath).data.get('isSupport', false) == true;
     }
 
     function isEmployee() {
-      let userDoc = /databases/$(database)/documents/users/$(request.auth.uid);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
-             exists(userDoc) && 
-             (get(userDoc).data.get('isEmployee', false) == true || get(userDoc).data.get('isAdmin', false) == true);
+             exists(userPath) && 
+             (get(userPath).data.get('isEmployee', false) == true || get(userPath).data.get('isAdmin', false) == true);
     }
 
     // ======================
     // Users Collection
     // ======================
     match /users/{userId} {
-      // CRITICAL: Check owner FIRST. No role functions called here to prevent recursion.
-      allow get: if isUserAuthenticated() && request.auth.uid == userId;
+      // Owner can always read/write their own document. 
+      // No role functions called here to prevent circular recursion.
+      allow get, create, update: if isUserAuthenticated() && request.auth.uid == userId;
       
-      // Staff can read other profiles
-      allow get: if isAdmin() || isEmployee();
-      allow list: if isAdmin() || isEmployee();
+      // Staff can read and list other profiles
+      allow get, list: if isAdmin() || isEmployee();
       
-      allow create: if isUserAuthenticated() && request.auth.uid == userId;
-      allow update: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
 
       match /teams/{teamId} {
@@ -61,17 +62,17 @@ service cloud.firestore {
     // ✅ CHAT SUPPORT SYSTEM
     // ======================
     match /chats/{chatId} {
-      // Players create their own sessions
+      // Players create their own sessions. Data must include their userId.
       allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
       
-      // Players can read/query their own. Support staff can read all.
+      // Players can read/list their own sessions. Support staff can see all active ones.
       allow read, list: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
         isSupport() ||
         isAdmin()
       );
       
-      // Both can update status or lastMessageTime.
+      // Both can update status (staff to pick, player to close) or lastMessageTime.
       allow update: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
         isSupport() ||
@@ -84,6 +85,7 @@ service cloud.firestore {
     // Messages Root Collection
     match /messages/{chatId}/chat/{msgId} {
       // Access allowed if user is Support, Admin, or the Chat Owner
+      // We check ownership by reading the parent chat document.
       allow read, write: if isUserAuthenticated() && (
         isSupport() ||
         isAdmin() ||
