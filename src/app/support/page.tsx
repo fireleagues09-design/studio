@@ -17,6 +17,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { useLoading } from "@/context/LoadingContext";
 
 export default function SupportPage() {
   const [user, setUser] = useState<any>(null);
@@ -24,12 +25,16 @@ export default function SupportPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { hideLoader } = useLoading();
 
   // Auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (!u) hideLoader();
+    });
     return () => unsub();
-  }, []);
+  }, [hideLoader]);
 
   // Get/Create chat
   useEffect(() => {
@@ -61,11 +66,13 @@ export default function SupportPage() {
         }
       } catch (err) {
         console.error("Chat init error:", err);
+      } finally {
+        hideLoader();
       }
     };
 
     init();
-  }, [user]);
+  }, [user, hideLoader]);
 
   // Listen messages
   useEffect(() => {

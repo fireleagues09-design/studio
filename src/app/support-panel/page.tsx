@@ -13,8 +13,11 @@ import {
   serverTimestamp,
   updateDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { useLoading } from "@/context/LoadingContext";
+import { useRouter } from "next/navigation";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<any>(null);
@@ -23,11 +26,27 @@ export default function SupportPanel() {
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { hideLoader } = useLoading();
+  const router = useRouter();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        // Verify role before showing panel
+        const userDoc = await getDoc(doc(db, "users", u.uid));
+        const data = userDoc.data();
+        if (data?.isAdmin || data?.isSupport || data?.isEmployee) {
+          setUser(u);
+        } else {
+          router.push("/");
+        }
+      } else {
+        router.push("/login");
+      }
+      hideLoader();
+    });
     return () => unsub();
-  }, []);
+  }, [hideLoader, router]);
 
   // Fetch chats
   useEffect(() => {
@@ -87,6 +106,8 @@ export default function SupportPanel() {
       console.error("Staff send error:", err);
     }
   };
+
+  if (!user) return null;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] border-t">
