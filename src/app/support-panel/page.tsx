@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, XCircle, ArrowLeft, Headset } from 'lucide-react';
+import { MessageSquare, Send, ArrowLeft, Headset, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
@@ -56,9 +56,10 @@ export default function SupportPanelPage() {
     useEffect(() => {
         const unsubAuth = onAuthStateChanged(auth, async (u) => {
             if (u) {
-                const docSnap = await getDoc(doc(db, 'users', u.uid));
+                const userDocRef = doc(db, 'users', u.uid);
+                const docSnap = await getDoc(userDocRef);
                 const data = docSnap.data();
-                // Strictly allow isSupport users only
+                // Strictly allow isSupport users
                 if (data?.isSupport === true) {
                     setUser(u);
                     setIsAuthorized(true);
@@ -83,14 +84,15 @@ export default function SupportPanelPage() {
             
             if (selectedChat) {
                 const updatedSelected = fetchedChats.find(c => c.id === selectedChat.id);
-                if (updatedSelected && updatedSelected.assignedAdmin !== user?.uid && updatedSelected.status === 'waiting') {
+                if (updatedSelected) {
+                    setSelectedChat(updatedSelected);
+                } else {
                     setSelectedChat(null);
-                    toast({ title: "Chat Moved", description: "This chat was moved back to the queue due to inactivity." });
                 }
             }
         });
         return () => unsub();
-    }, [isAuthorized, user?.uid, selectedChat, toast]);
+    }, [isAuthorized, selectedChat?.id]);
 
     useEffect(() => {
         if (!selectedChat) return;
@@ -98,28 +100,18 @@ export default function SupportPanelPage() {
             setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
-        
-        const unsubChat = onSnapshot(doc(db, 'chats', selectedChat.id), snap => {
-            if (snap.exists()) {
-                const data = snap.data() as ChatSession;
-                setSelectedChat({ id: snap.id, ...data });
-                
-                if (data.assignedAdmin === user?.uid && data.status === 'open') {
-                    const last = data.lastMessageTime?.toDate ? data.lastMessageTime.toDate() : (data.lastMessageTime ? new Date(data.lastMessageTime.seconds * 1000) : new Date());
-                    if ((Date.now() - last.getTime()) / 60000 >= 5) {
-                        updateDoc(doc(db, 'chats', snap.id), { assignedAdmin: null, status: 'waiting' });
-                        setSelectedChat(null);
-                        toast({ title: "Session Expired", description: "Chat moved to queue due to your inactivity." });
-                    }
-                }
-            }
-        });
-        return () => { unsubMsgs(); unsubChat(); };
-    }, [selectedChat?.id, user?.uid, toast]);
+        return () => unsubMsgs();
+    }, [selectedChat?.id]);
 
     const pickChat = async (chat: ChatSession) => {
         if (!user || (chat.assignedAdmin && chat.assignedAdmin !== user.uid)) return;
-        await updateDoc(doc(db, 'chats', chat.id), { assignedAdmin: user.uid, status: 'open', lastMessageTime: serverTimestamp() });
+        
+        const chatRef = doc(db, 'chats', chat.id);
+        await updateDoc(chatRef, { 
+            assignedAdmin: user.uid, 
+            status: 'open', 
+            lastMessageTime: serverTimestamp() 
+        });
         setSelectedChat(chat);
     };
 
@@ -128,6 +120,7 @@ export default function SupportPanelPage() {
         if (!inputText.trim() || !selectedChat || !user) return;
         const txt = inputText.trim();
         setInputText('');
+        
         await addDoc(collection(db, `messages/${selectedChat.id}/chat`), {
             text: encryptMessage(txt),
             senderId: user.uid,
@@ -145,9 +138,9 @@ export default function SupportPanelPage() {
                 <div>
                     <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
                         <Headset className="h-8 w-8 text-primary" />
-                        Support Management
+                        Support Panel
                     </h1>
-                    <p className="text-muted-foreground mt-1">Professional assist panel for support staff.</p>
+                    <p className="text-muted-foreground mt-1">Professional assist panel for staff.</p>
                 </div>
                 <Button variant="outline" asChild>
                     <Link href="/">
@@ -158,7 +151,7 @@ export default function SupportPanelPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-                <Card className="lg:col-span-1 flex flex-col overflow-hidden">
+                <Card className="lg:col-span-1 flex flex-col overflow-hidden border-border/50">
                     <CardHeader className="bg-secondary/30">
                         <CardTitle className="flex items-center justify-between">
                             Active Queue
@@ -175,7 +168,7 @@ export default function SupportPanelPage() {
                                     className={cn(
                                         "p-4 border-b cursor-pointer transition-colors hover:bg-secondary/50",
                                         selectedChat?.id === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : '',
-                                        c.assignedAdmin && c.assignedAdmin !== user?.uid ? 'opacity-50 cursor-not-allowed' : ''
+                                        c.assignedAdmin && c.assignedAdmin !== user?.uid ? 'opacity-50 cursor-not-allowed bg-muted/20' : ''
                                     )}
                                 >
                                     <div className="flex justify-between items-start mb-1">
@@ -187,6 +180,11 @@ export default function SupportPanelPage() {
                                     <div className="text-[10px] font-mono text-muted-foreground truncate">ID: {c.id}</div>
                                     {c.assignedAdmin && c.assignedAdmin !== user?.uid && (
                                         <div className="text-[10px] text-destructive mt-1 italic">Being assisted by another admin</div>
+                                    )}
+                                    {c.assignedAdmin === user?.uid && (
+                                        <div className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+                                            <UserCheck className="h-3 w-3" /> Assisting
+                                        </div>
                                     )}
                                 </div>
                             )) : (

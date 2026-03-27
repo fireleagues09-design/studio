@@ -11,7 +11,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Safer role checks to avoid recursion
+    // Safer role checks: we prioritize the owner check in the users collection to avoid recursion
     function isAdmin() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
@@ -37,7 +37,7 @@ service cloud.firestore {
     // Users Collection
     // ======================
     match /users/{userId} {
-      // Owner check FIRST to prevent recursion
+      // CRITICAL: Check owner FIRST. If the user is reading their own doc, we don't call isAdmin/isSupport.
       allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin() || isEmployee());
       allow list: if isAdmin() || isEmployee();
       allow create: if isUserAuthenticated() && request.auth.uid == userId;
@@ -55,20 +55,18 @@ service cloud.firestore {
     // ✅ CHAT SUPPORT SYSTEM
     // ======================
     match /chats/{chatId} {
-      // Player creates their own chat
+      // Normal user creates their own chat
       allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
       
-      // Players can read/list their own. Support can read all.
+      // Players can read/list their own. Support staff can read all.
       allow read, list: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.get('assignedAdmin', null) ||
         isSupport()
       );
       
-      // Players can update status (close) or lastMessageTime. Support handles assignments.
+      // Players can update status/lastMessageTime. Support can update assignedAdmin.
       allow update: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.get('assignedAdmin', null) ||
         isSupport()
       );
 
@@ -77,6 +75,7 @@ service cloud.firestore {
 
     // Messages Root Collection
     match /messages/{chatId}/chat/{msgId} {
+      // Access allowed if user is Support or the Chat Owner or the Assigned Admin
       allow read, write: if isUserAuthenticated() && (
         isSupport() ||
         get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid ||
