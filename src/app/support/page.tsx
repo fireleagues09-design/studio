@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,7 +32,7 @@ export default function SupportPage() {
     const [view, setView] = useState<'chat' | 'home' | 'history'>('home');
     const [isStartingChat, setIsStartingChat] = useState(false);
     
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
     const { hideLoader } = useLoading();
     const { toast } = useToast();
 
@@ -99,7 +100,6 @@ export default function SupportPage() {
 
         const unsub = onSnapshot(q, (snap) => {
             setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         });
 
         // Listen to chat session updates (status changes)
@@ -119,6 +119,16 @@ export default function SupportPage() {
             unsubChat();
         };
     }, [chatId, view]);
+
+    // Auto-scroll chat to bottom without scrolling the entire page
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({
+                top: chatContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [messages]);
 
     const syncHistory = async () => {
         if (!user) return;
@@ -284,7 +294,10 @@ export default function SupportPage() {
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-4 border rounded-2xl p-4 bg-card/30 backdrop-blur-md shadow-inner relative scroll-smooth scrollbar-hide">
+            <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto flex flex-col gap-4 border rounded-2xl p-4 bg-card/30 backdrop-blur-md shadow-inner relative scroll-smooth scrollbar-hide"
+            >
                 {messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
                         <div className="p-6 bg-secondary rounded-full">
@@ -323,7 +336,6 @@ export default function SupportPage() {
                         );
                     })
                 )}
-                <div ref={scrollRef} />
             </div>
 
             {activeChat?.status !== 'closed' ? (

@@ -42,7 +42,7 @@ export default function SupportPanel() {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const { hideLoader } = useLoading();
   const { toast } = useToast();
   const router = useRouter();
@@ -98,11 +98,20 @@ export default function SupportPanel() {
 
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
     return () => unsub();
   }, [selectedChat]);
+
+  // Auto-scroll chat to bottom without scrolling the entire page
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages]);
 
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -322,7 +331,10 @@ export default function SupportPanel() {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 bg-muted/10 scroll-smooth">
+            <div 
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 bg-muted/10 scroll-smooth"
+            >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center">
                     <p className="text-sm italic">Loading message history...</p>
@@ -355,7 +367,6 @@ export default function SupportPanel() {
                     );
                 })
               )}
-              <div ref={scrollRef} />
             </div>
 
             {selectedChat.status !== 'closed' ? (
