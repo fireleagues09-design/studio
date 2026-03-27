@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -95,7 +94,7 @@ export default function SupportPanelPage() {
     useEffect(() => {
         if (!selectedChat) return;
         const unsubMsgs = onSnapshot(
-            query(collection(db, `chats/${selectedChat.id}/messages`), orderBy('createdAt', 'asc')), 
+            query(collection(db, `chats/${selectedChat.id}/messages`), orderBy("createdAt", "asc")), 
             snap => {
                 setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
                 setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -215,21 +214,26 @@ export default function SupportPanelPage() {
                         <div className="flex-1 overflow-hidden bg-muted/5">
                             <ScrollArea className="h-full">
                                 <div className="p-4 lg:p-6 space-y-6 max-w-4xl mx-auto">
-                                    {messages.map(m => (
-                                        <div key={m.id} className={cn("flex flex-col", m.senderId === user?.uid ? "items-end" : "items-start")}>
-                                            <div className={cn(
-                                                "p-3 rounded-2xl max-w-[85%] text-sm shadow-sm",
-                                                m.senderId === user?.uid 
-                                                    ? "bg-primary text-primary-foreground rounded-tr-none" 
-                                                    : "bg-background border border-border/50 rounded-tl-none"
-                                            )}>
-                                                {decryptMessage(m.text)}
+                                    {messages.map(m => {
+                                        // Robust identity logic: check against the chat's userId
+                                        const isFromPlayer = m.senderId === selectedChat.userId;
+                                        
+                                        return (
+                                            <div key={m.id} className={cn("flex flex-col", !isFromPlayer ? "items-end" : "items-start")}>
+                                                <div className={cn(
+                                                    "p-3 rounded-2xl max-w-[85%] text-sm shadow-sm",
+                                                    !isFromPlayer 
+                                                        ? "bg-primary text-primary-foreground rounded-tr-none" 
+                                                        : "bg-background border border-border/50 rounded-tl-none"
+                                                )}>
+                                                    {decryptMessage(m.text)}
+                                                </div>
+                                                <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                                                    {isFromPlayer ? 'Player' : 'You'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                                {m.senderId === user?.uid ? 'You' : 'Player'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
-                                            </span>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                     <div ref={scrollRef} />
                                 </div>
                             </ScrollArea>
