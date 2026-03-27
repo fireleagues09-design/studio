@@ -69,6 +69,7 @@ export default function SupportPage() {
         const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
             setUser(u);
             if (u) {
+                // Find most recent active chat
                 const q = query(
                     collection(db, 'chats'), 
                     where('userId', '==', u.uid), 
@@ -127,7 +128,7 @@ export default function SupportPage() {
                 updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' });
                 clearInterval(interval);
             }
-        }, 30000);
+        }, 30000); // Check every 30s
 
         return () => clearInterval(interval);
     }, [currentChat]);

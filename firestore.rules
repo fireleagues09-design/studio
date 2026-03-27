@@ -41,17 +41,15 @@ service cloud.firestore {
     // Rules for Chat Support
     match /chats/{chatId} {
       // Players can read/list their own chats. Admins can access all.
-      // 'read' covers both 'get' (single doc) and 'list' (queries)
       allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       
       // Players can create a chat where they are the owner
       allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
       
-      // Only the owner or an admin can update the chat (e.g. status, last activity)
+      // Only the owner or an admin can update the chat
       allow update: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
       match /messages/{messageId} {
-        // Helper to check chat ownership via the parent document
         function isChatParticipant() {
           return get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
         }

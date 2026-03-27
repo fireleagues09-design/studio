@@ -86,10 +86,25 @@ export default function AdminSupportPanel() {
         const q = query(collection(db, 'chats'), where('status', 'in', ['waiting', 'open']), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snap) => {
             const chatList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatSession));
+            
+            // Check for chats that were unassigned due to admin inactivity
+            snap.docChanges().forEach((change) => {
+                if (change.type === 'modified') {
+                    const data = change.doc.data();
+                    if (data.status === 'waiting' && data.adminId === null) {
+                        toast({ 
+                            title: "Chat Moved", 
+                            description: `Chat from ${data.userName} moved back to queue. Please select to assist.`,
+                            variant: "default"
+                        });
+                    }
+                }
+            });
+
             setChats(chatList);
         });
         return () => unsubscribe();
-    }, [isAdmin]);
+    }, [isAdmin, toast]);
 
     useEffect(() => {
         if (!selectedChat) return;
@@ -116,8 +131,8 @@ export default function AdminSupportPanel() {
                         });
                         setSelectedChat(null);
                         toast({ 
-                            title: "Chat Moved", 
-                            description: "Moved to queue due to inactivity. Select again to assist.",
+                            title: "Chat Unassigned", 
+                            description: "Moved to queue due to inactivity. Select again to resume assist.",
                             variant: "destructive"
                         });
                     }
@@ -243,7 +258,7 @@ export default function AdminSupportPanel() {
                                             <span className="font-bold flex items-center gap-2">
                                                 <User className="h-4 w-4" /> {chat.userName}
                                             </span>
-                                            {chat.adminId && <span className="text-[10px] uppercase font-bold px-1 bg-white/20 rounded">TAKEN</span>}
+                                            {chat.adminId && chat.adminId !== user?.uid && <span className="text-[10px] uppercase font-bold px-1 bg-white/20 rounded">TAKEN</span>}
                                         </div>
                                         <p className="text-[10px] font-mono opacity-70">ID: {chat.id}</p>
                                         <div className="flex justify-between mt-2 text-[10px] opacity-80">
