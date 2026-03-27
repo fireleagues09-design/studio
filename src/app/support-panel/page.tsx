@@ -1,22 +1,34 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
-  collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, limit
+  collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, limit, deleteDoc
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Clock } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -28,9 +40,11 @@ export default function SupportPanel() {
   const [isSending, setIsSending] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const { hideLoader } = useLoading();
+  const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
@@ -124,10 +138,43 @@ export default function SupportPanel() {
       setSelectedChat(null);
   };
 
+  const handleDeleteChat = async () => {
+    if (!chatToDelete) return;
+    try {
+        await deleteDoc(doc(db, "chats", chatToDelete));
+        if (selectedChat?.id === chatToDelete) {
+            setSelectedChat(null);
+        }
+        toast({ title: "Success", description: "Chat deleted from history." });
+    } catch (err) {
+        console.error("Delete error:", err);
+        toast({ title: "Error", description: "Failed to delete chat.", variant: "destructive" });
+    } finally {
+        setChatToDelete(null);
+    }
+  };
+
   if (!isMounted || !isAuthorized) return null;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
+      <AlertDialog open={!!chatToDelete} onOpenChange={(open) => !open && setChatToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this conversation from the history. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete Forever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Sidebar: Chat Queue */}
       <div className={cn(
           "w-full md:w-80 border-r flex flex-col bg-muted/5 transition-all duration-300",
@@ -169,7 +216,7 @@ export default function SupportPanel() {
                   key={c.id}
                   onClick={() => setSelectedChat(c)}
                   className={cn(
-                      "p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
+                      "p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 relative group",
                       selectedChat?.id === c.id 
                           ? "bg-primary/10 border-primary shadow-md scale-[0.98]" 
                           : "bg-background hover:bg-accent border-transparent"
@@ -195,6 +242,20 @@ export default function SupportPanel() {
                               {c.status === 'open' ? 'Active Session' : c.status === 'closed' ? 'Closed' : 'Waiting...'}
                           </div>
                       </div>
+                      
+                      {activeTab === 'history' && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setChatToDelete(c.id);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                   </div>
                 </div>
               );
@@ -244,10 +305,20 @@ export default function SupportPanel() {
                     Close Session
                 </Button>
               ) : (
-                <Badge variant="outline" className="font-bold gap-1 text-muted-foreground">
-                    <History className="h-3 w-3" />
-                    History Mode
-                </Badge>
+                <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-bold gap-1 text-muted-foreground">
+                        <History className="h-3 w-3" />
+                        History Mode
+                    </Badge>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => setChatToDelete(selectedChat.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
               )}
             </div>
 

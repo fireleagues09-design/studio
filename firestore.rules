@@ -60,7 +60,8 @@ service cloud.firestore {
       
       // allow staff to update session status (assigning, closing)
       allow update: if isUserAuthenticated();
-      allow delete: if isAdmin();
+      // ✅ Allow staff to delete chat documents (history management)
+      allow delete: if isStaff();
 
       // MESSAGES Subcollection
       match /messages/{messageId} {
