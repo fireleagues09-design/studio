@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from 'date-fns';
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -199,7 +200,7 @@ export default function SupportPanel() {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-4 bg-muted/10">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 bg-muted/10">
               {messages.length === 0 && (
                   <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm italic">
                       No messages yet in this session.
@@ -208,18 +209,20 @@ export default function SupportPanel() {
               {messages.map((m) => {
                 const isMe = m.senderId === user?.uid;
                 return (
-                  <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
-                    <div className={cn(
-                        "flex flex-col max-w-[85%] md:max-w-[70%]",
-                        isMe ? "items-end" : "items-start"
-                    )}>
+                  <div key={m.id} className="flex w-full justify-start">
+                    <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start">
                         <div className={cn(
-                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm text-white",
-                            isMe ? "bg-green-600 rounded-br-none" : "bg-gray-700 rounded-tl-none"
+                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm text-white rounded-tl-none",
+                            isMe ? "bg-green-600" : "bg-gray-700"
                         )}>
-                            {!isMe && <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Player</div>}
+                            <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                {isMe ? 'You' : 'Player'}
+                            </div>
                             {m.text}
                         </div>
+                        <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-60">
+                            {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                        </span>
                     </div>
                   </div>
                 );

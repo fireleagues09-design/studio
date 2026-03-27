@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { 
-    collection, doc, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit
+    collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit, where
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Send, Loader2, Headset } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -131,38 +132,36 @@ export default function SupportPage() {
                     <Headset className="h-6 w-6 text-primary" />
                     <h1 className="text-xl font-bold">Live Support</h1>
                 </div>
-                {chatId && (
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Connected</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Support Active</span>
+                </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-3 border rounded-xl p-4 bg-card/50 backdrop-blur-sm shadow-inner relative">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 border rounded-xl p-4 bg-card/50 backdrop-blur-sm shadow-inner relative">
                 {messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-40 text-center space-y-2">
                         <Headset className="h-12 w-12" />
-                        <p className="italic text-sm">Our team is ready to help. Type your message below.</p>
+                        <p className="italic text-sm">Connecting to Support...</p>
                     </div>
                 ) : (
                     messages.map((m) => {
                         const isMe = m.senderId === user.uid;
                         return (
-                            <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
-                                <div className={cn(
-                                    "flex flex-col max-w-[85%] md:max-w-[70%]",
-                                    isMe ? "items-end" : "items-start"
-                                )}>
+                            <div key={m.id} className="flex w-full justify-start">
+                                <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start">
                                     <div className={cn(
-                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base leading-relaxed text-white shadow-sm",
-                                        isMe 
-                                            ? "bg-orange-500 rounded-br-none" 
-                                            : "bg-gray-700 rounded-tl-none"
+                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm text-white rounded-tl-none",
+                                        isMe ? "bg-orange-500" : "bg-gray-700"
                                     )}>
-                                        {!isMe && <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Support Agent</div>}
+                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                            {isMe ? 'You' : 'Support Agent'}
+                                        </div>
                                         {m.text}
                                     </div>
+                                    <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-60">
+                                        {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                    </span>
                                 </div>
                             </div>
                         );
