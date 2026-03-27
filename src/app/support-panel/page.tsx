@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
 export default function SupportPanel() {
@@ -163,6 +163,7 @@ export default function SupportPanel() {
                 >
                   <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
+                          {c.playerPhotoURL && <AvatarImage src={c.playerPhotoURL} alt={registeredName} />}
                           <AvatarFallback className="bg-secondary text-[12px] font-bold">
                               {registeredName.charAt(0).toUpperCase()}
                           </AvatarFallback>
@@ -200,14 +201,22 @@ export default function SupportPanel() {
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedChat(null)}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
-                    <div className="font-bold flex items-center gap-2">
-                        {/* Registered Name in Header */}
-                        <span className="text-foreground">{selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}</span>
-                        <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                        {selectedChat.playerPhotoURL && <AvatarImage src={selectedChat.playerPhotoURL} alt={selectedChat.playerDisplayName} />}
+                        <AvatarFallback className="text-[10px] font-bold">
+                            {(selectedChat.playerDisplayName || "P").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <div className="font-bold flex items-center gap-2">
+                            {/* Registered Name in Header */}
+                            <span className="text-foreground">{selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}</span>
+                            <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
+                        </div>
+                        {/* FireLeagues Username in Blue */}
+                        <p className="text-[10px] text-blue-400 font-mono">Handle: @{selectedChat.userHandle || "unknown"}</p>
                     </div>
-                    {/* FireLeagues Username in Blue */}
-                    <p className="text-[10px] text-blue-400 font-mono">Handle: @{selectedChat.userHandle || "unknown"}</p>
                 </div>
               </div>
               <Button 

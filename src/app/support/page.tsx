@@ -46,7 +46,7 @@ export default function SupportPage() {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                // Registered Name (from Google/Auth or Firestore)
+                // Registered Name (Priority: Auth Display Name -> Username -> Player)
                 const registeredName = user.displayName || userData?.username || "Player";
                 // FireLeagues Username Handle
                 const userHandle = userData?.username || registeredName.toLowerCase().replace(/\s/g, '');
@@ -64,13 +64,14 @@ export default function SupportPage() {
                 const chatMetadata = {
                     playerDisplayName: registeredName,
                     userHandle: userHandle,
+                    playerPhotoURL: user.photoURL || null,
                     lastMessageTime: serverTimestamp()
                 };
 
                 if (!snap.empty) {
                     const existingChatId = snap.docs[0].id;
                     setChatId(existingChatId);
-                    // Force sync identity data so agents see correct names
+                    // Force sync identity data so agents see correct names and avatars
                     await updateDoc(doc(db, "chats", existingChatId), chatMetadata);
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {
