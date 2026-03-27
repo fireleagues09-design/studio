@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { startSupportChatAction } from '@/app/actions';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -28,6 +29,7 @@ export default function SupportPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [view, setView] = useState<'chat' | 'home' | 'history'>('home');
+    const [isStartingChat, setIsStartingChat] = useState(false);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const { hideLoader } = useLoading();
@@ -132,29 +134,34 @@ export default function SupportPage() {
     };
 
     const startNewChat = async () => {
-        if (!user) return;
+        if (!user || isStartingChat) return;
+        setIsStartingChat(true);
         try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.exists() ? userDoc.data() : null;
             
             const realName = userData?.realName || user.displayName || "No Name Provided";
             const gamingHandle = userData?.username || null;
+            const idToken = await user.getIdToken();
 
-            const docRef = await addDoc(collection(db, "chats"), {
-                playerDisplayName: realName,
-                userHandle: gamingHandle,
-                playerPhotoURL: user.photoURL || null,
-                userId: user.uid,
-                status: "waiting",
-                createdAt: serverTimestamp(),
-                lastMessageTime: serverTimestamp()
-            });
-            
-            setChatId(docRef.id);
-            setView('chat');
-        } catch (err) {
+            const result = await startSupportChatAction(
+                idToken,
+                realName,
+                gamingHandle,
+                user.photoURL
+            );
+
+            if (result.success && result.chatId) {
+                setChatId(result.chatId);
+                setView('chat');
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err: any) {
             console.error("Create chat error:", err);
-            toast({ title: "Error", description: "Failed to start new chat.", variant: "destructive" });
+            toast({ title: "Error", description: err.message || "Failed to start new chat.", variant: "destructive" });
+        } finally {
+            setIsStartingChat(false);
         }
     };
 
@@ -215,9 +222,9 @@ export default function SupportPage() {
                     </div>
                     <h1 className="text-3xl font-bold">How can we help?</h1>
                     <p className="text-muted-foreground">Our support agents are online and ready to assist you with any tournament or wallet issues.</p>
-                    <Button size="lg" className="rounded-full font-bold px-8 shadow-lg shadow-primary/20" onClick={startNewChat}>
-                        <PlusCircle className="mr-2 h-5 w-5" />
-                        Start New Conversation
+                    <Button size="lg" className="rounded-full font-bold px-8 shadow-lg shadow-primary/20" onClick={startNewChat} disabled={isStartingChat}>
+                        {isStartingChat ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
+                        {isStartingChat ? 'Creating Session...' : 'Start New Conversation'}
                     </Button>
                 </div>
 
@@ -236,7 +243,7 @@ export default function SupportPage() {
                                                 <MessageSquare className="h-5 w-5 text-muted-foreground" />
                                             </div>
                                             <div>
-                                                <p className="font-bold text-sm">Session #{c.id.substring(0, 8)}</p>
+                                                <p className="font-bold text-sm">Session #{c.id}</p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {c.createdAt ? format(c.createdAt.toDate(), 'PPp') : 'Unknown date'}
                                                 </p>
@@ -266,7 +273,7 @@ export default function SupportPage() {
                             <Headset className="h-5 w-5 text-primary" />
                             Live Support
                         </h1>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Session: {chatId?.substring(0, 8)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Session: {chatId}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
