@@ -64,8 +64,8 @@ export async function registerSoloPlayer(
 }
 
 /**
- * Starts a new support chat session with a sequential numeric ID.
- * Starts at 8 digits (10000000) and grows to 9+ naturally.
+ * Starts a new support chat session with a sequential alphanumeric ID.
+ * Starts at 8 characters (Base36) and grows to 9+ naturally.
  */
 export async function startSupportChatAction(
     idToken: string,
@@ -81,25 +81,34 @@ export async function startSupportChatAction(
 
         const configRef = db.collection('settings').doc('support_config');
         
-        const chatId = await db.runTransaction(async (transaction) => {
+        const chatIdString = await db.runTransaction(async (transaction) => {
             const configDoc = await transaction.get(configRef);
             
-            // Starting at 10,000,000 ensures 8 digits. 
-            // Once it hits 100,000,000 it becomes 9 digits automatically.
-            let nextId = 10000000; 
+            /**
+             * Starting at 36^7 ensures the first ID generated is 8 characters in Base36.
+             * 36^7 = 78,364,164,096. 
+             * We use a slightly higher start (100 billion) to ensure it looks "mixed" from the start.
+             * 100,000,000,000 in Base36 is "2B0IK3S0".
+             */
+            let nextCounter = 100000000000; 
             
             if (configDoc.exists) {
                 const data = configDoc.data();
-                if (data && typeof data.lastChatId === 'number') {
-                    nextId = data.lastChatId + 1;
+                if (data && typeof data.lastChatCounter === 'number') {
+                    nextCounter = data.lastChatCounter + 1;
+                } else if (data && typeof data.lastChatId === 'number') {
+                    // Migration path from previous purely numeric IDs
+                    nextCounter = Math.max(nextCounter, data.lastChatId + 1);
                 }
             }
             
-            // Update the global counter
-            transaction.set(configRef, { lastChatId: nextId }, { merge: true });
+            // Update the global counter in Firestore
+            transaction.set(configRef, { lastChatCounter: nextCounter }, { merge: true });
             
-            const newChatIdString = nextId.toString();
-            const chatDocRef = db.collection('chats').doc(newChatIdString);
+            // Convert numeric counter to Alphanumeric Uppercase (Base36)
+            const generatedId = nextCounter.toString(36).toUpperCase();
+            
+            const chatDocRef = db.collection('chats').doc(generatedId);
             
             transaction.set(chatDocRef, {
                 playerDisplayName,
@@ -111,10 +120,10 @@ export async function startSupportChatAction(
                 lastMessageTime: FieldValue.serverTimestamp()
             });
             
-            return newChatIdString;
+            return generatedId;
         });
 
-        return { success: true, chatId };
+        return { success: true, chatId: chatIdString };
     } catch (error: any) {
         console.error('Error creating sequential support chat:', error);
         return { success: false, message: error.message || 'Failed to start support session.' };
