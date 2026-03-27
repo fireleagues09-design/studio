@@ -160,7 +160,8 @@ export default function SupportPanel() {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm truncate">{c.userName || "Unknown Player"}</div>
-                        <div className="text-[9px] opacity-60 font-mono flex items-center gap-1">
+                        <div className="text-[10px] text-muted-foreground font-mono truncate">ID: {c.userId}</div>
+                        <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
                             <span className={cn(
                                 "h-1.5 w-1.5 rounded-full",
                                 c.status === 'open' ? "bg-green-500" : "bg-amber-500"
