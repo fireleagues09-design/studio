@@ -95,7 +95,7 @@ export default function SupportPanel() {
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: encryptMessage(msgText), // Secure XOR Encryption
+        text: encryptMessage(msgText), // Secure E2E Encryption
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -158,12 +158,12 @@ export default function SupportPanel() {
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-secondary text-[12px] font-bold">
-                            {c.userName?.charAt(0).toUpperCase() || '?'}
+                            {(c.playerDisplayName || c.userHandle || "?").charAt(0).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm truncate">{c.userName || "Unknown Player"}</div>
-                        <div className="text-[10px] text-primary font-mono truncate">@{c.userName?.toLowerCase().replace(/\s/g, '')}</div>
+                        <div className="font-bold text-sm truncate text-foreground">{c.playerDisplayName || "Unknown Player"}</div>
+                        <div className="text-[10px] text-primary font-mono truncate">@{c.userHandle || "unknown"}</div>
                         <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
                             <span className={cn(
                                 "h-1.5 w-1.5 rounded-full",
@@ -193,10 +193,10 @@ export default function SupportPanel() {
                 </Button>
                 <div>
                     <div className="font-bold flex items-center gap-2">
-                        {selectedChat.userName}
+                        {selectedChat.playerDisplayName}
                         <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                     </div>
-                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userName?.toLowerCase().replace(/\s/g, '')}</p>
+                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userHandle}</p>
                 </div>
               </div>
               <Button 

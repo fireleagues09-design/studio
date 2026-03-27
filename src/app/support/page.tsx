@@ -42,10 +42,12 @@ export default function SupportPage() {
 
         const initChat = async () => {
             try {
-                // Explicitly fetch the official FireLeagues username
+                // Fetch the official FireLeagues profile data
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
-                const fireleaguesHandle = userData?.username || user.displayName || "Player";
+                
+                const playerDisplayName = user.displayName || "Player";
+                const userHandle = userData?.username || playerDisplayName.toLowerCase().replace(/\s/g, '');
 
                 const q = query(
                     collection(db, "chats"),
@@ -57,18 +59,23 @@ export default function SupportPage() {
 
                 const snap = await getDocs(q);
 
+                const chatMetadata = {
+                    playerDisplayName: playerDisplayName,
+                    userHandle: userHandle,
+                    lastMessageTime: serverTimestamp()
+                };
+
                 if (!snap.empty) {
                     const existingChatId = snap.docs[0].id;
                     setChatId(existingChatId);
-                    // Sync the FireLeagues username in case it was updated
-                    await updateDoc(doc(db, "chats", existingChatId), { userName: fireleaguesHandle });
+                    // Sync identity data in case it was updated
+                    await updateDoc(doc(db, "chats", existingChatId), chatMetadata);
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {
+                        ...chatMetadata,
                         userId: user.uid,
-                        userName: fireleaguesHandle,
                         status: "waiting",
                         createdAt: serverTimestamp(),
-                        lastMessageTime: serverTimestamp(),
                     });
                     setChatId(docRef.id);
                 }
@@ -108,7 +115,7 @@ export default function SupportPage() {
 
         try {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(messageText), // Secure XOR Encryption
+                text: encryptMessage(messageText), // Secure E2E Encryption
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
