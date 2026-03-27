@@ -25,39 +25,48 @@ service cloud.firestore {
              get(userPath).data.get('isSupport', false) == true;
     }
 
+    function isEmployee() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isUserAuthenticated() && 
+             exists(userPath) && 
+             (get(userPath).data.get('isEmployee', false) == true || get(userPath).data.get('isEmployee', 0) == 1);
+    }
+
+    function isStaff() {
+        return isAdmin() || isSupport() || isEmployee();
+    }
+
     // ======================
     // Users Collection
     // ======================
     match /users/{userId} {
       allow get, create, update: if isUserAuthenticated() && request.auth.uid == userId;
-      allow get, list: if isAdmin() || isSupport();
+      allow get, list: if isStaff();
       allow delete: if isAdmin();
 
       match /teams/{teamId} {
         allow read: if true;
-        allow list: if isAdmin();
+        allow list: if isStaff();
         allow create, delete, update: if (isUserAuthenticated() && request.auth.uid == userId) || isAdmin();
       }
     }
 
     // ======================
-    // ✅ CHAT SUPPORT SYSTEM (SYNCHRONIZED FIX)
+    // ✅ SUPPORT CHAT SYSTEM (UNIFIED FIX)
     // ======================
     match /chats/{chatId} {
-      // allow authenticated users to read and create chats
+      // allow any authenticated user to see and create chats for themselves or for staff queue
       allow read, create: if isUserAuthenticated();
       
-      // allow updates only for staff/admins or session closing
+      // allow staff to update session status (assigning, closing)
       allow update: if isUserAuthenticated();
       allow delete: if isAdmin();
 
-      // ======================
-      // MESSAGES (Subcollection)
-      // ======================
+      // MESSAGES Subcollection
       match /messages/{messageId} {
-        // Simple permissive rules for authenticated users to sync correctly
-        allow create, read: if isUserAuthenticated();
-        allow update, delete: if isAdmin();
+        // Simple permissive rules for real-time sync
+        allow read, create: if isUserAuthenticated();
+        allow update, delete: if isStaff();
       }
     }
 
@@ -66,21 +75,21 @@ service cloud.firestore {
     // ======================
     match /tournaments/{tournamentId} {
       allow read, list: if true;
-      allow create, update: if isAdmin() || isSupport();
+      allow create, update: if isStaff();
       allow delete: if isAdmin();
 
       match /registrations/{userId} {
-        allow read, list: if request.auth.uid == userId || isAdmin();
+        allow read, list: if request.auth.uid == userId || isStaff();
         allow create: if request.auth.uid == userId;
-        allow update: if isAdmin();
+        allow update: if isStaff();
         allow delete: if false;
       }
     }
 
     match /transactions/{transactionId} {
-      allow list: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+      allow list: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isStaff());
+      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isStaff());
+      allow update: if isStaff();
       allow create: if isUserAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow delete: if false;
     }

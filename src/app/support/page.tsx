@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -8,11 +9,12 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -35,7 +37,7 @@ export default function SupportPage() {
         return () => unsubAuth();
     }, [hideLoader]);
 
-    // Get/Create chat
+    // Get/Create chat session
     useEffect(() => {
         if (!user || !isMounted) return;
 
@@ -73,7 +75,7 @@ export default function SupportPage() {
         initChat();
     }, [user, isMounted, hideLoader]);
 
-    // Listen messages
+    // Real-time messages listener
     useEffect(() => {
         if (!chatId) return;
 
@@ -102,7 +104,7 @@ export default function SupportPage() {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
                 text: messageText,
                 senderId: user.uid,
-                senderType: 'player',
+                senderType: 'player', // Identity anchor
                 createdAt: serverTimestamp(),
             });
 
@@ -118,52 +120,70 @@ export default function SupportPage() {
     };
 
     if (!isMounted) return null;
-    if (!user) return (
-        <div className="container mx-auto px-4 py-12 text-center">
-            <h1 className="text-2xl font-bold mb-4">Support Chat</h1>
-            <p className="text-muted-foreground">Please log in to contact support.</p>
-            <Button asChild className="mt-4"><a href="/login">Login</a></Button>
-        </div>
-    );
+    
+    if (!user) {
+        return (
+            <div className="container mx-auto px-4 py-12 text-center h-[calc(100vh-10rem)] flex flex-col items-center justify-center">
+                <Headset className="h-16 w-16 text-muted-foreground mb-4 opacity-20" />
+                <h1 className="text-2xl font-bold mb-4">Support Chat</h1>
+                <p className="text-muted-foreground">Please log in to contact our support team.</p>
+                <Button asChild className="mt-6"><Link href="/login">Login Now</Link></Button>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-2 md:px-4 py-4 max-w-4xl h-[calc(100vh-5rem)] flex flex-col">
             <header className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                    <Headset className="h-6 w-6 text-primary" />
-                    <h1 className="text-xl font-bold">Live Support</h1>
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" asChild className="md:hidden">
+                        <Link href="/"><ArrowLeft className="h-5 w-5" /></Link>
+                    </Button>
+                    <div>
+                        <h1 className="text-xl font-bold flex items-center gap-2">
+                            <Headset className="h-5 w-5 text-primary" />
+                            Live Support
+                        </h1>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Session: {chatId?.substring(0, 8)}</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Online</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Agent Online</span>
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-4 border rounded-xl p-4 bg-card/50 backdrop-blur-sm shadow-inner relative">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 border rounded-2xl p-4 bg-card/30 backdrop-blur-md shadow-inner relative scroll-smooth scrollbar-hide">
                 {messages.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center opacity-40 text-center space-y-2">
-                        <Headset className="h-12 w-12" />
-                        <p className="italic text-sm">Waiting for messages...</p>
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-30 text-center space-y-4">
+                        <div className="p-6 bg-secondary rounded-full">
+                            <MessageSquare className="h-12 w-12" />
+                        </div>
+                        <div>
+                            <p className="font-bold text-lg">Connected!</p>
+                            <p className="text-sm">How can we help you today?</p>
+                        </div>
                     </div>
                 ) : (
                     messages.map((m) => {
+                        // PLAYER view: 'player' is Me (Right)
                         const isMe = m.senderType === 'player';
                         return (
                             <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
-                                <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", isMe ? "items-end" : "items-start")}>
+                                <div className={cn("flex flex-col max-w-[85%] md:max-w-[75%]", isMe ? "items-end" : "items-start")}>
                                     <div className={cn(
-                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm text-white",
-                                        isMe ? "bg-orange-500 rounded-br-none" : "bg-gray-700 rounded-bl-none"
+                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm",
+                                        isMe ? "bg-primary text-primary-foreground rounded-br-none" : "bg-secondary text-foreground rounded-bl-none"
                                     )}>
                                         {!isMe && (
-                                            <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                            <div className="text-[10px] font-black uppercase tracking-widest mb-1 text-primary">
                                                 Support Agent
                                             </div>
                                         )}
-                                        {m.text}
+                                        <p className="leading-relaxed break-words whitespace-pre-wrap">{m.text}</p>
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-60">
-                                        {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                    <span className="text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60">
+                                        {isMe ? 'You' : 'Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                     </span>
                                 </div>
                             </div>
@@ -173,22 +193,26 @@ export default function SupportPage() {
                 <div ref={scrollRef} />
             </div>
 
-            <form onSubmit={sendMessage} className="flex mt-4 gap-2 px-1">
-                <Input
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="flex-1 border rounded-full px-5 py-2.5 bg-background focus:ring-2 focus:ring-primary focus:outline-none h-11 md:h-12"
-                    placeholder="Type your message..."
-                    autoComplete="off"
-                />
+            <form onSubmit={sendMessage} className="flex mt-4 gap-2 items-center">
+                <div className="relative flex-1">
+                    <Input
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className="w-full border-2 rounded-full px-5 py-6 bg-background focus:ring-2 focus:ring-primary focus:outline-none text-base shadow-lg"
+                        placeholder="Describe your issue..."
+                        autoComplete="off"
+                    />
+                </div>
                 <Button 
                     type="submit" 
                     disabled={!text.trim() || isSending}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-6 rounded-full font-bold h-11 md:h-12 transition-transform active:scale-95 disabled:opacity-50"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-12 h-12 md:w-14 md:h-14 rounded-full shadow-xl transition-all active:scale-90 disabled:opacity-50 flex items-center justify-center p-0"
                 >
-                    {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6" />}
                 </Button>
             </form>
         </div>
     );
 }
+
+import { MessageSquare } from 'lucide-react';
