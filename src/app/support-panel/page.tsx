@@ -244,7 +244,7 @@ export default function SupportPanel() {
                         <AvatarFallback className="text-xs">{(c.playerDisplayName || "P").charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">{c.playerDisplayName || "Unknown Player"}</div>
+                        <div className="font-bold text-sm truncate text-foreground">{c.playerDisplayName || "Unknown Player"}</div>
                         {c.userHandle && c.userHandle !== 'unregistered' && (
                           <div className="text-[10px] text-blue-500 font-mono">@{c.userHandle}</div>
                         )}
@@ -284,20 +284,20 @@ export default function SupportPanel() {
         {selectedChat ? (
           <>
             <div className="p-4 border-b bg-background/50 backdrop-blur-md flex justify-between items-center z-10">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSelectedChat(null)}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Button variant="ghost" size="icon" className="md:hidden flex-shrink-0" onClick={() => setSelectedChat(null)}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <Avatar className="h-9 w-9 border">
+                <Avatar className="h-9 w-9 border flex-shrink-0">
                     {selectedChat.playerPhotoURL && <AvatarImage src={selectedChat.playerPhotoURL} />}
                     <AvatarFallback>{(selectedChat.playerDisplayName || "P").charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="leading-tight">
-                    <h3 className="font-bold text-sm">{selectedChat.playerDisplayName || "Unknown Player"}</h3>
-                    <p className="text-[10px] text-muted-foreground font-mono">ID: {selectedChat.id}</p>
+                <div className="leading-tight min-w-0">
+                    <h3 className="font-bold text-sm text-foreground truncate whitespace-nowrap">{selectedChat.playerDisplayName || "Unknown Player"}</h3>
+                    <p className="text-[10px] text-muted-foreground font-mono truncate">ID: {selectedChat.id}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {selectedChat.status !== 'closed' ? (
                     <Button variant="outline" size="sm" onClick={endChat} className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10 text-xs">
                         <XCircle className="h-3.5 w-3.5 mr-1.5" />
