@@ -38,25 +38,30 @@ service cloud.firestore {
       }
     }
 
-    // Rules for Chat Support
+    // Rules for Chat Support (Aligned with user request)
     match /chats/{chatId} {
-      // Players can read/list their own chats. Admins can access all.
-      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isUserAuthenticated();
       
-      // Players can create a chat where they are the owner
-      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Players can read their own. Admins can read all to see the queue.
+      allow read: if isUserAuthenticated() && (
+        request.auth.uid == resource.data.createdBy || 
+        request.auth.uid == resource.data.assignedAdmin ||
+        isAdmin()
+      );
       
-      // Only the owner or an admin can update the chat
-      allow update: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isUserAuthenticated() && (
+        request.auth.uid == resource.data.createdBy || 
+        request.auth.uid == resource.data.assignedAdmin ||
+        isAdmin()
+      );
+    }
 
-      match /messages/{messageId} {
-        function isChatParticipant() {
-          return get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
-        }
-        
-        allow read: if isUserAuthenticated() && (isChatParticipant() || isAdmin());
-        allow create: if isUserAuthenticated() && (isChatParticipant() || isAdmin());
-      }
+    // Messages Root Collection
+    match /messages/{chatId}/chat/{msgId} {
+      allow read, write: if isUserAuthenticated() && (
+        get(/databases/$(database)/documents/chats/$(chatId)).data.createdBy == request.auth.uid ||
+        isAdmin()
+      );
     }
 
     // Rules for the 'tournaments' collection

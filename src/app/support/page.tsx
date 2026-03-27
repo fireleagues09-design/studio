@@ -43,12 +43,11 @@ type Message = {
 
 type ChatSession = {
     id: string;
-    userId: string;
+    createdBy: string;
     userName: string;
-    adminId: string | null;
+    assignedAdmin: string | null;
     status: 'waiting' | 'open' | 'closed';
-    lastPlayerActivity: any;
-    lastAdminActivity: any;
+    lastMessageTime: any;
     createdAt: any;
 };
 
@@ -69,10 +68,9 @@ export default function SupportPage() {
         const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
             setUser(u);
             if (u) {
-                // Find most recent active chat
                 const q = query(
                     collection(db, 'chats'), 
-                    where('userId', '==', u.uid), 
+                    where('createdBy', '==', u.uid), 
                     where('status', 'in', ['waiting', 'open']),
                     limit(1)
                 );
@@ -93,7 +91,7 @@ export default function SupportPage() {
 
     useEffect(() => {
         if (!currentChat) return;
-        const q = query(collection(db, `chats/${currentChat.id}/messages`), orderBy('createdAt', 'asc'));
+        const q = query(collection(db, `messages/${currentChat.id}/chat`), orderBy('createdAt', 'asc'));
         const unsubscribe = onSnapshot(q, (snap) => {
             const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
             setMessages(msgs);
@@ -116,19 +114,18 @@ export default function SupportPage() {
         };
     }, [currentChat?.id, toast]);
 
-    // Player Inactivity Check (5 mins)
     useEffect(() => {
         if (!currentChat || currentChat.status === 'closed') return;
         
         const interval = setInterval(() => {
-            const lastActivity = currentChat.lastPlayerActivity?.toDate() || new Date();
+            const lastActivity = currentChat.lastMessageTime?.toDate() || new Date();
             const diffInMins = (Date.now() - lastActivity.getTime()) / 1000 / 60;
             
             if (diffInMins >= 5) {
                 updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' });
                 clearInterval(interval);
             }
-        }, 30000); // Check every 30s
+        }, 30000);
 
         return () => clearInterval(interval);
     }, [currentChat]);
@@ -142,12 +139,11 @@ export default function SupportPage() {
         const chatId = generateChatId();
         const chatData: ChatSession = {
             id: chatId,
-            userId: user.uid,
+            createdBy: user.uid,
             userName: user.displayName || 'Player',
-            adminId: null,
+            assignedAdmin: null,
             status: 'waiting',
-            lastPlayerActivity: serverTimestamp(),
-            lastAdminActivity: serverTimestamp(),
+            lastMessageTime: serverTimestamp(),
             createdAt: serverTimestamp(),
         };
 
@@ -169,7 +165,7 @@ export default function SupportPage() {
         setInputText('');
 
         try {
-            await addDoc(collection(db, `chats/${currentChat.id}/messages`), {
+            await addDoc(collection(db, `messages/${currentChat.id}/chat`), {
                 text: encryptMessage(textToEncrypt),
                 senderId: user.uid,
                 senderType: 'player',
@@ -177,7 +173,7 @@ export default function SupportPage() {
             });
 
             await updateDoc(doc(db, 'chats', currentChat.id), {
-                lastPlayerActivity: serverTimestamp()
+                lastMessageTime: serverTimestamp()
             });
         } catch (err) {
             toast({ title: "Failed to send", variant: "destructive" });
@@ -194,7 +190,7 @@ export default function SupportPage() {
             const uploadSnap = await uploadBytes(storageRef, file);
             const url = await getDownloadURL(uploadSnap.ref);
 
-            await addDoc(collection(db, `chats/${currentChat.id}/messages`), {
+            await addDoc(collection(db, `messages/${currentChat.id}/chat`), {
                 text: encryptMessage("Media shared"),
                 mediaUrl: url,
                 mediaType: file.type.startsWith('image/') ? 'image' : 'video',
@@ -204,7 +200,7 @@ export default function SupportPage() {
             });
 
             await updateDoc(doc(db, 'chats', currentChat.id), {
-                lastPlayerActivity: serverTimestamp()
+                lastMessageTime: serverTimestamp()
             });
         } catch (err) {
             toast({ title: "Upload Failed", variant: "destructive" });

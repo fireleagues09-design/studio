@@ -41,12 +41,11 @@ type Message = {
 
 type ChatSession = {
     id: string;
-    userId: string;
+    createdBy: string;
     userName: string;
-    adminId: string | null;
+    assignedAdmin: string | null;
     status: 'waiting' | 'open' | 'closed';
-    lastPlayerActivity: any;
-    lastAdminActivity: any;
+    lastMessageTime: any;
     createdAt: any;
 };
 
@@ -87,11 +86,10 @@ export default function AdminSupportPanel() {
         const unsubscribe = onSnapshot(q, (snap) => {
             const chatList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatSession));
             
-            // Check for chats that were unassigned due to admin inactivity
             snap.docChanges().forEach((change) => {
                 if (change.type === 'modified') {
                     const data = change.doc.data();
-                    if (data.status === 'waiting' && data.adminId === null) {
+                    if (data.status === 'waiting' && data.assignedAdmin === null) {
                         toast({ 
                             title: "Chat Moved", 
                             description: `Chat from ${data.userName} moved back to queue. Please select to assist.`,
@@ -108,7 +106,7 @@ export default function AdminSupportPanel() {
 
     useEffect(() => {
         if (!selectedChat) return;
-        const q = query(collection(db, `chats/${selectedChat.id}/messages`), orderBy('createdAt', 'asc'));
+        const q = query(collection(db, `messages/${selectedChat.id}/chat`), orderBy('createdAt', 'asc'));
         const unsubscribe = onSnapshot(q, (snap) => {
             const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
             setMessages(msgs);
@@ -121,12 +119,12 @@ export default function AdminSupportPanel() {
                 const data = { id: docSnap.id, ...docSnap.data() } as ChatSession;
                 setSelectedChat(data);
 
-                if (data.adminId === user?.uid && data.status === 'open') {
-                    const lastAdminActivity = data.lastAdminActivity?.toDate() || new Date();
-                    const diff = (Date.now() - lastAdminActivity.getTime()) / 1000 / 60;
+                if (data.assignedAdmin === user?.uid && data.status === 'open') {
+                    const lastMsg = data.lastMessageTime?.toDate() || new Date();
+                    const diff = (Date.now() - lastMsg.getTime()) / 1000 / 60;
                     if (diff >= 5) {
                         updateDoc(doc(db, 'chats', data.id), { 
-                            adminId: null, 
+                            assignedAdmin: null, 
                             status: 'waiting' 
                         });
                         setSelectedChat(null);
@@ -148,15 +146,15 @@ export default function AdminSupportPanel() {
 
     const pickChat = async (chat: ChatSession) => {
         if (!user) return;
-        if (chat.adminId && chat.adminId !== user.uid) {
+        if (chat.assignedAdmin && chat.assignedAdmin !== user.uid) {
             toast({ title: "Access Denied", description: "Assisting by another admin.", variant: "destructive" });
             return;
         }
 
         await updateDoc(doc(db, 'chats', chat.id), {
-            adminId: user.uid,
+            assignedAdmin: user.uid,
             status: 'open',
-            lastAdminActivity: serverTimestamp(),
+            lastMessageTime: serverTimestamp(),
         });
         setSelectedChat(chat);
     };
@@ -169,7 +167,7 @@ export default function AdminSupportPanel() {
         setInputText('');
 
         try {
-            await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
+            await addDoc(collection(db, `messages/${selectedChat.id}/chat`), {
                 text: encryptMessage(textToEncrypt),
                 senderId: user.uid,
                 senderType: 'admin',
@@ -177,7 +175,7 @@ export default function AdminSupportPanel() {
             });
 
             await updateDoc(doc(db, 'chats', selectedChat.id), {
-                lastAdminActivity: serverTimestamp()
+                lastMessageTime: serverTimestamp()
             });
         } catch (err) {
             toast({ title: "Failed to send", variant: "destructive" });
@@ -194,7 +192,7 @@ export default function AdminSupportPanel() {
             const uploadSnap = await uploadBytes(storageRef, file);
             const url = await getDownloadURL(uploadSnap.ref);
 
-            await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
+            await addDoc(collection(db, `messages/${selectedChat.id}/chat`), {
                 text: encryptMessage("Media shared"),
                 mediaUrl: url,
                 mediaType: file.type.startsWith('image/') ? 'image' : 'video',
@@ -204,7 +202,7 @@ export default function AdminSupportPanel() {
             });
 
             await updateDoc(doc(db, 'chats', selectedChat.id), {
-                lastAdminActivity: serverTimestamp()
+                lastMessageTime: serverTimestamp()
             });
         } catch (err) {
             toast({ title: "Upload Failed", variant: "destructive" });
@@ -249,7 +247,7 @@ export default function AdminSupportPanel() {
                                         className={`p-4 rounded-lg border cursor-pointer transition-all ${
                                             selectedChat?.id === chat.id 
                                             ? 'bg-primary text-primary-foreground border-primary' 
-                                            : chat.adminId && chat.adminId !== user?.uid 
+                                            : chat.assignedAdmin && chat.assignedAdmin !== user?.uid 
                                                 ? 'bg-muted opacity-60 cursor-not-allowed'
                                                 : 'hover:bg-secondary bg-background'
                                         }`}
@@ -258,7 +256,7 @@ export default function AdminSupportPanel() {
                                             <span className="font-bold flex items-center gap-2">
                                                 <User className="h-4 w-4" /> {chat.userName}
                                             </span>
-                                            {chat.adminId && chat.adminId !== user?.uid && <span className="text-[10px] uppercase font-bold px-1 bg-white/20 rounded">TAKEN</span>}
+                                            {chat.assignedAdmin && chat.assignedAdmin !== user?.uid && <span className="text-[10px] uppercase font-bold px-1 bg-white/20 rounded">TAKEN</span>}
                                         </div>
                                         <p className="text-[10px] font-mono opacity-70">ID: {chat.id}</p>
                                         <div className="flex justify-between mt-2 text-[10px] opacity-80">
