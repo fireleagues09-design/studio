@@ -14,6 +14,7 @@ import { Headset, Send, MessageSquare, ArrowLeft, XCircle, User, CheckCircle, Lo
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -92,7 +93,7 @@ export default function SupportPanel() {
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: msgText,
+        text: encryptMessage(msgText),
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -219,7 +220,7 @@ export default function SupportPanel() {
                                     Player Message
                                 </div>
                             )}
-                            <p className="leading-relaxed break-words whitespace-pre-wrap">{m.text}</p>
+                            <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                         </div>
                         <span className={cn(
                             "text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60",

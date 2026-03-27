@@ -14,6 +14,7 @@ import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { encryptMessage, decryptMessage } from '@/lib/encryption';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -99,7 +100,7 @@ export default function SupportPage() {
 
         try {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: messageText,
+                text: encryptMessage(messageText),
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
@@ -176,7 +177,7 @@ export default function SupportPage() {
                                                 Support Agent
                                             </div>
                                         )}
-                                        <p className="leading-relaxed break-words whitespace-pre-wrap">{m.text}</p>
+                                        <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                                     </div>
                                     <span className="text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60">
                                         {isMe ? 'You' : 'Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
