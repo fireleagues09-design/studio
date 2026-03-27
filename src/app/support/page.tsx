@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -15,7 +14,8 @@ import {
     serverTimestamp, 
     updateDoc,
     limit,
-    getDocs
+    getDocs,
+    getDoc
 } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -23,7 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, Image as ImageIcon, Loader2, XCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Send, Image as ImageIcon, Loader2, XCircle, ShieldCheck, Headset } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
@@ -59,11 +59,54 @@ export default function SupportPage() {
     const [inputText, setInputText] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const { hideLoader } = useLoading();
+
+    // 14-digit Chat ID generator
+    const generateChatId = () => {
+        return Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
+    };
+
+    const startNewChat = async (currentUser: FirebaseUser) => {
+        setIsCreating(true);
+        const chatId = generateChatId();
+        
+        // Fetch username from Firestore to ensure we have it
+        let userName = currentUser.displayName || 'Player';
+        try {
+            const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+            if (userDoc.exists()) {
+                userName = userDoc.data().username || userName;
+            }
+        } catch (e) {
+            console.warn("Could not fetch user doc for name, using fallback.");
+        }
+
+        const chatData: ChatSession = {
+            id: chatId,
+            createdBy: currentUser.uid,
+            userName: userName,
+            assignedAdmin: null,
+            status: 'waiting',
+            lastMessageTime: serverTimestamp(),
+            createdAt: serverTimestamp(),
+        };
+
+        try {
+            await setDoc(doc(db, 'chats', chatId), chatData);
+            setCurrentChat(chatData);
+        } catch (error) {
+            console.error("Failed to create chat:", error);
+            toast({ title: "Error", description: "Could not start chat. Try again.", variant: "destructive" });
+        } finally {
+            setIsCreating(false);
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
@@ -80,12 +123,18 @@ export default function SupportPage() {
                     const snap = await getDocs(q);
                     if (!snap.empty) {
                         setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
+                        setLoading(false);
+                    } else {
+                        // AUTO START CHAT IF NONE EXISTS
+                        await startNewChat(u);
                     }
                 } catch (e) {
                     console.error("Error checking existing chats:", e);
+                    setLoading(false);
                 }
+            } else {
+                setLoading(false);
             }
-            setLoading(false);
             hideLoader();
         });
         return () => unsubscribeAuth();
@@ -132,33 +181,6 @@ export default function SupportPage() {
 
         return () => clearInterval(interval);
     }, [currentChat]);
-
-    const generateChatId = () => {
-        return Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
-    };
-
-    const startNewChat = async () => {
-        if (!user) return;
-        const chatId = generateChatId();
-        const chatData: ChatSession = {
-            id: chatId,
-            createdBy: user.uid,
-            userName: user.displayName || 'Player',
-            assignedAdmin: null,
-            status: 'waiting',
-            lastMessageTime: serverTimestamp(),
-            createdAt: serverTimestamp(),
-        };
-
-        try {
-            await setDoc(doc(db, 'chats', chatId), chatData);
-            setCurrentChat(chatData);
-            toast({ title: "Support Requested", description: "Connecting you to an available admin..." });
-        } catch (error) {
-            console.error("Failed to create chat:", error);
-            toast({ title: "Error", description: "Could not start chat. Try again.", variant: "destructive" });
-        }
-    };
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -219,7 +241,14 @@ export default function SupportPage() {
         setMessages([]);
     };
 
-    if (loading) return null;
+    if (loading || isCreating) {
+        return (
+            <div className="container mx-auto px-4 flex flex-col items-center justify-center h-[calc(100vh-10rem)]">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground animate-pulse font-medium">Initialising support session...</p>
+            </div>
+        );
+    }
 
     if (!user) {
         return (
@@ -234,30 +263,23 @@ export default function SupportPage() {
         <div className="container mx-auto px-4 py-8 max-w-2xl h-[calc(100vh-10rem)]">
             {!currentChat ? (
                 <Card className="h-full flex flex-col items-center justify-center text-center p-8 space-y-8 border-primary/10 shadow-2xl bg-card">
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-                        <div className="relative bg-primary/10 p-8 rounded-full border border-primary/20">
-                            <MessageSquare className="h-16 w-16 text-primary" />
-                        </div>
+                    <div className="bg-destructive/10 p-6 rounded-full">
+                        <XCircle className="h-12 w-12 text-destructive" />
                     </div>
                     <div className="space-y-3">
-                        <CardTitle className="text-4xl font-bold tracking-tight">Support Chat</CardTitle>
-                        <CardDescription className="text-lg">Need help? Connect with our team in real-time.</CardDescription>
+                        <CardTitle className="text-3xl font-bold">Session Ended</CardTitle>
+                        <CardDescription>Your support request could not be processed or was closed.</CardDescription>
                     </div>
-                    <Button size="lg" onClick={startNewChat} className="px-12 py-7 font-bold text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95">
+                    <Button size="lg" onClick={() => user && startNewChat(user)} className="px-8 font-bold">
                         Start New Chat
                     </Button>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-4 py-2 rounded-full border">
-                        <ShieldCheck className="h-3 w-3" />
-                        End-to-End Encrypted
-                    </div>
                 </Card>
             ) : (
                 <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl bg-card">
                     <CardHeader className="bg-primary text-primary-foreground p-5 flex flex-row items-center justify-between border-b border-primary/10">
-                        <div>
+                        <div className="flex-1">
                             <div className="flex items-center gap-3">
-                                <CardTitle className="text-xl font-bold">Assisting: {user.displayName || 'You'}</CardTitle>
+                                <CardTitle className="text-xl font-bold">Assisting: {currentChat.userName}</CardTitle>
                                 {currentChat.status === 'waiting' && (
                                     <Badge variant="secondary" className="animate-pulse bg-white/20 text-white border-white/10 px-3 py-1">
                                         Searching Admin...
@@ -277,6 +299,16 @@ export default function SupportPage() {
                     <CardContent className="flex-1 p-0 bg-secondary/10 relative overflow-hidden">
                         <ScrollArea className="h-full p-6">
                             <div className="space-y-6">
+                                {messages.length === 0 && !isCreating && (
+                                    <div className="flex flex-col items-center justify-center h-full text-center py-12 space-y-4">
+                                        <div className="bg-primary/10 p-4 rounded-full">
+                                            <Headset className="h-8 w-8 text-primary" />
+                                        </div>
+                                        <p className="text-sm text-muted-foreground max-w-[200px]">
+                                            You are connected. Type a message to start the conversation.
+                                        </p>
+                                    </div>
+                                )}
                                 {messages.map((msg) => (
                                     <div 
                                         key={msg.id} 
@@ -322,7 +354,7 @@ export default function SupportPage() {
                                         <p className="font-bold text-2xl">Session Ended</p>
                                         <p className="text-muted-foreground text-sm">This chat session has been closed. Start a new one if you still need help.</p>
                                     </div>
-                                    <Button onClick={() => setCurrentChat(null)} className="w-full py-6 font-bold text-lg rounded-xl">
+                                    <Button onClick={() => user && startNewChat(user)} className="w-full py-6 font-bold text-lg rounded-xl">
                                         Start New Session
                                     </Button>
                                 </div>
