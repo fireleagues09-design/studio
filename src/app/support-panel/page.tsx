@@ -11,12 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, Headset, UserCheck, ChevronLeft, ListFilter, Search } from 'lucide-react';
+import { Send, ChevronLeft, Headset, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -25,7 +24,6 @@ type Message = {
     id: string;
     text: string;
     senderId: string;
-    senderType: 'player' | 'admin';
     createdAt: any;
 };
 
@@ -60,7 +58,7 @@ export default function SupportPanelPage() {
                 const userDocRef = doc(db, 'users', u.uid);
                 const docSnap = await getDoc(userDocRef);
                 const data = docSnap.data();
-                if (data?.isSupport === true || data?.isAdmin === true) {
+                if (data?.isSupport === true) {
                     setUser(u);
                     setIsAuthorized(true);
                 } else {
@@ -84,9 +82,8 @@ export default function SupportPanelPage() {
             
             if (selectedChat) {
                 const updatedSelected = fetchedChats.find(c => c.id === selectedChat.id);
-                if (updatedSelected) {
-                    setSelectedChat(updatedSelected);
-                } else {
+                if (updatedSelected) setSelectedChat(updatedSelected);
+                else {
                     setSelectedChat(null);
                     setShowQueueOnMobile(true);
                 }
@@ -108,8 +105,7 @@ export default function SupportPanelPage() {
     }, [selectedChat?.id]);
 
     const pickChat = async (chat: ChatSession) => {
-        if (!user || (chat.assignedAdmin && chat.assignedAdmin !== user.uid)) return;
-        
+        if (!user) return;
         if (chat.status === 'waiting') {
             await updateDoc(doc(db, 'chats', chat.id), { 
                 assignedAdmin: user.uid, 
@@ -131,7 +127,6 @@ export default function SupportPanelPage() {
             await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
                 text: encryptMessage(txt),
                 senderId: user.uid,
-                senderType: 'admin',
                 createdAt: serverTimestamp(),
             });
             await updateDoc(doc(db, 'chats', selectedChat.id), { lastMessageTime: serverTimestamp() });
@@ -168,16 +163,12 @@ export default function SupportPanelPage() {
                                     "w-full text-left p-3 rounded-lg transition-all border border-transparent",
                                     selectedChat?.id === c.id 
                                         ? "bg-primary/10 border-primary/20 shadow-sm" 
-                                        : "hover:bg-accent",
-                                    c.assignedAdmin && c.assignedAdmin !== user?.uid && "opacity-50"
+                                        : "hover:bg-accent"
                                 )}
                             >
                                 <div className="flex justify-between items-start mb-1">
                                     <span className="font-bold text-sm truncate">{c.userName}</span>
-                                    <Badge 
-                                        variant={c.status === 'waiting' ? 'destructive' : 'default'} 
-                                        className="text-[10px] scale-90"
-                                    >
+                                    <Badge variant={c.status === 'waiting' ? 'destructive' : 'default'} className="text-[10px] scale-90">
                                         {c.status === 'waiting' ? 'WAITING' : 'OPEN'}
                                     </Badge>
                                 </div>
@@ -235,7 +226,7 @@ export default function SupportPanelPage() {
                                                 {decryptMessage(m.text)}
                                             </div>
                                             <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                                {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                                {m.senderId === user?.uid ? 'You' : 'Player'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                             </span>
                                         </div>
                                     ))}

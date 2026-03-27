@@ -18,11 +18,11 @@ import {
     getDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, XCircle, Loader2, BadgeInfo, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Send, XCircle, Loader2, BadgeInfo } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { useLoading } from '@/context/LoadingContext';
@@ -32,7 +32,6 @@ type Message = {
     id: string;
     text: string;
     senderId: string;
-    senderType: 'player' | 'admin';
     createdAt: any;
 };
 
@@ -90,15 +89,7 @@ export default function SupportPage() {
                     setChatId(snap.docs[0].id);
                     setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
                 } else {
-                    // Fetch username for the session
-                    let userName = user.displayName || user.email?.split('@')[0] || 'Player';
-                    try {
-                        const userDoc = await getDoc(doc(db, 'users', user.uid));
-                        if (userDoc.exists()) {
-                            userName = userDoc.data().username || userName;
-                        }
-                    } catch (e) { console.warn("Name fetch error", e); }
-
+                    const userName = user.displayName || user.email?.split('@')[0] || 'Player';
                     const docRef = await addDoc(collection(db, "chats"), {
                         userId: user.uid,
                         userName: userName,
@@ -107,7 +98,6 @@ export default function SupportPage() {
                         createdAt: serverTimestamp(),
                         lastMessageTime: serverTimestamp()
                     });
-
                     setChatId(docRef.id);
                 }
             } catch (err) {
@@ -160,7 +150,6 @@ export default function SupportPage() {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
                 text: encryptMessage(txt),
                 senderId: user.uid,
-                senderType: 'player',
                 createdAt: serverTimestamp()
             });
 
@@ -176,7 +165,7 @@ export default function SupportPage() {
     if (loading) return (
         <div className="h-[calc(100vh-10rem)] flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <p className="text-muted-foreground font-medium">Connecting to Secure Assist...</p>
+            <p className="text-muted-foreground font-medium">Connecting to Support...</p>
         </div>
     );
 
@@ -215,9 +204,6 @@ export default function SupportPage() {
                 <CardContent className="flex-1 p-4 bg-secondary/5 overflow-hidden">
                     <ScrollArea className="h-full">
                         <div className="space-y-4 pr-4">
-                            <div className="text-center py-2">
-                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Encrypted Session: {chatId}</span>
-                            </div>
                             {messages.map(m => (
                                 <div key={m.id} className={`flex flex-col ${m.senderId === user.uid ? 'items-end' : 'items-start'}`}>
                                     <div className={`p-3 rounded-2xl max-w-[85%] text-sm shadow-sm ${
@@ -228,7 +214,7 @@ export default function SupportPage() {
                                         {decryptMessage(m.text)}
                                     </div>
                                     <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                        {m.senderId === user.uid ? 'You' : 'Support'}
+                                        {m.senderId === user.uid ? 'You' : 'Support Agent'}
                                     </span>
                                 </div>
                             ))}

@@ -11,10 +11,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     function isAdmin() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
@@ -26,22 +22,17 @@ service cloud.firestore {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
              exists(userPath) && 
-             (get(userPath).data.get('isSupport', false) == true || get(userPath).data.get('isAdmin', false) == true);
-    }
-
-    function isEmployee() {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isUserAuthenticated() && 
-             exists(userPath) && 
-             (get(userPath).data.get('isEmployee', false) == true || get(userPath).data.get('isAdmin', false) == true);
+             get(userPath).data.get('isSupport', false) == true;
     }
 
     // ======================
     // Users Collection
     // ======================
     match /users/{userId} {
+      // Allow owner to read/write their own profile
       allow get, create, update: if isUserAuthenticated() && request.auth.uid == userId;
-      allow get, list: if isAdmin() || isEmployee();
+      // Allow admins or staff to search/view users
+      allow get, list: if isAdmin() || isSupport();
       allow delete: if isAdmin();
 
       match /teams/{teamId} {
@@ -52,40 +43,39 @@ service cloud.firestore {
     }
 
     // ======================
-    // ✅ CHAT SUPPORT SYSTEM
+    // ✅ CHAT SUPPORT SYSTEM (FINAL FIX)
     // ======================
     match /chats/{chatId} {
-      // CREATE chat (user starts support chat)
-      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // allow authenticated user to create chat safely
+      allow create: if isUserAuthenticated();
 
-      // READ chat (user + support staff)
+      // allow user to read own chat + staff/admin
       allow read, list: if isUserAuthenticated() && (
-        request.auth.uid == resource.data.userId || 
-        isSupport()
+        isAdmin() || 
+        isSupport() ||
+        request.auth.uid == resource.data.userId
       );
 
-      // UPDATE (staff to pick, user/staff to update lastMessageTime)
-      allow update: if isUserAuthenticated() && (
-        request.auth.uid == resource.data.userId || 
-        isSupport()
-      );
-
+      // allow staff to pick/update chats
+      allow update: if isUserAuthenticated() && (isAdmin() || isSupport() || request.auth.uid == resource.data.userId);
       allow delete: if isAdmin();
 
-      // Messages Subcollection
+      // ======================
+      // MESSAGES (Subcollection)
+      // ======================
       match /messages/{messageId} {
-        // Access allowed if user is Support or the Chat Owner
+        // allow sending message if logged in
+        allow create: if isUserAuthenticated();
+
+        // allow read for user in chat + staff/admin
         allow read, list: if isUserAuthenticated() && (
+          isAdmin() ||
           isSupport() ||
-          get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
+          request.auth.uid == resource.data.senderId ||
+          request.auth.uid == get(/databases/$(database)/documents/chats/$(chatId)).data.userId
         );
-        
-        allow create: if isUserAuthenticated() && (
-          isSupport() ||
-          get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
-        );
-        
-        allow update, delete: if isSupport();
+
+        allow update, delete: if isAdmin();
       }
     }
 
@@ -94,7 +84,7 @@ service cloud.firestore {
     // ======================
     match /tournaments/{tournamentId} {
       allow read, list: if true;
-      allow create, update: if isAdmin() || isEmployee();
+      allow create, update: if isAdmin() || isSupport();
       allow delete: if isAdmin();
 
       match /registrations/{userId} {
