@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -247,8 +246,6 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('transactions');
     const [isMounted, setIsMounted] = useState(false);
     const isMobile = useIsMobile();
-    const [isBestiePageEnabled, setIsBestiePageEnabled] = useState(false);
-    const [settingsLoading, setSettingsLoading] = useState(true);
     
     const [upiId, setUpiId] = useState('');
     const [upiQrCodeUrl, setUpiQrCodeUrl] = useState('');
@@ -335,16 +332,6 @@ export default function AdminPage() {
 
             setPendingTransactions(transactionsWithUserNames);
         });
-
-        const settingsDocRef = doc(db, 'settings', 'featureControls');
-        const unsubscribeSettings = onSnapshot(settingsDocRef, (doc) => {
-            if (doc.exists()) {
-                setIsBestiePageEnabled(doc.data().isBestiePageEnabled || false);
-            } else {
-                setIsBestiePageEnabled(false);
-            }
-            setSettingsLoading(false);
-        });
         
         const paymentDocRef = doc(db, 'settings', 'paymentDetails');
         const unsubscribePayment = onSnapshot(paymentDocRef, (doc) => {
@@ -361,7 +348,6 @@ export default function AdminPage() {
             unsubscribeTournaments();
             unsubscribeUsers();
             unsubscribeTransactions();
-            unsubscribeSettings();
             unsubscribePayment();
         };
     }, [isAdmin, user]);
@@ -398,25 +384,6 @@ export default function AdminPage() {
             });
         } finally {
             setActionLoading(prev => ({...prev, [id]: false}));
-        }
-    };
-
-    const handleBestiePageToggle = async (enabled: boolean) => {
-        if (!auth.currentUser) return;
-        setActionLoading(prev => ({ ...prev, bestiePageToggle: true }));
-        try {
-            const idToken = await auth.currentUser.getIdToken();
-            const result = await setBestiePageStatus(enabled, idToken);
-            if (result.success) {
-                toast({ title: 'Success', description: `Bestie page has been ${enabled ? 'activated' : 'deactivated'}.` });
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
-            setIsBestiePageEnabled(!enabled);
-        } finally {
-            setActionLoading(prev => ({ ...prev, bestiePageToggle: false }));
         }
     };
 
@@ -817,34 +784,6 @@ export default function AdminPage() {
                     </Card>
                 </TabsContent>
                  <TabsContent value="settings" className="mt-6 space-y-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Feature Controls</CardTitle>
-                            <CardDescription>
-                                Enable or disable special features across the site.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {settingsLoading ? (
-                                <Skeleton className="h-20 w-full" />
-                            ) : (
-                                <div className="flex items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5">
-                                        <Label htmlFor="bestie-page-switch" className="text-base font-medium">Special Bestie Page</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Activate the animated special page for all users with the 'isBestie' role.
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        id="bestie-page-switch"
-                                        checked={isBestiePageEnabled}
-                                        onCheckedChange={handleBestiePageToggle}
-                                        disabled={actionLoading['bestiePageToggle']}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
                     <SliderAdmin />
                 </TabsContent>
             </Tabs>
