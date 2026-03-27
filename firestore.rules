@@ -4,26 +4,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the requesting user is an admin.
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
-    }
-
-    // Helper function to check if the requesting user is an employee.
-    function isEmployee() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isEmployee == true ||
-              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isEmployee == 1);
-    }
-
+    // Helper functions for roles
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
+    // Direct check for admin/employee flags to avoid recursion in rules
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isUserAuthenticated() && getUserData().isAdmin == true;
+    }
+
+    function isEmployee() {
+      let data = getUserData();
+      return isUserAuthenticated() && (data.isEmployee == true || data.isEmployee == 1);
+    }
+
     // Rules for the 'users' collection
     match /users/{userId} {
-      allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin() || isEmployee());
       allow list: if isAdmin() || isEmployee();
       allow create: if isUserAuthenticated() && request.auth.uid == userId;
       allow update: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
@@ -45,7 +47,9 @@ service cloud.firestore {
       allow list: if isAdmin();
 
       match /messages/{messageId} {
+        // Only allow reading messages if user owns the chat or is an admin
         allow read: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
+        // Only allow sending messages if user is part of the chat or is an admin
         allow create: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
       }
     }

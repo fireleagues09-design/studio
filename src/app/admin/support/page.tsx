@@ -81,7 +81,6 @@ export default function AdminSupportPanel() {
         return () => unsubscribeAuth();
     }, [router]);
 
-    // Listener for all waiting or open chats
     useEffect(() => {
         if (!isAdmin) return;
         const q = query(collection(db, 'chats'), where('status', 'in', ['waiting', 'open']), orderBy('createdAt', 'desc'));
@@ -92,7 +91,6 @@ export default function AdminSupportPanel() {
         return () => unsubscribe();
     }, [isAdmin]);
 
-    // Listener for messages of selected chat
     useEffect(() => {
         if (!selectedChat) return;
         const q = query(collection(db, `chats/${selectedChat.id}/messages`), orderBy('createdAt', 'asc'));
@@ -102,7 +100,7 @@ export default function AdminSupportPanel() {
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
 
-        // Auto-reassignment logic (Admin Inactivity - 5 mins)
+        // Admin Inactivity Check (5 mins)
         const unsubChat = onSnapshot(doc(db, 'chats', selectedChat.id), (docSnap) => {
             if (docSnap.exists()) {
                 const data = { id: docSnap.id, ...docSnap.data() } as ChatSession;
@@ -112,7 +110,6 @@ export default function AdminSupportPanel() {
                     const lastAdminActivity = data.lastAdminActivity?.toDate() || new Date();
                     const diff = (Date.now() - lastAdminActivity.getTime()) / 1000 / 60;
                     if (diff >= 5) {
-                        // Move back to queue
                         updateDoc(doc(db, 'chats', data.id), { 
                             adminId: null, 
                             status: 'waiting' 
@@ -120,7 +117,7 @@ export default function AdminSupportPanel() {
                         setSelectedChat(null);
                         toast({ 
                             title: "Chat Moved", 
-                            description: "The chat was moved back to queue due to 5 mins inactivity.",
+                            description: "Moved to queue due to inactivity. Select again to assist.",
                             variant: "destructive"
                         });
                     }
@@ -137,7 +134,7 @@ export default function AdminSupportPanel() {
     const pickChat = async (chat: ChatSession) => {
         if (!user) return;
         if (chat.adminId && chat.adminId !== user.uid) {
-            toast({ title: "Access Denied", description: "Another admin is already assisting this player.", variant: "destructive" });
+            toast({ title: "Access Denied", description: "Assisting by another admin.", variant: "destructive" });
             return;
         }
 
@@ -219,14 +216,13 @@ export default function AdminSupportPanel() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-                {/* Chat Queue */}
                 <Card className="lg:col-span-1 flex flex-col border-primary/10 shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <MessageSquare className="h-5 w-5 text-primary" />
                             Active Requests ({chats.length})
                         </CardTitle>
-                        <CardDescription>Select a user to begin assisting.</CardDescription>
+                        <CardDescription>Select user to begin assisting.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1 p-0 overflow-hidden">
                         <ScrollArea className="h-[500px]">
@@ -266,7 +262,6 @@ export default function AdminSupportPanel() {
                     </CardContent>
                 </Card>
 
-                {/* Chat Area */}
                 <Card className="lg:col-span-2 flex flex-col border-primary/10 shadow-lg overflow-hidden">
                     {selectedChat ? (
                         <>
@@ -275,11 +270,9 @@ export default function AdminSupportPanel() {
                                     <CardTitle>Assisting: {selectedChat.userName}</CardTitle>
                                     <p className="text-xs opacity-80 font-mono">Chat ID: {selectedChat.id}</p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={closeChat}>
-                                        <XCircle className="h-5 w-5 mr-2" /> Close Chat
-                                    </Button>
-                                </div>
+                                <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={closeChat}>
+                                    <XCircle className="h-5 w-5 mr-2" /> Close Chat
+                                </Button>
                             </CardHeader>
                             <CardContent className="flex-1 p-0 bg-secondary/30">
                                 <ScrollArea className="h-[400px] p-4">
@@ -338,7 +331,7 @@ export default function AdminSupportPanel() {
                                         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
                                     </Button>
                                     <Input 
-                                        placeholder="Type an encrypted reply..." 
+                                        placeholder="Type encrypted reply..." 
                                         value={inputText}
                                         onChange={(e) => setInputText(e.target.value)}
                                         className="flex-1"
@@ -355,7 +348,7 @@ export default function AdminSupportPanel() {
                                 <AlertCircle className="h-12 w-12 text-primary" />
                             </div>
                             <h2 className="text-2xl font-bold">No Chat Selected</h2>
-                            <p className="text-muted-foreground max-w-xs">Select a player from the queue on the left to start the assistance process.</p>
+                            <p className="text-muted-foreground">Select player from the queue to start assistance.</p>
                         </div>
                     )}
                 </Card>

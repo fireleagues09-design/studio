@@ -13,7 +13,6 @@ import {
     addDoc, 
     setDoc, 
     serverTimestamp, 
-    Timestamp,
     updateDoc,
     limit,
     getDocs
@@ -24,12 +23,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, Image as ImageIcon, Video, Loader2, XCircle, Clock } from 'lucide-react';
+import { MessageSquare, Send, Image as ImageIcon, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
 import { useLoading } from '@/context/LoadingContext';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 type Message = {
     id: string;
@@ -69,16 +69,19 @@ export default function SupportPage() {
         const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
             setUser(u);
             if (u) {
-                // Look for an existing open or waiting chat
                 const q = query(
                     collection(db, 'chats'), 
                     where('userId', '==', u.uid), 
                     where('status', 'in', ['waiting', 'open']),
                     limit(1)
                 );
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
+                try {
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
+                    }
+                } catch (e) {
+                    console.error("Error checking existing chats:", e);
                 }
             }
             setLoading(false);
@@ -87,7 +90,6 @@ export default function SupportPage() {
         return () => unsubscribeAuth();
     }, [hideLoader]);
 
-    // Listener for messages
     useEffect(() => {
         if (!currentChat) return;
         const q = query(collection(db, `chats/${currentChat.id}/messages`), orderBy('createdAt', 'asc'));
@@ -97,10 +99,9 @@ export default function SupportPage() {
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
         
-        // Listener for chat session updates (reassignment or closing)
-        const unsubChat = onSnapshot(doc(db, 'chats', currentChat.id), (doc) => {
-            if (doc.exists()) {
-                const data = { id: doc.id, ...doc.data() } as ChatSession;
+        const unsubChat = onSnapshot(doc(db, 'chats', currentChat.id), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = { id: docSnap.id, ...docSnap.data() } as ChatSession;
                 setCurrentChat(data);
                 if (data.status === 'closed') {
                     toast({ title: "Chat Closed", description: "The support session has ended." });
@@ -114,7 +115,7 @@ export default function SupportPage() {
         };
     }, [currentChat?.id, toast]);
 
-    // Auto-timeout check (Player Inactivity - 5 mins)
+    // Player Inactivity Check (5 mins)
     useEffect(() => {
         if (!currentChat || currentChat.status === 'closed') return;
         
@@ -126,13 +127,12 @@ export default function SupportPage() {
                 updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' });
                 clearInterval(interval);
             }
-        }, 30000); // Check every 30s
+        }, 30000);
 
         return () => clearInterval(interval);
     }, [currentChat]);
 
     const generateChatId = () => {
-        // Generates a 14-digit number
         return Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
     };
 
@@ -155,6 +155,7 @@ export default function SupportPage() {
             setCurrentChat(chatData);
             toast({ title: "Support Requested", description: "Connecting you to an available admin..." });
         } catch (error) {
+            console.error("Failed to create chat:", error);
             toast({ title: "Error", description: "Could not start chat. Try again.", variant: "destructive" });
         }
     };
@@ -186,14 +187,6 @@ export default function SupportPage() {
         const file = e.target.files?.[0];
         if (!file || !currentChat || !user) return;
 
-        const isImage = file.type.startsWith('image/');
-        const isVideo = file.type.startsWith('video/');
-
-        if (!isImage && !isVideo) {
-            toast({ title: "Invalid file type", description: "Only images and videos are supported.", variant: "destructive" });
-            return;
-        }
-
         setIsUploading(true);
         try {
             const storageRef = ref(storage, `support/${currentChat.id}/${Date.now()}_${file.name}`);
@@ -203,7 +196,7 @@ export default function SupportPage() {
             await addDoc(collection(db, `chats/${currentChat.id}/messages`), {
                 text: encryptMessage("Media shared"),
                 mediaUrl: url,
-                mediaType: isImage ? 'image' : 'video',
+                mediaType: file.type.startsWith('image/') ? 'image' : 'video',
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
