@@ -284,7 +284,7 @@ export default function SupportPanel() {
         {selectedChat ? (
           <>
             <div className="p-4 border-b bg-background/50 backdrop-blur-md flex justify-between items-center z-10">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
                 <Button variant="ghost" size="icon" className="md:hidden flex-shrink-0" onClick={() => setSelectedChat(null)}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
@@ -292,9 +292,9 @@ export default function SupportPanel() {
                     {selectedChat.playerPhotoURL && <AvatarImage src={selectedChat.playerPhotoURL} />}
                     <AvatarFallback>{(selectedChat.playerDisplayName || "P").charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="leading-tight min-w-0">
+                <div className="leading-none min-w-0">
                     <h3 className="font-bold text-sm text-foreground truncate whitespace-nowrap">{selectedChat.playerDisplayName || "Unknown Player"}</h3>
-                    <p className="text-[10px] text-muted-foreground font-mono truncate">ID: {selectedChat.id}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono truncate mt-1">ID: {selectedChat.id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
