@@ -23,13 +23,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, Image as ImageIcon, Loader2, XCircle } from 'lucide-react';
+import { MessageSquare, Send, Image as ImageIcon, Loader2, XCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
 import { useLoading } from '@/context/LoadingContext';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 type Message = {
     id: string;
@@ -72,6 +73,7 @@ export default function SupportPage() {
                     collection(db, 'chats'), 
                     where('createdBy', '==', u.uid), 
                     where('status', 'in', ['waiting', 'open']),
+                    orderBy('createdAt', 'desc'),
                     limit(1)
                 );
                 try {
@@ -114,6 +116,7 @@ export default function SupportPage() {
         };
     }, [currentChat?.id, toast]);
 
+    // Client-side auto-close logic (5 min inactivity)
     useEffect(() => {
         if (!currentChat || currentChat.status === 'closed') return;
         
@@ -222,7 +225,7 @@ export default function SupportPage() {
         return (
             <div className="container mx-auto px-4 py-20 text-center">
                 <h1 className="text-2xl font-bold mb-4">Support requires login</h1>
-                <Button onClick={() => window.location.href = '/login'}>Go to Login</Button>
+                <Button asChild><Link href="/login">Go to Login</Link></Button>
             </div>
         );
     }
@@ -230,63 +233,77 @@ export default function SupportPage() {
     return (
         <div className="container mx-auto px-4 py-8 max-w-2xl h-[calc(100vh-10rem)]">
             {!currentChat ? (
-                <Card className="h-full flex flex-col items-center justify-center text-center p-8 space-y-6">
-                    <div className="bg-primary/10 p-6 rounded-full">
-                        <MessageSquare className="h-12 w-12 text-primary" />
+                <Card className="h-full flex flex-col items-center justify-center text-center p-8 space-y-8 border-primary/10 shadow-2xl bg-card">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                        <div className="relative bg-primary/10 p-8 rounded-full border border-primary/20">
+                            <MessageSquare className="h-16 w-16 text-primary" />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <CardTitle className="text-3xl">Support Chat</CardTitle>
-                        <CardDescription>Need help? Connect with our team in real-time.</CardDescription>
+                    <div className="space-y-3">
+                        <CardTitle className="text-4xl font-bold tracking-tight">Support Chat</CardTitle>
+                        <CardDescription className="text-lg">Need help? Connect with our team in real-time.</CardDescription>
                     </div>
-                    <Button size="lg" onClick={startNewChat} className="px-12 font-bold text-lg">
+                    <Button size="lg" onClick={startNewChat} className="px-12 py-7 font-bold text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95">
                         Start New Chat
                     </Button>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 px-4 py-2 rounded-full border">
+                        <ShieldCheck className="h-3 w-3" />
+                        End-to-End Encrypted
+                    </div>
                 </Card>
             ) : (
-                <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-xl">
-                    <CardHeader className="bg-primary text-primary-foreground p-4 flex flex-row items-center justify-between">
+                <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl bg-card">
+                    <CardHeader className="bg-primary text-primary-foreground p-5 flex flex-row items-center justify-between border-b border-primary/10">
                         <div>
-                            <div className="flex items-center gap-2">
-                                <CardTitle className="text-lg">Assisting: {user.displayName || 'You'}</CardTitle>
-                                {currentChat.status === 'waiting' && <Badge variant="secondary" className="animate-pulse bg-white/20 text-white">Searching Admin...</Badge>}
+                            <div className="flex items-center gap-3">
+                                <CardTitle className="text-xl font-bold">Assisting: {user.displayName || 'You'}</CardTitle>
+                                {currentChat.status === 'waiting' && (
+                                    <Badge variant="secondary" className="animate-pulse bg-white/20 text-white border-white/10 px-3 py-1">
+                                        Searching Admin...
+                                    </Badge>
+                                )}
                             </div>
-                            <p className="text-xs opacity-80 font-mono">Chat ID: {currentChat.id}</p>
+                            <div className="flex items-center gap-2 mt-1 opacity-80 text-xs font-mono">
+                                <span>Chat ID:</span>
+                                <span className="tracking-widest">{currentChat.id}</span>
+                            </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={closeChat}>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full h-10 w-10" onClick={closeChat}>
                             <XCircle className="h-6 w-6" />
                         </Button>
                     </CardHeader>
 
-                    <CardContent className="flex-1 p-0 bg-secondary/30 relative">
-                        <ScrollArea className="h-full p-4">
-                            <div className="space-y-4">
+                    <CardContent className="flex-1 p-0 bg-secondary/10 relative overflow-hidden">
+                        <ScrollArea className="h-full p-6">
+                            <div className="space-y-6">
                                 {messages.map((msg) => (
                                     <div 
                                         key={msg.id} 
                                         className={`flex flex-col ${msg.senderType === 'player' ? 'items-end' : 'items-start'}`}
                                     >
                                         <div 
-                                            className={`max-w-[80%] p-3 rounded-lg shadow-sm ${
+                                            className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
                                                 msg.senderType === 'player' 
                                                 ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                                                : 'bg-background border rounded-tl-none'
+                                                : 'bg-background border border-primary/10 rounded-tl-none'
                                             }`}
                                         >
                                             {msg.mediaUrl ? (
                                                 <div className="space-y-2">
                                                     {msg.mediaType === 'image' ? (
-                                                        <div className="relative w-full aspect-square min-w-[200px] rounded overflow-hidden">
+                                                        <div className="relative w-full aspect-square min-w-[240px] rounded-xl overflow-hidden border border-white/10">
                                                             <Image src={msg.mediaUrl} alt="shared" fill className="object-cover" />
                                                         </div>
                                                     ) : (
-                                                        <video src={msg.mediaUrl} controls className="rounded max-w-full max-h-[300px]" />
+                                                        <video src={msg.mediaUrl} controls className="rounded-xl max-w-full max-h-[350px] border border-white/10" />
                                                     )}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm break-words">{decryptMessage(msg.text)}</p>
+                                                <p className="text-sm md:text-base leading-relaxed break-words">{decryptMessage(msg.text)}</p>
                                             )}
-                                            <p className={`text-[10px] mt-1 opacity-70 ${msg.senderType === 'player' ? 'text-right' : 'text-left'}`}>
-                                                {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm') : '...'}
+                                            <p className={`text-[10px] mt-2 font-medium opacity-60 ${msg.senderType === 'player' ? 'text-right' : 'text-left'}`}>
+                                                {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm') : 'Sending...'}
                                             </p>
                                         </div>
                                     </div>
@@ -296,17 +313,25 @@ export default function SupportPage() {
                         </ScrollArea>
                         
                         {currentChat.status === 'closed' && (
-                            <div className="absolute inset-0 bg-background/80 flex items-center justify-center p-6 text-center z-50">
-                                <div className="space-y-4">
-                                    <p className="font-bold text-lg">This chat session has ended.</p>
-                                    <Button onClick={() => setCurrentChat(null)}>Start New Session</Button>
+                            <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center p-8 text-center z-50">
+                                <div className="space-y-6 max-w-xs">
+                                    <div className="bg-destructive/10 p-4 rounded-full w-fit mx-auto">
+                                        <XCircle className="h-12 w-12 text-destructive" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="font-bold text-2xl">Session Ended</p>
+                                        <p className="text-muted-foreground text-sm">This chat session has been closed. Start a new one if you still need help.</p>
+                                    </div>
+                                    <Button onClick={() => setCurrentChat(null)} className="w-full py-6 font-bold text-lg rounded-xl">
+                                        Start New Session
+                                    </Button>
                                 </div>
                             </div>
                         )}
                     </CardContent>
 
-                    <CardFooter className="p-4 bg-background border-t">
-                        <form onSubmit={sendMessage} className="flex w-full items-center gap-2">
+                    <CardFooter className="p-4 bg-background border-t border-primary/10 shadow-inner">
+                        <form onSubmit={sendMessage} className="flex w-full items-center gap-3">
                             <input 
                                 type="file" 
                                 className="hidden" 
@@ -318,20 +343,27 @@ export default function SupportPage() {
                                 type="button" 
                                 variant="outline" 
                                 size="icon" 
+                                className="rounded-xl h-12 w-12 flex-shrink-0 border-primary/20 hover:bg-primary/5"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading || currentChat.status === 'closed'}
                             >
-                                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                                {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImageIcon className="h-5 w-5 text-primary" />}
                             </Button>
-                            <Input 
-                                placeholder="Securely message support..." 
-                                value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
-                                className="flex-1"
-                                disabled={currentChat.status === 'closed'}
-                            />
-                            <Button type="submit" disabled={!inputText.trim() || currentChat.status === 'closed'}>
-                                <Send className="h-4 w-4" />
+                            <div className="relative flex-1">
+                                <Input 
+                                    placeholder="Type your message..." 
+                                    value={inputText}
+                                    onChange={(e) => setInputText(e.target.value)}
+                                    className="h-12 px-4 rounded-xl border-primary/20 focus-visible:ring-primary/30"
+                                    disabled={currentChat.status === 'closed'}
+                                />
+                            </div>
+                            <Button 
+                                type="submit" 
+                                disabled={!inputText.trim() || currentChat.status === 'closed'}
+                                className="rounded-xl h-12 w-12 flex-shrink-0 shadow-lg"
+                            >
+                                <Send className="h-5 w-5" />
                             </Button>
                         </form>
                     </CardFooter>
