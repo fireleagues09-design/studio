@@ -65,16 +65,17 @@ service cloud.firestore {
       allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
       
       // Players can read/query their own. Support staff can read all.
-      // 'list' is required for query() calls.
       allow read, list: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        isSupport()
+        isSupport() ||
+        isAdmin()
       );
       
       // Both can update status or lastMessageTime.
       allow update: if isUserAuthenticated() && (
         request.auth.uid == resource.data.userId || 
-        isSupport()
+        isSupport() ||
+        isAdmin()
       );
 
       allow delete: if isAdmin();
@@ -82,9 +83,10 @@ service cloud.firestore {
 
     // Messages Root Collection
     match /messages/{chatId}/chat/{msgId} {
-      // Access allowed if user is Support or the Chat Owner
+      // Access allowed if user is Support, Admin, or the Chat Owner
       allow read, write: if isUserAuthenticated() && (
         isSupport() ||
+        isAdmin() ||
         get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid
       );
     }

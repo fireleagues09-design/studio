@@ -19,11 +19,11 @@ import {
     getDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, XCircle, Loader2, BadgeInfo } from 'lucide-react';
+import { Send, XCircle, Loader2, BadgeInfo, MessageSquarePlus, MessageCircle, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { useLoading } from '@/context/LoadingContext';
@@ -54,52 +54,17 @@ export default function SupportPage() {
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
+    const [showStartScreen, setShowStartScreen] = useState(true);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
     const { hideLoader } = useLoading();
-
-    const startNewChat = async (currentUser: FirebaseUser) => {
-        setIsCreating(true);
-        const chatId = Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
-        
-        let userName = currentUser.displayName || 'Player';
-        try {
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) userName = userDoc.data().username || userName;
-        } catch (e) {
-            console.warn("Could not fetch username for chat, using fallback.");
-        }
-
-        const chatData = {
-            id: chatId,
-            userId: currentUser.uid,
-            userName: userName,
-            assignedAdmin: null,
-            status: 'waiting',
-            lastMessageTime: serverTimestamp(),
-            createdAt: serverTimestamp(),
-        };
-
-        try {
-            await setDoc(doc(db, 'chats', chatId), chatData);
-            setCurrentChat(chatData as ChatSession);
-        } catch (error: any) {
-            console.error("Chat creation error:", error);
-            toast({ title: "Session Error", description: "Could not initialize support. Please try again.", variant: "destructive" });
-        } finally {
-            setIsCreating(false);
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (u) => {
             if (u) {
                 setUser(u);
                 try {
-                    // Check for existing waiting or open chats
                     const q = query(
                         collection(db, 'chats'), 
                         where('userId', '==', u.uid), 
@@ -110,17 +75,13 @@ export default function SupportPage() {
                     const snap = await getDocs(q);
                     if (!snap.empty) {
                         setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
-                        setLoading(false);
-                    } else {
-                        await startNewChat(u);
+                        setShowStartScreen(false);
                     }
                 } catch (err) {
-                    console.error("Auth session check error:", err);
-                    setLoading(false);
+                    console.error("Session check error:", err);
                 }
-            } else {
-                setLoading(false);
             }
+            setLoading(false);
             hideLoader();
         });
         return () => unsub();
@@ -138,6 +99,38 @@ export default function SupportPage() {
         return () => { unsubMsgs(); unsubChat(); };
     }, [currentChat?.id]);
 
+    const startNewChat = async () => {
+        if (!user) return;
+        setIsCreating(true);
+        const chatId = Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
+        
+        let userName = user.displayName || 'Player';
+        try {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) userName = userDoc.data().username || userName;
+        } catch (e) {}
+
+        const chatData = {
+            id: chatId,
+            userId: user.uid,
+            userName: userName,
+            assignedAdmin: null,
+            status: 'waiting',
+            lastMessageTime: serverTimestamp(),
+            createdAt: serverTimestamp(),
+        };
+
+        try {
+            await setDoc(doc(db, 'chats', chatId), chatData);
+            setCurrentChat(chatData as ChatSession);
+            setShowStartScreen(false);
+        } catch (error: any) {
+            toast({ title: "Error", description: "Failed to start chat. Check permissions.", variant: "destructive" });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!inputText.trim() || !currentChat || !user) return;
@@ -152,14 +145,14 @@ export default function SupportPage() {
             });
             await updateDoc(doc(db, 'chats', currentChat.id), { lastMessageTime: serverTimestamp() });
         } catch (err) {
-            toast({ title: "Send Failed", description: "Could not send message. Please refresh.", variant: "destructive" });
+            toast({ title: "Error", description: "Message not sent.", variant: "destructive" });
         }
     };
 
-    if (loading || isCreating) return (
+    if (loading) return (
         <div className="h-[calc(100vh-10rem)] flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <p className="text-muted-foreground animate-pulse font-medium">Initializing Secure Connection...</p>
+            <p className="text-muted-foreground font-medium">Loading Support...</p>
         </div>
     );
 
@@ -167,7 +160,48 @@ export default function SupportPage() {
         <div className="container mx-auto px-4 py-12 text-center">
             <BadgeInfo className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-2xl font-bold">Authentication Required</h2>
-            <p className="text-muted-foreground mt-2">Please login to access live support features.</p>
+            <p className="text-muted-foreground mt-2">Please login to access live support.</p>
+        </div>
+    );
+
+    if (showStartScreen) return (
+        <div className="container mx-auto px-4 py-12 max-w-lg">
+            <Card className="border-primary/20 shadow-xl overflow-hidden">
+                <div className="bg-primary h-2 w-full" />
+                <CardHeader className="text-center pb-8">
+                    <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                        <MessageCircle className="h-8 w-8 text-primary" />
+                    </div>
+                    <CardTitle className="text-2xl font-bold">Live Support</CardTitle>
+                    <CardDescription>Our team is available 24/7 to help you with tournament issues, payments, or account queries.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                            <ShieldCheck className="h-5 w-5 text-green-500" />
+                            <span className="text-sm">End-to-end encrypted messaging</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                            <BadgeInfo className="h-5 w-5 text-primary" />
+                            <span className="text-sm">Average response time: 5 minutes</span>
+                        </div>
+                    </div>
+                    <Button 
+                        onClick={startNewChat} 
+                        disabled={isCreating} 
+                        className="w-full py-6 text-lg font-bold"
+                    >
+                        {isCreating ? (
+                            <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Connecting...</>
+                        ) : (
+                            <><MessageSquarePlus className="mr-2 h-5 w-5" /> Start New Chat</>
+                        )}
+                    </Button>
+                </CardContent>
+                <CardFooter className="bg-secondary/20 p-4 justify-center">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">FireLeagues Secure Assist</p>
+                </CardFooter>
+            </Card>
         </div>
     );
 
@@ -178,14 +212,13 @@ export default function SupportPage() {
                     <CardHeader className="bg-primary text-primary-foreground p-5 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-lg">Session: {currentChat.id}</CardTitle>
-                            {currentChat.status === 'waiting' && (
+                            {currentChat.status === 'waiting' ? (
                                 <div className="flex items-center gap-2 mt-1">
                                     <div className="h-2 w-2 rounded-full bg-white animate-ping" />
                                     <span className="text-xs font-medium opacity-90">Searching for staff...</span>
                                 </div>
-                            )}
-                            {currentChat.status === 'open' && (
-                                <Badge variant="secondary" className="mt-1 bg-white/20 text-white border-transparent">Active Session</Badge>
+                            ) : (
+                                <Badge variant="secondary" className="mt-1 bg-white/20 text-white border-transparent">Support Active</Badge>
                             )}
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => updateDoc(doc(db, 'chats', currentChat.id), { status: 'closed' })}>
@@ -213,7 +246,7 @@ export default function SupportPage() {
                     <CardFooter className="p-4 border-t bg-background">
                         <form onSubmit={sendMessage} className="flex w-full gap-2">
                             <Input 
-                                placeholder={currentChat.status === 'closed' ? "Session ended" : "Type your message..."} 
+                                placeholder="Type your message..." 
                                 value={inputText} 
                                 onChange={e => setInputText(e.target.value)} 
                                 disabled={currentChat.status === 'closed'}
