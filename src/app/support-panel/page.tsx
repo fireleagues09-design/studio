@@ -304,10 +304,16 @@ export default function SupportPanel() {
                         Close Case
                     </Button>
                 ) : (
-                    <Button variant="outline" size="sm" onClick={reopenChat} className="h-8 text-primary border-primary/20 hover:bg-primary/10 text-xs">
-                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                        Reopen
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-bold gap-1 text-muted-foreground">
+                            <History className="h-3 w-3" />
+                            History Mode
+                        </Badge>
+                        <Button variant="outline" size="sm" onClick={reopenChat} className="h-8 text-primary border-primary/20 hover:bg-primary/10 text-xs font-bold">
+                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                            Reopen
+                        </Button>
+                    </div>
                 )}
               </div>
             </div>
@@ -317,13 +323,15 @@ export default function SupportPanel() {
               className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5"
             >
               {messages.map((m, idx) => {
-                  const isMe = m.senderType === 'admin';
+                  const isAgent = m.senderType === 'admin';
                   return (
-                    <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
-                        <div className={cn("flex flex-col max-w-[80%]", isMe ? "items-end" : "items-start")}>
+                    <div key={m.id} className={cn("flex w-full", isAgent ? "justify-start" : "justify-end")}>
+                        <div className={cn("flex flex-col max-w-[80%]", isAgent ? "items-start" : "items-end")}>
                             <div className={cn(
                                 "px-4 py-2 rounded-2xl text-sm shadow-sm",
-                                isMe ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-card border text-foreground rounded-tl-none"
+                                isAgent 
+                                    ? "bg-card border text-foreground rounded-tl-none" 
+                                    : "bg-primary text-primary-foreground rounded-tr-none"
                             )}>
                                 <p className="whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                             </div>
