@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -9,21 +8,25 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, Clock, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [chatId, setChatId] = useState<string | null>(null);
+    const [activeChat, setActiveChat] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
+    const [historyChats, setHistoryChats] = useState<any[]>([]);
     const [text, setText] = useState("");
     const [isMounted, setIsMounted] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const [view, setView] = useState<'chat' | 'home' | 'history'>('home');
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const { hideLoader } = useLoading();
@@ -41,53 +44,46 @@ export default function SupportPage() {
     useEffect(() => {
         if (!user || !isMounted) return;
 
-        const initChat = async () => {
+        const syncIdentityAndFetchData = async () => {
             try {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                const userData = userDoc.exists() ? userDoc.data() : null;
-                
-                // Prioritize Real Name from profile over Google Display Name
-                const realName = userData?.realName || user.displayName || "No Name Provided";
-                const gamingHandle = userData?.username || null;
-
-                const q = query(
+                // 1. Fetch Active Chat
+                const qActive = query(
                     collection(db, "chats"),
                     where("userId", "==", user.uid),
                     where("status", "in", ["waiting", "open"]),
                     orderBy("createdAt", "desc"),
                     limit(1)
                 );
-
-                const snap = await getDocs(q);
-
-                const chatMetadata = {
-                    playerDisplayName: realName,
-                    userHandle: gamingHandle,
-                    playerPhotoURL: user.photoURL || null,
-                    lastMessageTime: serverTimestamp()
-                };
-
-                if (!snap.empty) {
-                    const existingChatId = snap.docs[0].id;
-                    setChatId(existingChatId);
-                    await updateDoc(doc(db, "chats", existingChatId), chatMetadata);
+                const activeSnap = await getDocs(qActive);
+                
+                if (!activeSnap.empty) {
+                    const docData = activeSnap.docs[0].data();
+                    setChatId(activeSnap.docs[0].id);
+                    setActiveChat({ id: activeSnap.docs[0].id, ...docData });
+                    setView('chat');
                 } else {
-                    const docRef = await addDoc(collection(db, "chats"), {
-                        ...chatMetadata,
-                        userId: user.uid,
-                        status: "waiting",
-                        createdAt: serverTimestamp(),
-                    });
-                    setChatId(docRef.id);
+                    setView('home');
                 }
+
+                // 2. Fetch History
+                const qHistory = query(
+                    collection(db, "chats"),
+                    where("userId", "==", user.uid),
+                    where("status", "==", "closed"),
+                    orderBy("createdAt", "desc"),
+                    limit(10)
+                );
+                const historySnap = await getDocs(qHistory);
+                setHistoryChats(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
             } catch (err) {
-                console.error("Chat init error:", err);
+                console.error("Support init error:", err);
             } finally {
                 hideLoader();
             }
         };
 
-        initChat();
+        syncIdentityAndFetchData();
     }, [user, isMounted, hideLoader]);
 
     useEffect(() => {
@@ -103,12 +99,74 @@ export default function SupportPage() {
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         });
 
-        return () => unsub();
-    }, [chatId]);
+        // Listen to chat session updates (status changes)
+        const unsubChat = onSnapshot(doc(db, "chats", chatId), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                setActiveChat({ id: snap.id, ...data });
+                if (data.status === 'closed' && view === 'chat') {
+                    // Refresh history if closed
+                    syncHistory();
+                }
+            }
+        });
+
+        return () => {
+            unsub();
+            unsubChat();
+        };
+    }, [chatId, view]);
+
+    const syncHistory = async () => {
+        if (!user) return;
+        const qHistory = query(
+            collection(db, "chats"),
+            where("userId", "==", user.uid),
+            where("status", "==", "closed"),
+            orderBy("createdAt", "desc"),
+            limit(10)
+        );
+        const historySnap = await getDocs(qHistory);
+        setHistoryChats(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    };
+
+    const startNewChat = async () => {
+        if (!user) return;
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.exists() ? userDoc.data() : null;
+            
+            const realName = userData?.realName || user.displayName || "No Name Provided";
+            const gamingHandle = userData?.username || null;
+
+            const docRef = await addDoc(collection(db, "chats"), {
+                playerDisplayName: realName,
+                userHandle: gamingHandle,
+                playerPhotoURL: user.photoURL || null,
+                userId: user.uid,
+                status: "waiting",
+                createdAt: serverTimestamp(),
+                lastMessageTime: serverTimestamp()
+            });
+            
+            setChatId(docRef.id);
+            setView('chat');
+        } catch (err) {
+            console.error("Create chat error:", err);
+            toast({ title: "Error", description: "Failed to start new chat.", variant: "destructive" });
+        }
+    };
+
+    const selectHistoryChat = (id: string) => {
+        setChatId(id);
+        const chat = historyChats.find(c => c.id === id);
+        setActiveChat(chat);
+        setView('chat');
+    };
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!text.trim() || !chatId || !user || isSending) return;
+        if (!text.trim() || !chatId || !user || isSending || activeChat?.status === 'closed') return;
 
         const messageText = text.trim();
         setText("");
@@ -146,12 +204,61 @@ export default function SupportPage() {
         );
     }
 
+    // HOME VIEW: List history and show "Start New" button
+    if (view === 'home') {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-2xl space-y-8">
+                <div className="text-center space-y-4">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Headset className="h-10 w-10 text-primary" />
+                    </div>
+                    <h1 className="text-3xl font-bold">How can we help?</h1>
+                    <p className="text-muted-foreground">Our support agents are online and ready to assist you with any tournament or wallet issues.</p>
+                    <Button size="lg" className="rounded-full font-bold px-8 shadow-lg shadow-primary/20" onClick={startNewChat}>
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Start New Conversation
+                    </Button>
+                </div>
+
+                {historyChats.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            Recent Support Sessions
+                        </h3>
+                        <div className="grid gap-3">
+                            {historyChats.map((c) => (
+                                <Card key={c.id} className="cursor-pointer hover:border-primary/50 transition-all active:scale-[0.98]" onClick={() => selectHistoryChat(c.id)}>
+                                    <CardContent className="p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-secondary rounded-lg">
+                                                <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm">Session #{c.id.substring(0, 8)}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {c.createdAt ? format(c.createdAt.toDate(), 'PPp') : 'Unknown date'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Badge variant="secondary">Closed</Badge>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // CHAT VIEW
     return (
         <div className="container mx-auto px-2 md:px-4 py-4 max-w-4xl h-[calc(100vh-5rem)] flex flex-col">
             <header className="flex items-center justify-between mb-4 px-2">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" asChild className="md:hidden">
-                        <Link href="/"><ArrowLeft className="h-5 w-5" /></Link>
+                    <Button variant="ghost" size="icon" onClick={() => setView('home')}>
+                        <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
                         <h1 className="text-xl font-bold flex items-center gap-2">
@@ -162,8 +269,10 @@ export default function SupportPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2 bg-secondary/50 px-3 py-1 rounded-full border border-border/50">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Agent Online</span>
+                    <div className={cn("h-2 w-2 rounded-full", activeChat?.status === 'closed' ? "bg-muted-foreground" : "bg-green-500 animate-pulse")} />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        {activeChat?.status === 'closed' ? 'Closed' : 'Agent Online'}
+                    </span>
                 </div>
             </header>
 
@@ -180,7 +289,7 @@ export default function SupportPage() {
                     </div>
                 ) : (
                     messages.map((m) => {
-                        const isMe = m.senderType === 'player';
+                        const isMe = m.senderId === user.uid;
                         return (
                             <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
                                 <div className={cn("flex flex-col max-w-[85%] md:max-w-[75%]", isMe ? "items-end" : "items-start")}>
@@ -209,24 +318,36 @@ export default function SupportPage() {
                 <div ref={scrollRef} />
             </div>
 
-            <form onSubmit={sendMessage} className="flex mt-4 gap-2 items-center">
-                <div className="relative flex-1">
-                    <Input
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="w-full border-2 rounded-full px-5 py-6 bg-background focus:ring-2 focus:ring-primary focus:outline-none text-base shadow-lg"
-                        placeholder="Describe your issue..."
-                        autoComplete="off"
-                    />
+            {activeChat?.status !== 'closed' ? (
+                <form onSubmit={sendMessage} className="flex mt-4 gap-2 items-center">
+                    <div className="relative flex-1">
+                        <Input
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            className="w-full border-2 rounded-full px-5 py-6 bg-background focus:ring-2 focus:ring-primary focus:outline-none text-base shadow-lg"
+                            placeholder="Describe your issue..."
+                            autoComplete="off"
+                        />
+                    </div>
+                    <Button 
+                        type="submit" 
+                        disabled={!text.trim() || isSending}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground w-12 h-12 md:w-14 md:h-14 rounded-full shadow-xl transition-all active:scale-90 disabled:opacity-50 flex items-center justify-center p-0"
+                    >
+                        {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6" />}
+                    </Button>
+                </form>
+            ) : (
+                <div className="mt-6 p-4 bg-secondary/30 rounded-xl text-center border-dashed border-2 border-muted-foreground/20">
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        This conversation is archived.
+                    </p>
+                    <Button variant="link" size="sm" onClick={() => setView('home')} className="mt-1">
+                        Back to Home
+                    </Button>
                 </div>
-                <Button 
-                    type="submit" 
-                    disabled={!text.trim() || isSending}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-12 h-12 md:w-14 md:h-14 rounded-full shadow-xl transition-all active:scale-90 disabled:opacity-50 flex items-center justify-center p-0"
-                >
-                    {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6" />}
-                </Button>
-            </form>
+            )}
         </div>
     );
 }
