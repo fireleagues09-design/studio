@@ -46,6 +46,7 @@ type ChatSession = {
 };
 
 export default function SupportPage() {
+    const [hasMounted, setHasMounted] = useState(false);
     const [user, setUser] = useState<FirebaseUser | null>(null);
     const [chatId, setChatId] = useState<string | null>(null);
     const [currentChat, setCurrentChat] = useState<ChatSession | null>(null);
@@ -57,8 +58,14 @@ export default function SupportPage() {
     const { toast } = useToast();
     const { hideLoader } = useLoading();
 
+    // 0. Hydration Guard
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
     // 1. Auth Observer
     useEffect(() => {
+        if (!hasMounted) return;
         const unsub = onAuthStateChanged(auth, (u) => {
             setUser(u);
             if (!u) {
@@ -67,11 +74,11 @@ export default function SupportPage() {
             }
         });
         return () => unsub();
-    }, [hideLoader]);
+    }, [hasMounted, hideLoader]);
 
     // 2. Get or Create Chat
     useEffect(() => {
-        if (!user) return;
+        if (!hasMounted || !user) return;
 
         const getOrCreateChat = async () => {
             try {
@@ -110,11 +117,11 @@ export default function SupportPage() {
         };
 
         getOrCreateChat();
-    }, [user, hideLoader, toast]);
+    }, [hasMounted, user, hideLoader, toast]);
 
     // 3. Listen to Messages & Session Updates
     useEffect(() => {
-        if (!chatId) return;
+        if (!hasMounted || !chatId) return;
 
         const unsubMsgs = onSnapshot(
             query(collection(db, `chats/${chatId}/messages`), orderBy("createdAt", "asc")), 
@@ -137,7 +144,7 @@ export default function SupportPage() {
         });
 
         return () => { unsubMsgs(); unsubChat(); };
-    }, [chatId]);
+    }, [hasMounted, chatId]);
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -161,6 +168,8 @@ export default function SupportPage() {
             toast({ title: "Error", description: "Message not sent.", variant: "destructive" });
         }
     };
+
+    if (!hasMounted) return null;
 
     if (loading) return (
         <div className="h-[calc(100vh-10rem)] flex flex-col items-center justify-center space-y-4">
