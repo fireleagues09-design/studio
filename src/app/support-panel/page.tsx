@@ -11,7 +11,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Clock, Trash2 } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Clock, Trash2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -103,7 +103,6 @@ export default function SupportPanel() {
     return () => unsub();
   }, [selectedChat]);
 
-  // Auto-scroll chat to bottom without scrolling the entire page
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
@@ -147,6 +146,22 @@ export default function SupportPanel() {
       setSelectedChat(null);
   };
 
+  const reopenChat = async () => {
+      if (!selectedChat || !user) return;
+      try {
+          await updateDoc(doc(db, 'chats', selectedChat.id), { 
+              status: 'open',
+              assignedAdmin: user.uid,
+              lastMessageTime: serverTimestamp()
+          });
+          setActiveTab('active');
+          toast({ title: "Success", description: "Chat session has been reopened." });
+      } catch (err) {
+          console.error("Reopen error:", err);
+          toast({ title: "Error", description: "Failed to reopen chat.", variant: "destructive" });
+      }
+  };
+
   const handleDeleteChat = async () => {
     if (!chatToDelete) return;
     try {
@@ -184,7 +199,6 @@ export default function SupportPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Sidebar: Chat Queue */}
       <div className={cn(
           "w-full md:w-80 border-r flex flex-col bg-muted/5 transition-all duration-300",
           selectedChat ? "hidden md:flex" : "flex"
@@ -273,7 +287,6 @@ export default function SupportPanel() {
         </div>
       </div>
 
-      {/* Main Chat Workspace */}
       <div className={cn(
           "flex-1 flex flex-col bg-background transition-all duration-300",
           !selectedChat ? "hidden md:flex" : "flex"
@@ -315,6 +328,15 @@ export default function SupportPanel() {
                 </Button>
               ) : (
                 <div className="flex items-center gap-2">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="font-bold gap-1 text-primary hover:bg-primary/10 border-primary/20"
+                        onClick={reopenChat}
+                    >
+                        <RotateCcw className="h-3 w-3" />
+                        Reopen Session
+                    </Button>
                     <Badge variant="outline" className="font-bold gap-1 text-muted-foreground">
                         <History className="h-3 w-3" />
                         History Mode
