@@ -98,9 +98,15 @@ export default function SupportPage() {
         try {
             await setDoc(doc(db, 'chats', chatId), chatData);
             setCurrentChat(chatData);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create chat:", error);
-            toast({ title: "Error", description: "Could not start chat. Please check your connection.", variant: "destructive" });
+            toast({ 
+                title: "Error", 
+                description: error.code === 'permission-denied' 
+                    ? "Permission denied. Please try logging out and in again."
+                    : "Could not start chat. Please check your connection.", 
+                variant: "destructive" 
+            });
         } finally {
             setIsCreating(false);
             setLoading(false);
@@ -126,8 +132,12 @@ export default function SupportPage() {
                     } else {
                         await startNewChat(u);
                     }
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Error checking existing chats:", e);
+                    // If permissions error, don't just hang
+                    if (e.code === 'permission-denied') {
+                        toast({ title: "Access Denied", description: "You don't have permission to access support. Please contact admin.", variant: "destructive" });
+                    }
                     setLoading(false);
                 }
             } else {
@@ -145,6 +155,8 @@ export default function SupportPage() {
             const msgs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
             setMessages(msgs);
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }, (error) => {
+            console.error("Messages snapshot error:", error);
         });
         
         const unsubChat = onSnapshot(doc(db, 'chats', currentChat.id), (docSnap) => {

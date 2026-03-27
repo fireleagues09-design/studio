@@ -11,20 +11,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Fetch user data directly to avoid circular dependency in rules
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
+    // Safer role checks to avoid recursion and errors on missing fields
     function isAdmin() {
-      let path = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isUserAuthenticated() && exists(path) && get(path).data.isAdmin == true;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isUserAuthenticated() && 
+             exists(userPath) && 
+             get(userPath).data.get('isAdmin', false) == true;
     }
 
     function isEmployee() {
-      let path = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isUserAuthenticated() && exists(path) && 
-             (get(path).data.isEmployee == true || get(path).data.isEmployee == 1);
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isUserAuthenticated() && 
+             exists(userPath) && 
+             (get(userPath).data.get('isEmployee', false) == true || get(userPath).data.get('isEmployee', 0) == 1);
     }
 
     // ======================
@@ -32,6 +31,7 @@ service cloud.firestore {
     // ======================
     match /users/{userId} {
       // Owners can always get their own data. Admins/Employees can see all.
+      // We check userId match FIRST to prevent isAdmin() recursion.
       allow get: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin() || isEmployee());
       allow list: if isAdmin() || isEmployee();
       allow create: if isUserAuthenticated() && request.auth.uid == userId;
@@ -52,30 +52,29 @@ service cloud.firestore {
       // Player creates their own chat
       allow create: if isUserAuthenticated() && request.resource.data.createdBy == request.auth.uid;
       
-      // Players can read their own. Admins can read all to see the queue.
-      allow read: if isUserAuthenticated() && (
+      // Players can read/list their own. Admins can read all.
+      allow read, list: if isUserAuthenticated() && (
         request.auth.uid == resource.data.createdBy || 
-        request.auth.uid == resource.data.assignedAdmin ||
+        request.auth.uid == resource.data.get('assignedAdmin', null) ||
         isAdmin()
       );
       
       // Players can update status (close) or lastMessageTime. Admins handle assignments.
       allow update: if isUserAuthenticated() && (
         request.auth.uid == resource.data.createdBy || 
-        request.auth.uid == resource.data.assignedAdmin ||
+        request.auth.uid == resource.data.get('assignedAdmin', null) ||
         isAdmin()
       );
 
       allow delete: if isAdmin();
     }
 
-    // Messages Root Collection (Secured)
-    // Structure: /messages/{chatId}/chat/{msgId}
+    // Messages Root Collection
     match /messages/{chatId}/chat/{msgId} {
       allow read, write: if isUserAuthenticated() && (
         isAdmin() ||
         get(/databases/$(database)/documents/chats/$(chatId)).data.createdBy == request.auth.uid ||
-        get(/databases/$(database)/documents/chats/$(chatId)).data.assignedAdmin == request.auth.uid
+        get(/databases/$(database)/documents/chats/$(chatId)).data.get('assignedAdmin', null) == request.auth.uid
       );
     }
 
