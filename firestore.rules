@@ -9,7 +9,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Direct check for admin/employee flags to avoid recursion in rules
+    // Fetch user data from the 'users' collection
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -40,17 +40,24 @@ service cloud.firestore {
 
     // Rules for Chat Support
     match /chats/{chatId} {
-      // Players can read/write their own chats. Admins can read all.
+      // Players can read/list their own chats. Admins can access all.
+      // 'read' covers both 'get' (single doc) and 'list' (queries)
       allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isUserAuthenticated();
+      
+      // Players can create a chat where they are the owner
+      allow create: if isUserAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only the owner or an admin can update the chat (e.g. status, last activity)
       allow update: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow list: if isAdmin();
 
       match /messages/{messageId} {
-        // Only allow reading messages if user owns the chat or is an admin
-        allow read: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
-        // Only allow sending messages if user is part of the chat or is an admin
-        allow create: if isUserAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid || isAdmin());
+        // Helper to check chat ownership via the parent document
+        function isChatParticipant() {
+          return get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        }
+        
+        allow read: if isUserAuthenticated() && (isChatParticipant() || isAdmin());
+        allow create: if isUserAuthenticated() && (isChatParticipant() || isAdmin());
       }
     }
 
@@ -70,10 +77,10 @@ service cloud.firestore {
 
     // Rules for the 'transactions' collection
     match /transactions/{transactionId} {
-      allow list: if request.auth.uid != null;
-      allow read: if resource.data.userId == request.auth.uid || isAdmin();
+      allow list: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow update: if isAdmin();
-      allow create: if request.auth.uid == request.resource.data.userId;
+      allow create: if isUserAuthenticated() && request.auth.uid == request.resource.data.userId;
       allow delete: if false;
     }
     
