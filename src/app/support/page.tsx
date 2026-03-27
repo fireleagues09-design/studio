@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
