@@ -125,10 +125,10 @@ export default function SupportPage() {
             return (
               <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm md:text-base leading-relaxed ${
+                  className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm md:text-base leading-relaxed text-white ${
                     isMe
-                      ? "bg-primary text-primary-foreground rounded-br-none shadow-md"
-                      : "bg-secondary text-secondary-foreground rounded-tl-none shadow-sm"
+                      ? "bg-orange-500 rounded-br-none shadow-md"
+                      : "bg-gray-700 rounded-tl-none shadow-sm"
                   }`}
                 >
                   {!isMe && <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Support Agent</div>}
@@ -151,7 +151,7 @@ export default function SupportPage() {
         <button 
           type="submit" 
           disabled={!text.trim()}
-          className="bg-primary text-primary-foreground px-6 rounded-full font-bold h-11 md:h-12 transition-transform active:scale-95 disabled:opacity-50"
+          className="bg-orange-500 text-white px-6 rounded-full font-bold h-11 md:h-12 transition-transform active:scale-95 disabled:opacity-50"
         >
           Send
         </button>
