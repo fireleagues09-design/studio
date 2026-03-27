@@ -42,10 +42,10 @@ export default function SupportPage() {
 
         const initChat = async () => {
             try {
-                // Fetch the custom username created by the player
+                // Explicitly fetch the official FireLeagues username
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
-                const playerHandle = userData?.username || user.displayName || user.email?.split('@')[0] || "Player";
+                const fireleaguesHandle = userData?.username || user.displayName || "Player";
 
                 const q = query(
                     collection(db, "chats"),
@@ -60,12 +60,12 @@ export default function SupportPage() {
                 if (!snap.empty) {
                     const existingChatId = snap.docs[0].id;
                     setChatId(existingChatId);
-                    // Sync the username in the chat document in case it changed
-                    await updateDoc(doc(db, "chats", existingChatId), { userName: playerHandle });
+                    // Sync the FireLeagues username in case it was updated
+                    await updateDoc(doc(db, "chats", existingChatId), { userName: fireleaguesHandle });
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {
                         userId: user.uid,
-                        userName: playerHandle, // Store the custom handle
+                        userName: fireleaguesHandle,
                         status: "waiting",
                         createdAt: serverTimestamp(),
                         lastMessageTime: serverTimestamp(),
@@ -108,7 +108,7 @@ export default function SupportPage() {
 
         try {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(messageText), // E2E Security
+                text: encryptMessage(messageText), // Secure XOR Encryption
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
@@ -188,7 +188,7 @@ export default function SupportPage() {
                                         <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                                     </div>
                                     <span className="text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60">
-                                        {isMe ? 'You' : 'Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
+                                        {isMe ? 'You' : 'Support Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                     </span>
                                 </div>
                             </div>

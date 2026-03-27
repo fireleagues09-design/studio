@@ -24,6 +24,7 @@ export default function SupportPanel() {
   const [text, setText] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const { hideLoader } = useLoading();
@@ -37,6 +38,7 @@ export default function SupportPanel() {
         const data = userDoc.data();
         if (data?.isAdmin || data?.isSupport || data?.isEmployee) {
           setUser(u);
+          setIsAuthorized(true);
         } else {
           router.push("/");
         }
@@ -49,7 +51,7 @@ export default function SupportPanel() {
   }, [hideLoader, router]);
 
   useEffect(() => {
-    if (!user || !isMounted) return;
+    if (!isAuthorized || !isMounted) return;
 
     const q = query(
       collection(db, "chats"),
@@ -62,7 +64,7 @@ export default function SupportPanel() {
     });
 
     return () => unsub();
-  }, [user, isMounted]);
+  }, [isAuthorized, isMounted]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -93,7 +95,7 @@ export default function SupportPanel() {
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: encryptMessage(msgText), // E2E Security
+        text: encryptMessage(msgText), // Secure XOR Encryption
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -117,7 +119,7 @@ export default function SupportPanel() {
       setSelectedChat(null);
   };
 
-  if (!isMounted || !user) return null;
+  if (!isMounted || !isAuthorized) return null;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
@@ -167,7 +169,7 @@ export default function SupportPanel() {
                                 "h-1.5 w-1.5 rounded-full",
                                 c.status === 'open' ? "bg-green-500" : "bg-amber-500"
                             )} />
-                            {c.status === 'open' ? 'Active Chat' : 'Waiting...'}
+                            {c.status === 'open' ? 'Active Session' : 'Waiting...'}
                         </div>
                     </div>
                 </div>
@@ -194,7 +196,7 @@ export default function SupportPanel() {
                         {selectedChat.userName}
                         <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                     </div>
-                    <p className="text-[10px] text-primary font-mono">Handle: @{selectedChat.userName?.toLowerCase().replace(/\s/g, '')}</p>
+                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userName?.toLowerCase().replace(/\s/g, '')}</p>
                 </div>
               </div>
               <Button 
