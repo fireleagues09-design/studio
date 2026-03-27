@@ -25,7 +25,7 @@ import {
     type User
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { EyeOff, Eye, Loader2 } from "lucide-react";
+import { EyeOff, Eye, Loader2, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import {
@@ -230,8 +230,11 @@ export default function RegisterPage() {
               </div>
             </div>
             
-            <div className="text-center text-sm text-muted-foreground p-4 bg-secondary rounded-md border">
-              Email registration will be available when we launch our website officially from its testing phase.
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-lg border border-border/50 text-center">
+              <Info className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">
+                Email Registration / Login will be available soon
+              </p>
             </div>
           
           <div className="mt-4 text-center text-sm">
@@ -245,5 +248,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    

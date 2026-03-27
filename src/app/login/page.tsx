@@ -26,7 +26,7 @@ import {
     type User
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import {
@@ -300,38 +300,12 @@ export default function LoginPage() {
               </div>
             </div>
 
-           <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading}/>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pr-10"
-                disabled={loading}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </Button>
+            <div className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-lg border border-border/50 text-center">
+              <Info className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">
+                Email Registration / Login will be available soon
+              </p>
             </div>
-          </div>
-          
-          <Button onClick={handleEmailLogin} className="w-full mt-2" disabled={loading}>
-            {loading ? 'Signing In...' : 'Sign In'}
-          </Button>
 
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{" "}
@@ -344,5 +318,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
