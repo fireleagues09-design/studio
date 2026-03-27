@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useLoading } from '@/context/LoadingContext';
 
 type Message = {
     id: string;
@@ -57,11 +58,13 @@ export default function AdminSupportPanel() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [isUploading, setIsUploading] = useState(false);
+    const [authLoading, setAuthLoading] = useState(true);
     
     const scrollRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const router = useRouter();
+    const { hideLoader } = useLoading();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
@@ -76,9 +79,16 @@ export default function AdminSupportPanel() {
             } else {
                 router.push('/login');
             }
+            setAuthLoading(false);
         });
         return () => unsubscribeAuth();
     }, [router]);
+
+    useEffect(() => {
+        if (!authLoading) {
+            hideLoader();
+        }
+    }, [authLoading, hideLoader]);
 
     useEffect(() => {
         if (!isAdmin) return;
@@ -217,6 +227,7 @@ export default function AdminSupportPanel() {
         setSelectedChat(null);
     };
 
+    if (authLoading) return null;
     if (!isAdmin) return null;
 
     return (
