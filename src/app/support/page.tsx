@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -66,7 +67,6 @@ export default function SupportPage() {
     const { toast } = useToast();
     const { hideLoader } = useLoading();
 
-    // 14-digit Chat ID generator
     const generateChatId = () => {
         return Math.floor(10000000000000 + Math.random() * 90000000000000).toString();
     };
@@ -75,7 +75,6 @@ export default function SupportPage() {
         setIsCreating(true);
         const chatId = generateChatId();
         
-        // Fetch username from Firestore to ensure we have it
         let userName = currentUser.displayName || 'Player';
         try {
             const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
@@ -101,7 +100,7 @@ export default function SupportPage() {
             setCurrentChat(chatData);
         } catch (error) {
             console.error("Failed to create chat:", error);
-            toast({ title: "Error", description: "Could not start chat. Try again.", variant: "destructive" });
+            toast({ title: "Error", description: "Could not start chat. Please check your connection.", variant: "destructive" });
         } finally {
             setIsCreating(false);
             setLoading(false);
@@ -125,7 +124,6 @@ export default function SupportPage() {
                         setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
                         setLoading(false);
                     } else {
-                        // AUTO START CHAT IF NONE EXISTS
                         await startNewChat(u);
                     }
                 } catch (e) {
@@ -165,7 +163,6 @@ export default function SupportPage() {
         };
     }, [currentChat?.id, toast]);
 
-    // Client-side auto-close logic (5 min inactivity)
     useEffect(() => {
         if (!currentChat || currentChat.status === 'closed') return;
         
