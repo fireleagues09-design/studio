@@ -102,6 +102,7 @@ export default function SupportPage() {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
                 text: messageText,
                 senderId: user.uid,
+                senderType: 'player',
                 createdAt: serverTimestamp(),
             });
 
@@ -134,7 +135,7 @@ export default function SupportPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Support Active</span>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Online</span>
                 </div>
             </header>
 
@@ -142,21 +143,23 @@ export default function SupportPage() {
                 {messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-40 text-center space-y-2">
                         <Headset className="h-12 w-12" />
-                        <p className="italic text-sm">Connecting to Support...</p>
+                        <p className="italic text-sm">Waiting for messages...</p>
                     </div>
                 ) : (
                     messages.map((m) => {
-                        const isMe = m.senderId === user.uid;
+                        const isMe = m.senderType === 'player';
                         return (
-                            <div key={m.id} className="flex w-full justify-start">
-                                <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start">
+                            <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
+                                <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", isMe ? "items-end" : "items-start")}>
                                     <div className={cn(
-                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm text-white rounded-tl-none",
-                                        isMe ? "bg-orange-500" : "bg-gray-700"
+                                        "px-4 py-2.5 rounded-2xl text-sm md:text-base shadow-sm text-white",
+                                        isMe ? "bg-orange-500 rounded-br-none" : "bg-gray-700 rounded-bl-none"
                                     )}>
-                                        <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
-                                            {isMe ? 'You' : 'Support Agent'}
-                                        </div>
+                                        {!isMe && (
+                                            <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
+                                                Support Agent
+                                            </div>
+                                        )}
                                         {m.text}
                                     </div>
                                     <span className="text-[10px] text-muted-foreground mt-1 px-1 opacity-60">

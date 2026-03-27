@@ -96,6 +96,7 @@ export default function SupportPanel() {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
         text: msgText,
         senderId: user.uid,
+        senderType: 'admin',
         createdAt: serverTimestamp(),
       });
 
@@ -207,13 +208,13 @@ export default function SupportPanel() {
                   </div>
               )}
               {messages.map((m) => {
-                const isMe = m.senderId === user?.uid;
+                const isMe = m.senderType === 'admin';
                 return (
-                  <div key={m.id} className="flex w-full justify-start">
+                  <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
                     <div className="flex flex-col max-w-[85%] md:max-w-[70%] items-start">
                         <div className={cn(
-                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm text-white rounded-tl-none",
-                            isMe ? "bg-green-600" : "bg-gray-700"
+                            "px-4 py-2.5 rounded-2xl text-sm shadow-sm text-white",
+                            isMe ? "bg-green-600 rounded-br-none" : "bg-gray-700 rounded-bl-none"
                         )}>
                             <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
                                 {isMe ? 'You' : 'Player'}
