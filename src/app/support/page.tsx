@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -14,8 +13,7 @@ import {
     serverTimestamp, 
     updateDoc,
     limit,
-    getDocs,
-    getDoc
+    getDocs
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -187,60 +185,74 @@ export default function SupportPage() {
     );
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-2xl h-[calc(100vh-10rem)]">
-            <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl">
-                <CardHeader className="bg-primary text-primary-foreground p-5 flex flex-row items-center justify-between">
+        <div className="container mx-auto px-4 py-6 max-w-4xl h-[calc(100vh-8rem)]">
+            <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl bg-card/50 backdrop-blur-sm">
+                <CardHeader className="bg-primary text-primary-foreground p-6 flex flex-row items-center justify-between shrink-0">
                     <div>
-                        <CardTitle className="text-lg">Live Support</CardTitle>
+                        <CardTitle className="text-xl md:text-2xl">Live Support</CardTitle>
                         {currentChat?.status === 'waiting' ? (
                             <div className="flex items-center gap-2 mt-1">
-                                <div className="h-2 w-2 rounded-full bg-white animate-ping" />
+                                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
                                 <span className="text-xs font-medium opacity-90">Searching for staff...</span>
                             </div>
                         ) : (
-                            <Badge variant="secondary" className="mt-1 bg-white/20 text-white border-transparent">Support Active</Badge>
+                            <Badge variant="secondary" className="mt-1 bg-white/20 text-white border-transparent backdrop-blur-md">Support Active</Badge>
                         )}
                     </div>
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="text-white hover:bg-white/20"
+                        className="text-white hover:bg-white/20 rounded-full"
                         onClick={() => chatId && updateDoc(doc(db, 'chats', chatId), { status: 'closed' })}
                     >
-                        <XCircle className="h-6 w-6" />
+                        <XCircle className="h-7 w-7" />
                     </Button>
                 </CardHeader>
-                <CardContent className="flex-1 p-4 bg-secondary/5 overflow-hidden">
-                    <ScrollArea className="h-full">
-                        <div className="space-y-4 pr-4">
-                            {messages.map(m => (
-                                <div key={m.id} className={`flex flex-col ${m.senderId === user.uid ? 'items-end' : 'items-start'}`}>
-                                    <div className={`p-3 rounded-2xl max-w-[85%] text-sm shadow-sm ${
-                                        m.senderId === user.uid 
-                                            ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                                            : 'bg-background border rounded-tl-none'
-                                    }`}>
-                                        {decryptMessage(m.text)}
-                                    </div>
-                                    <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                        {m.senderId === user.uid ? 'You' : 'Support Agent'}
-                                    </span>
+                
+                <CardContent className="flex-1 p-0 overflow-hidden bg-secondary/5">
+                    <ScrollArea className="h-full w-full">
+                        <div className="p-6 space-y-6">
+                            {messages.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-center space-y-2 opacity-50">
+                                    <BadgeInfo className="h-10 w-10 text-muted-foreground" />
+                                    <p className="text-sm font-medium">No messages yet. Say hi!</p>
                                 </div>
-                            ))}
+                            ) : (
+                                messages.map(m => (
+                                    <div key={m.id} className={`flex flex-col ${m.senderId === user.uid ? 'items-end' : 'items-start'}`}>
+                                        <div className={`p-4 px-5 rounded-2xl max-w-[80%] text-sm md:text-base shadow-sm leading-relaxed ${
+                                            m.senderId === user.uid 
+                                                ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                                                : 'bg-background border border-border/50 rounded-tl-none'
+                                        }`}>
+                                            {decryptMessage(m.text)}
+                                        </div>
+                                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1.5 px-1 opacity-70">
+                                            {m.senderId === user.uid ? 'You' : 'Support Agent'}
+                                        </span>
+                                    </div>
+                                ))
+                            )}
                             <div ref={scrollRef} />
                         </div>
                     </ScrollArea>
                 </CardContent>
-                <CardFooter className="p-4 border-t bg-background">
-                    <form onSubmit={sendMessage} className="flex w-full gap-2">
+
+                <CardFooter className="p-6 border-t bg-background shrink-0">
+                    <form onSubmit={sendMessage} className="flex w-full gap-3">
                         <Input 
                             placeholder="Type your message..." 
                             value={inputText} 
                             onChange={e => setInputText(e.target.value)} 
-                            className="rounded-full bg-secondary/20 border-none focus-visible:ring-primary"
+                            className="flex-1 rounded-full bg-secondary/30 border-none focus-visible:ring-2 focus-visible:ring-primary h-12 px-6"
                         />
-                        <Button type="submit" disabled={!inputText.trim()} size="icon" className="rounded-full shrink-0">
-                            <Send className="h-4 w-4" />
+                        <Button 
+                            type="submit" 
+                            disabled={!inputText.trim()} 
+                            size="icon" 
+                            className="rounded-full shrink-0 h-12 w-12 shadow-lg"
+                        >
+                            <Send className="h-5 w-5" />
                         </Button>
                     </form>
                 </CardFooter>
