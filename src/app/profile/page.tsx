@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -309,7 +308,7 @@ export default function ProfilePage() {
                                 <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     id="real-name" 
-                                    placeholder="Your official name" 
+                                    placeholder="Enter Real name" 
                                     value={localRealName}
                                     onChange={e => setLocalRealName(e.target.value)}
                                     className="pl-9"
