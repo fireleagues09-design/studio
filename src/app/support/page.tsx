@@ -26,6 +26,7 @@ import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { useLoading } from '@/context/LoadingContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type Message = {
     id: string;
