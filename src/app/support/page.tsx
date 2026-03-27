@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -9,7 +8,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -37,7 +36,6 @@ export default function SupportPage() {
         return () => unsubAuth();
     }, [hideLoader]);
 
-    // Get/Create chat session
     useEffect(() => {
         if (!user || !isMounted) return;
 
@@ -75,7 +73,6 @@ export default function SupportPage() {
         initChat();
     }, [user, isMounted, hideLoader]);
 
-    // Real-time messages listener
     useEffect(() => {
         if (!chatId) return;
 
@@ -104,7 +101,7 @@ export default function SupportPage() {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
                 text: messageText,
                 senderId: user.uid,
-                senderType: 'player', // Identity anchor
+                senderType: 'player',
                 createdAt: serverTimestamp(),
             });
 
@@ -166,7 +163,6 @@ export default function SupportPage() {
                     </div>
                 ) : (
                     messages.map((m) => {
-                        // PLAYER view: 'player' is Me (Right)
                         const isMe = m.senderType === 'player';
                         return (
                             <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
@@ -214,5 +210,3 @@ export default function SupportPage() {
         </div>
     );
 }
-
-import { MessageSquare } from 'lucide-react';

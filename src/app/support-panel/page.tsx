@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -11,9 +10,10 @@ import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, User, CheckCircle } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, User, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -34,8 +34,7 @@ export default function SupportPanel() {
       if (u) {
         const userDoc = await getDoc(doc(db, "users", u.uid));
         const data = userDoc.data();
-        // Check if user has staff privileges
-        if (data?.isAdmin || data?.isSupport || data?.isEmployee || data?.isStaff) {
+        if (data?.isAdmin || data?.isSupport || data?.isEmployee) {
           setUser(u);
         } else {
           router.push("/");
@@ -48,7 +47,6 @@ export default function SupportPanel() {
     return () => unsub();
   }, [hideLoader, router]);
 
-  // Fetch active chats queue
   useEffect(() => {
     if (!user || !isMounted) return;
 
@@ -65,7 +63,6 @@ export default function SupportPanel() {
     return () => unsub();
   }, [user, isMounted]);
 
-  // Fetch session messages
   useEffect(() => {
     if (!selectedChat) {
         setMessages([]);
@@ -85,7 +82,6 @@ export default function SupportPanel() {
     return () => unsub();
   }, [selectedChat]);
 
-  // Send staff reply
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!text.trim() || !selectedChat || !user || isSending) return;
@@ -98,11 +94,10 @@ export default function SupportPanel() {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
         text: msgText,
         senderId: user.uid,
-        senderType: 'admin', // Identity anchor for Staff
+        senderType: 'admin',
         createdAt: serverTimestamp(),
       });
 
-      // Update session status to 'open' if it was 'waiting'
       await updateDoc(doc(db, "chats", selectedChat.id), {
         status: "open",
         assignedAdmin: user.uid,
@@ -125,8 +120,6 @@ export default function SupportPanel() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
-
-      {/* Sidebar Queue */}
       <div className={cn(
           "w-full md:w-80 border-r flex flex-col bg-muted/5 transition-all duration-300",
           selectedChat ? "hidden md:flex" : "flex"
@@ -138,7 +131,7 @@ export default function SupportPanel() {
             </div>
             <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">{chats.length}</span>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {chats.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted-foreground flex flex-col items-center gap-4">
                 <div className="p-4 bg-secondary rounded-full opacity-20">
@@ -159,9 +152,11 @@ export default function SupportPanel() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                    <AvatarFallback className="h-8 w-8 bg-secondary text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {c.userName?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-secondary text-[10px] font-bold">
+                            {c.userName?.charAt(0).toUpperCase() || '?'}
+                        </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm truncate">{c.userName || "Unknown Player"}</div>
                         <div className="text-[9px] opacity-60 font-mono flex items-center gap-1">
@@ -179,7 +174,6 @@ export default function SupportPanel() {
         </div>
       </div>
 
-      {/* Main Workspace */}
       <div className={cn(
           "flex-1 flex flex-col bg-background transition-all duration-300",
           !selectedChat ? "hidden md:flex" : "flex"
@@ -210,14 +204,8 @@ export default function SupportPanel() {
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 bg-muted/10 scroll-smooth scrollbar-hide">
-              {messages.length === 0 && (
-                  <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm italic opacity-40">
-                      No message history found for this session.
-                  </div>
-              )}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 bg-muted/10 scroll-smooth">
               {messages.map((m) => {
-                // STAFF view: 'admin' is Me (Right)
                 const isMe = m.senderType === 'admin';
                 return (
                   <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
@@ -280,5 +268,3 @@ export default function SupportPanel() {
     </div>
   );
 }
-
-import { AvatarFallback } from "@/components/ui/avatar";
