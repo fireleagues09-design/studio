@@ -93,7 +93,7 @@ export default function SupportPanel() {
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: encryptMessage(msgText),
+        text: encryptMessage(msgText), // E2E Security
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -121,6 +121,7 @@ export default function SupportPanel() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
+      {/* Sidebar: Chat Queue */}
       <div className={cn(
           "w-full md:w-80 border-r flex flex-col bg-muted/5 transition-all duration-300",
           selectedChat ? "hidden md:flex" : "flex"
@@ -153,14 +154,14 @@ export default function SupportPanel() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-secondary text-[10px] font-bold">
+                    <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-secondary text-[12px] font-bold">
                             {c.userName?.charAt(0).toUpperCase() || '?'}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm truncate">{c.userName || "Unknown Player"}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono truncate">ID: {c.userId}</div>
+                        <div className="text-[10px] text-primary font-mono truncate">@{c.userName?.toLowerCase().replace(/\s/g, '')}</div>
                         <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
                             <span className={cn(
                                 "h-1.5 w-1.5 rounded-full",
@@ -176,6 +177,7 @@ export default function SupportPanel() {
         </div>
       </div>
 
+      {/* Main Chat Workspace */}
       <div className={cn(
           "flex-1 flex flex-col bg-background transition-all duration-300",
           !selectedChat ? "hidden md:flex" : "flex"
@@ -192,7 +194,7 @@ export default function SupportPanel() {
                         {selectedChat.userName}
                         <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-mono">UID: {selectedChat.userId}</p>
+                    <p className="text-[10px] text-primary font-mono">Handle: @{selectedChat.userName?.toLowerCase().replace(/\s/g, '')}</p>
                 </div>
               </div>
               <Button 

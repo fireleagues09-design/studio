@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { 
-    collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit, where
+    collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit, where, getDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,11 @@ export default function SupportPage() {
 
         const initChat = async () => {
             try {
+                // Fetch the custom username created by the player
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userData = userDoc.exists() ? userDoc.data() : null;
+                const playerHandle = userData?.username || user.displayName || user.email?.split('@')[0] || "Player";
+
                 const q = query(
                     collection(db, "chats"),
                     where("userId", "==", user.uid),
@@ -53,11 +58,14 @@ export default function SupportPage() {
                 const snap = await getDocs(q);
 
                 if (!snap.empty) {
-                    setChatId(snap.docs[0].id);
+                    const existingChatId = snap.docs[0].id;
+                    setChatId(existingChatId);
+                    // Sync the username in the chat document in case it changed
+                    await updateDoc(doc(db, "chats", existingChatId), { userName: playerHandle });
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {
                         userId: user.uid,
-                        userName: user.displayName || user.email?.split('@')[0] || "Player",
+                        userName: playerHandle, // Store the custom handle
                         status: "waiting",
                         createdAt: serverTimestamp(),
                         lastMessageTime: serverTimestamp(),
@@ -100,7 +108,7 @@ export default function SupportPage() {
 
         try {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(messageText),
+                text: encryptMessage(messageText), // E2E Security
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
