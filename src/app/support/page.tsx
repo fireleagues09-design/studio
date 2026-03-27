@@ -46,7 +46,9 @@ export default function SupportPage() {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                const playerDisplayName = user.displayName || "Player";
+                // Priority: Google/Auth Name -> Firestore Username -> "Player"
+                const playerDisplayName = user.displayName || userData?.username || "Player";
+                // Priority: Firestore Username -> Sanitized Name
                 const userHandle = userData?.username || playerDisplayName.toLowerCase().replace(/\s/g, '');
 
                 const q = query(
@@ -68,7 +70,7 @@ export default function SupportPage() {
                 if (!snap.empty) {
                     const existingChatId = snap.docs[0].id;
                     setChatId(existingChatId);
-                    // Sync identity data in case it was updated
+                    // Force sync identity data so agents see correct names
                     await updateDoc(doc(db, "chats", existingChatId), chatMetadata);
                 } else {
                     const docRef = await addDoc(collection(db, "chats"), {
@@ -115,7 +117,7 @@ export default function SupportPage() {
 
         try {
             await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(messageText), // Secure E2E Encryption
+                text: encryptMessage(messageText), 
                 senderId: user.uid,
                 senderType: 'player',
                 createdAt: serverTimestamp(),
@@ -194,7 +196,10 @@ export default function SupportPage() {
                                         )}
                                         <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                                     </div>
-                                    <span className="text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60">
+                                    <span className={cn(
+                                        "text-[9px] font-bold text-muted-foreground mt-1.5 px-1 opacity-60",
+                                        isMe ? "text-right" : "text-left"
+                                    )}>
                                         {isMe ? 'You' : 'Support Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                                     </span>
                                 </div>

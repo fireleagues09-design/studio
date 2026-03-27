@@ -10,7 +10,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, User, CheckCircle, Loader2 } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -95,7 +95,7 @@ export default function SupportPanel() {
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: encryptMessage(msgText), // Secure E2E Encryption
+        text: encryptMessage(msgText), 
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -144,37 +144,42 @@ export default function SupportPanel() {
                 <p className="font-medium italic">Everything is handled!<br/>Queue is empty.</p>
             </div>
           ) : (
-            chats.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => setSelectedChat(c)}
-                className={cn(
-                    "p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
-                    selectedChat?.id === c.id 
-                        ? "bg-primary/10 border-primary shadow-md scale-[0.98]" 
-                        : "bg-background hover:bg-accent border-transparent"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-secondary text-[12px] font-bold">
-                            {(c.playerDisplayName || c.userHandle || "?").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm truncate text-foreground">{c.playerDisplayName || "Unknown Player"}</div>
-                        <div className="text-[10px] text-primary font-mono truncate">@{c.userHandle || "unknown"}</div>
-                        <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
-                            <span className={cn(
-                                "h-1.5 w-1.5 rounded-full",
-                                c.status === 'open' ? "bg-green-500" : "bg-amber-500"
-                            )} />
-                            {c.status === 'open' ? 'Active Session' : 'Waiting...'}
-                        </div>
-                    </div>
+            chats.map((c) => {
+              const displayName = c.playerDisplayName || c.userName || "Unknown Player";
+              const handle = c.userHandle || "unknown";
+              
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedChat(c)}
+                  className={cn(
+                      "p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
+                      selectedChat?.id === c.id 
+                          ? "bg-primary/10 border-primary shadow-md scale-[0.98]" 
+                          : "bg-background hover:bg-accent border-transparent"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-secondary text-[12px] font-bold">
+                              {displayName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                          <div className="font-bold text-sm truncate text-foreground">{displayName}</div>
+                          <div className="text-[10px] text-primary font-mono truncate">@{handle}</div>
+                          <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
+                              <span className={cn(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  c.status === 'open' ? "bg-green-500" : "bg-amber-500"
+                              )} />
+                              {c.status === 'open' ? 'Active Session' : 'Waiting...'}
+                          </div>
+                      </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -193,10 +198,10 @@ export default function SupportPanel() {
                 </Button>
                 <div>
                     <div className="font-bold flex items-center gap-2">
-                        {selectedChat.playerDisplayName}
+                        {selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}
                         <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                     </div>
-                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userHandle}</p>
+                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userHandle || "unknown"}</p>
                 </div>
               </div>
               <Button 
