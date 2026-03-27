@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, XCircle, ArrowLeft, AlertCircle, Headset } from 'lucide-react';
+import { MessageSquare, Send, XCircle, ArrowLeft, Headset } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
@@ -18,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type Message = {
     id: string;
@@ -56,7 +58,8 @@ export default function SupportPanelPage() {
             if (u) {
                 const docSnap = await getDoc(doc(db, 'users', u.uid));
                 const data = docSnap.data();
-                if (data?.isAdmin || data?.isSupport) {
+                // Strictly allow isSupport users only
+                if (data?.isSupport === true) {
                     setUser(u);
                     setIsAuthorized(true);
                 } else {
@@ -78,7 +81,6 @@ export default function SupportPanelPage() {
             const fetchedChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatSession));
             setChats(fetchedChats);
             
-            // Check for unassignments/notifications if an assigned chat is moved back
             if (selectedChat) {
                 const updatedSelected = fetchedChats.find(c => c.id === selectedChat.id);
                 if (updatedSelected && updatedSelected.assignedAdmin !== user?.uid && updatedSelected.status === 'waiting') {
@@ -97,13 +99,11 @@ export default function SupportPanelPage() {
             setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
         
-        // Monitoring inactivity
         const unsubChat = onSnapshot(doc(db, 'chats', selectedChat.id), snap => {
             if (snap.exists()) {
                 const data = snap.data() as ChatSession;
                 setSelectedChat({ id: snap.id, ...data });
                 
-                // If I am assigned, check if I need to be bumped due to inactivity
                 if (data.assignedAdmin === user?.uid && data.status === 'open') {
                     const last = data.lastMessageTime?.toDate ? data.lastMessageTime.toDate() : (data.lastMessageTime ? new Date(data.lastMessageTime.seconds * 1000) : new Date());
                     if ((Date.now() - last.getTime()) / 60000 >= 5) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -17,10 +18,8 @@ import {
   Gift,
   Palette,
   AlertTriangle,
-  Hand,
   Briefcase,
   Tag,
-  Info,
   Headset,
 } from "lucide-react";
 import {
@@ -45,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   onAuthStateChanged,
   User as FirebaseUser,
@@ -70,9 +69,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useLoading } from "@/context/LoadingContext";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BestiePage from '@/components/BestiePage';
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { Alert } from "../ui/alert";
 import { CompleteProfileDialog } from "@/components/CompleteProfileDialog";
 
 
@@ -153,7 +151,6 @@ export function Header() {
 
                     setProfile(profileData);
 
-                    // Sync Firestore if Auth is verified but Firestore isn't
                     if (currentUser.emailVerified && !profileData.emailVerified) {
                        await updateDoc(userDocRef, { emailVerified: true });
                     }
@@ -182,7 +179,6 @@ export function Header() {
     };
   }, []);
 
-  // Effect for Android WebView Bridge
   useEffect(() => {
     const handleUserAfterLogin = async (user: FirebaseUser) => {
         const userDocRef = doc(db, 'users', user.uid);
@@ -195,8 +191,8 @@ export function Header() {
             await setDoc(userDocRef, {
                 username: newUsername,
                 email: user.email,
-                isRegistered: false, // Force profile completion if doc was missing
-                emailVerified: user.emailVerified || isGoogleUser, // Force true if it's a Google user.
+                isRegistered: false,
+                emailVerified: user.emailVerified || isGoogleUser,
                 wallet: { deposit: 0, winning: 0, bonus: 0 },
                 registeredOn: serverTimestamp(),
                 lastLogin: serverTimestamp(),
@@ -266,13 +262,15 @@ export function Header() {
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
-  const isStaff = profile?.isSupport || profile?.isAdmin;
+  const isSupportUser = profile?.isSupport === true;
+  const isAdminUser = profile?.isAdmin === true;
+  const isEmployeeUser = profile?.isEmployee === true;
 
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/tournaments", label: "Tournaments" },
     ...(user ? [{ href: "/support", label: "Support" }] : []),
-    ...(isStaff ? [{ href: "/support-panel", label: "Support Panel", icon: Headset }] : []),
+    ...(isSupportUser ? [{ href: "/support-panel", label: "Support Panel", icon: Headset }] : []),
   ];
   
   const renderThemeSwatches = () => (
@@ -329,7 +327,7 @@ export function Header() {
         <DropdownMenuItem asChild>
             <Link href="/support" className="cursor-pointer"><Headset className="mr-2 h-4 w-4" /><span>Live Support</span></Link>
         </DropdownMenuItem>
-        {isStaff && (
+        {isSupportUser && (
             <DropdownMenuItem asChild>
                 <Link href="/support-panel" className="cursor-pointer"><MessageSquare className="mr-2 h-4 w-4" /><span>Support Panel</span></Link>
             </DropdownMenuItem>
@@ -351,13 +349,13 @@ export function Header() {
             <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
         </DropdownMenuItem>
         
-        {(profile?.isAdmin || profile?.isEmployee) && <DropdownMenuSeparator />}
-        {profile?.isAdmin && (
+        {(isAdminUser || isEmployeeUser) && <DropdownMenuSeparator />}
+        {isAdminUser && (
             <DropdownMenuItem asChild>
                 <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
             </DropdownMenuItem>
         )}
-        {profile?.isEmployee && (
+        {isEmployeeUser && (
             <DropdownMenuItem asChild>
                 <Link href="/management" className="cursor-pointer"><Briefcase className="mr-2 h-4 w-4" /><span>Management</span></Link>
             </DropdownMenuItem>
@@ -408,7 +406,7 @@ export function Header() {
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support"><Headset className="mr-2 h-4 w-4" />Live Support</Link></Button>
         </SheetClose>
-        {isStaff && (
+        {isSupportUser && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support-panel"><MessageSquare className="mr-2 h-4 w-4" />Support Panel</Link></Button>
             </SheetClose>
@@ -425,13 +423,13 @@ export function Header() {
             </Button>
         </SheetClose>
 
-        {(profile?.isAdmin || profile?.isEmployee) && <Separator className="my-2"/>}
-        {profile?.isAdmin && (
+        {(isAdminUser || isEmployeeUser) && <Separator className="my-2"/>}
+        {isAdminUser && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
             </SheetClose>
         )}
-        {profile?.isEmployee && (
+        {isEmployeeUser && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start"><Link href="/management"><Briefcase className="mr-2 h-4 w-4" />Management</Link></Button>
             </SheetClose>

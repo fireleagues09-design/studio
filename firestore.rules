@@ -23,7 +23,7 @@ service cloud.firestore {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isUserAuthenticated() && 
              exists(userPath) && 
-             (get(userPath).data.get('isSupport', false) == true || get(userPath).data.get('isAdmin', false) == true);
+             get(userPath).data.get('isSupport', false) == true;
     }
 
     function isEmployee() {
