@@ -46,10 +46,10 @@ export default function SupportPage() {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
                 
-                // Priority: Google/Auth Name -> Firestore Username -> "Player"
-                const playerDisplayName = user.displayName || userData?.username || "Player";
-                // Priority: Firestore Username -> Sanitized Name
-                const userHandle = userData?.username || playerDisplayName.toLowerCase().replace(/\s/g, '');
+                // Registered Name (from Google/Auth or Firestore)
+                const registeredName = user.displayName || userData?.username || "Player";
+                // FireLeagues Username Handle
+                const userHandle = userData?.username || registeredName.toLowerCase().replace(/\s/g, '');
 
                 const q = query(
                     collection(db, "chats"),
@@ -62,7 +62,7 @@ export default function SupportPage() {
                 const snap = await getDocs(q);
 
                 const chatMetadata = {
-                    playerDisplayName: playerDisplayName,
+                    playerDisplayName: registeredName,
                     userHandle: userHandle,
                     lastMessageTime: serverTimestamp()
                 };

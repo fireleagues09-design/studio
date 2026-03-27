@@ -145,8 +145,10 @@ export default function SupportPanel() {
             </div>
           ) : (
             chats.map((c) => {
-              const displayName = c.playerDisplayName || c.userName || "Unknown Player";
-              const handle = c.userHandle || "unknown";
+              // Priority: playerDisplayName (Registered Name) -> legacy userName -> "Unknown Player"
+              const registeredName = c.playerDisplayName || c.userName || "Unknown Player";
+              // Priority: userHandle (FireLeagues Username) -> sanitized version of registeredName
+              const fireleaguesHandle = c.userHandle || registeredName.toLowerCase().replace(/\s/g, '');
               
               return (
                 <div
@@ -162,12 +164,14 @@ export default function SupportPanel() {
                   <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-secondary text-[12px] font-bold">
-                              {displayName.charAt(0).toUpperCase()}
+                              {registeredName.charAt(0).toUpperCase()}
                           </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                          <div className="font-bold text-sm truncate text-foreground">{displayName}</div>
-                          <div className="text-[10px] text-primary font-mono truncate">@{handle}</div>
+                          {/* Registered Name in Bold White Text */}
+                          <div className="font-bold text-sm truncate text-foreground">{registeredName}</div>
+                          {/* FireLeagues Username in Blue Text */}
+                          <div className="text-[10px] text-blue-400 font-mono truncate">@{fireleaguesHandle}</div>
                           <div className="text-[9px] opacity-60 font-mono flex items-center gap-1 mt-1">
                               <span className={cn(
                                   "h-1.5 w-1.5 rounded-full",
@@ -198,10 +202,12 @@ export default function SupportPanel() {
                 </Button>
                 <div>
                     <div className="font-bold flex items-center gap-2">
-                        {selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}
+                        {/* Registered Name in Header */}
+                        <span className="text-foreground">{selectedChat.playerDisplayName || selectedChat.userName || "Unknown Player"}</span>
                         <span className="text-[10px] bg-secondary px-2 py-0.5 rounded text-muted-foreground uppercase font-black tracking-tighter">Player</span>
                     </div>
-                    <p className="text-[10px] text-primary font-mono">FireLeagues Handle: @{selectedChat.userHandle || "unknown"}</p>
+                    {/* FireLeagues Username in Blue */}
+                    <p className="text-[10px] text-blue-400 font-mono">Handle: @{selectedChat.userHandle || "unknown"}</p>
                 </div>
               </div>
               <Button 
