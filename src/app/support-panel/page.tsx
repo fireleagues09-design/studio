@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -12,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, ChevronLeft, Headset, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useLoading } from '@/context/LoadingContext';
@@ -57,7 +57,7 @@ export default function SupportPanelPage() {
                 const userDocRef = doc(db, 'users', u.uid);
                 const docSnap = await getDoc(userDocRef);
                 const data = docSnap.data();
-                if (data?.isSupport === true) {
+                if (data?.isAdmin === true || data?.isSupport === true) {
                     setUser(u);
                     setIsAuthorized(true);
                 } else {
@@ -124,7 +124,7 @@ export default function SupportPanelPage() {
         
         try {
             await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-                text: encryptMessage(txt),
+                text: txt,
                 senderId: user.uid,
                 createdAt: serverTimestamp(),
             });
@@ -229,7 +229,7 @@ export default function SupportPanelPage() {
                                                             Player
                                                         </div>
                                                     )}
-                                                    {decryptMessage(m.text)}
+                                                    {m.text}
                                                 </div>
                                                 <span className="text-[10px] text-muted-foreground mt-1.5 px-1 opacity-70">
                                                     {isMe ? 'You' : 'Player'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}

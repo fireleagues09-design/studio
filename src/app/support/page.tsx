@@ -1,275 +1,161 @@
-'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { 
-    collection, 
-    doc, 
-    query, 
-    where, 
-    orderBy, 
-    onSnapshot, 
-    addDoc, 
-    serverTimestamp, 
-    updateDoc,
-    limit,
-    getDocs
-} from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, XCircle, Loader2, BadgeInfo } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { encryptMessage, decryptMessage } from '@/lib/encryption';
-import { useLoading } from '@/context/LoadingContext';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+"use client";
 
-type Message = {
-    id: string;
-    text: string;
-    senderId: string;
-    createdAt: any;
-};
-
-type ChatSession = {
-    id: string;
-    userId: string;
-    userName: string;
-    assignedAdmin: string | null;
-    status: 'waiting' | 'open' | 'closed';
-    lastMessageTime: any;
-    createdAt: any;
-};
+import { useState, useEffect, useRef } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+  updateDoc,
+  doc,
+  limit,
+  getDocs,
+} from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 export default function SupportPage() {
-    const [hasMounted, setHasMounted] = useState(false);
-    const [user, setUser] = useState<FirebaseUser | null>(null);
-    const [chatId, setChatId] = useState<string | null>(null);
-    const [currentChat, setCurrentChat] = useState<ChatSession | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [inputText, setInputText] = useState('');
-    const [loading, setLoading] = useState(true);
-    
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const { toast } = useToast();
-    const { hideLoader } = useLoading();
+  const [user, setUser] = useState<any>(null);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [text, setText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Hydration Guard
-    useEffect(() => {
-        setHasMounted(true);
-    }, []);
+  // Auth
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsub();
+  }, []);
 
-    // Auth Observer
-    useEffect(() => {
-        if (!hasMounted) return;
-        const unsub = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            if (!u) {
-                setLoading(false);
-                hideLoader();
-            }
-        });
-        return () => unsub();
-    }, [hasMounted, hideLoader]);
+  // Get/Create chat
+  useEffect(() => {
+    if (!user) return;
 
-    // Get or Create Chat
-    useEffect(() => {
-        if (!hasMounted || !user) return;
-
-        const getOrCreateChat = async () => {
-            try {
-                const q = query(
-                    collection(db, "chats"),
-                    where("userId", "==", user.uid),
-                    where("status", "in", ["waiting", "open"]),
-                    orderBy("createdAt", "desc"),
-                    limit(1)
-                );
-
-                const snap = await getDocs(q);
-
-                if (!snap.empty) {
-                    setChatId(snap.docs[0].id);
-                    setCurrentChat({ id: snap.docs[0].id, ...snap.docs[0].data() } as ChatSession);
-                } else {
-                    const userName = user.displayName || user.email?.split('@')[0] || 'Player';
-                    const docRef = await addDoc(collection(db, "chats"), {
-                        userId: user.uid,
-                        userName: userName,
-                        status: "waiting",
-                        assignedAdmin: null,
-                        createdAt: serverTimestamp(),
-                        lastMessageTime: serverTimestamp()
-                    });
-                    setChatId(docRef.id);
-                }
-            } catch (err) {
-                console.error("Chat error:", err);
-                toast({ title: "Error", description: "Failed to initialize support session.", variant: "destructive" });
-            } finally {
-                setLoading(false);
-                hideLoader();
-            }
-        };
-
-        getOrCreateChat();
-    }, [hasMounted, user, hideLoader, toast]);
-
-    // Listen to Messages & Session Updates
-    useEffect(() => {
-        if (!hasMounted || !chatId) return;
-
-        const unsubMsgs = onSnapshot(
-            query(collection(db, `chats/${chatId}/messages`), orderBy("createdAt", "asc")), 
-            (snap) => {
-                setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message)));
-                setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-            }
+    const init = async () => {
+      try {
+        const q = query(
+          collection(db, "chats"),
+          where("userId", "==", user.uid),
+          where("status", "in", ["waiting", "open"]),
+          orderBy("createdAt", "desc"),
+          limit(1)
         );
 
-        const unsubChat = onSnapshot(doc(db, 'chats', chatId), (snap) => {
-            if (snap.exists()) {
-                const data = snap.data() as ChatSession;
-                setCurrentChat({ id: snap.id, ...data });
-                if (data.status === 'closed') {
-                    setChatId(null);
-                    setCurrentChat(null);
-                    setMessages([]);
-                }
-            }
-        });
+        const snap = await getDocs(q);
 
-        return () => { unsubMsgs(); unsubChat(); };
-    }, [hasMounted, chatId]);
-
-    const sendMessage = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!inputText.trim() || !chatId || !user) return;
-
-        const txt = inputText.trim();
-        setInputText('');
-
-        try {
-            await addDoc(collection(db, `chats/${chatId}/messages`), {
-                text: encryptMessage(txt),
-                senderId: user.uid,
-                createdAt: serverTimestamp()
-            });
-
-            await updateDoc(doc(db, "chats", chatId), {
-                lastMessageTime: serverTimestamp()
-            });
-        } catch (err) {
-            console.error("Send error:", err);
-            toast({ title: "Error", description: "Message not sent.", variant: "destructive" });
+        if (!snap.empty) {
+          setChatId(snap.docs[0].id);
+        } else {
+          const ref = await addDoc(collection(db, "chats"), {
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || "Player",
+            status: "waiting",
+            createdAt: serverTimestamp(),
+            lastMessageTime: serverTimestamp(),
+          });
+          setChatId(ref.id);
         }
+      } catch (err) {
+        console.error("Chat init error:", err);
+      }
     };
 
-    if (!hasMounted) return null;
+    init();
+  }, [user]);
 
-    if (loading) return (
-        <div className="h-[calc(100vh-10rem)] flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            <p className="text-muted-foreground font-medium">Connecting to Support...</p>
-        </div>
+  // Listen messages
+  useEffect(() => {
+    if (!chatId) return;
+
+    const q = query(
+      collection(db, `chats/${chatId}/messages`),
+      orderBy("createdAt", "asc")
     );
 
-    if (!user) return (
-        <div className="container mx-auto px-4 py-12 text-center">
-            <BadgeInfo className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-2xl font-bold">Authentication Required</h2>
-            <p className="text-muted-foreground mt-2">Please login to access live support.</p>
-        </div>
-    );
+    const unsub = onSnapshot(q, (snap) => {
+      setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    });
 
-    return (
-        <div className="container mx-auto px-2 md:px-4 py-4 max-w-5xl h-[calc(100vh-5rem)]">
-            <Card className="h-full flex flex-col overflow-hidden border-primary/20 shadow-2xl bg-card/50 backdrop-blur-sm">
-                <CardHeader className="bg-primary text-primary-foreground p-4 md:p-5 flex flex-row items-center justify-between shrink-0">
-                    <div className="flex flex-col">
-                        <CardTitle className="text-lg md:text-xl">Live Support</CardTitle>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            {currentChat?.status === 'waiting' ? (
-                                <>
-                                    <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-                                    <span className="text-[10px] md:text-xs font-medium opacity-90">Searching for staff...</span>
-                                </>
-                            ) : (
-                                <Badge variant="secondary" className="h-5 bg-white/20 text-white border-transparent backdrop-blur-md text-[10px]">Support Active</Badge>
-                            )}
-                        </div>
-                    </div>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-white hover:bg-white/20 rounded-full h-8 w-8"
-                        onClick={() => chatId && updateDoc(doc(db, 'chats', chatId), { status: 'closed' })}
-                    >
-                        <XCircle className="h-5 w-5" />
-                    </Button>
-                </CardHeader>
-                
-                <CardContent className="flex-1 p-0 overflow-hidden bg-secondary/5 relative">
-                    <ScrollArea className="h-full w-full">
-                        <div className="p-4 md:p-6 space-y-6">
-                            {messages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center min-h-[300px] text-center space-y-2 opacity-50">
-                                    <BadgeInfo className="h-10 w-10 text-muted-foreground" />
-                                    <p className="text-sm font-medium">No messages yet. Say hi!</p>
-                                </div>
-                            ) : (
-                                messages.map(m => {
-                                    const isMe = m.senderId === user.uid;
-                                    return (
-                                        <div key={m.id} className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
-                                            <div className={cn(
-                                                "p-3 px-4 rounded-2xl max-w-[85%] md:max-w-[75%] text-sm md:text-base shadow-sm leading-relaxed",
-                                                isMe 
-                                                    ? "bg-primary text-primary-foreground rounded-tr-none" 
-                                                    : "bg-secondary text-secondary-foreground rounded-tl-none"
-                                            )}>
-                                                {!isMe && (
-                                                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
-                                                        Support Agent
-                                                    </div>
-                                                )}
-                                                {decryptMessage(m.text)}
-                                            </div>
-                                            <span className="text-[10px] text-muted-foreground mt-1.5 px-1 opacity-70">
-                                                {isMe ? 'You' : 'Agent'} • {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
-                                            </span>
-                                        </div>
-                                    );
-                                })
-                            )}
-                            <div ref={scrollRef} className="h-4" />
-                        </div>
-                    </ScrollArea>
-                </CardContent>
+    return () => unsub();
+  }, [chatId]);
 
-                <CardFooter className="p-3 md:p-4 border-t bg-background shrink-0">
-                    <form onSubmit={sendMessage} className="flex w-full gap-2 md:gap-3 max-w-4xl mx-auto">
-                        <Input 
-                            placeholder="Type your message..." 
-                            value={inputText} 
-                            onChange={e => setInputText(e.target.value)} 
-                            className="flex-1 rounded-full bg-secondary/30 border-none focus-visible:ring-2 focus-visible:ring-primary h-10 md:h-12 px-5 text-sm md:text-base"
-                        />
-                        <Button 
-                            type="submit" 
-                            disabled={!inputText.trim()} 
-                            size="icon" 
-                            className="rounded-full shrink-0 h-10 w-10 md:h-12 md:w-12 shadow-lg"
-                        >
-                            <Send className="h-4 w-4 md:h-5 md:w-5" />
-                        </Button>
-                    </form>
-                </CardFooter>
-            </Card>
-        </div>
-    );
+  // Send message
+  const sendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!text.trim() || !chatId || !user) return;
+
+    const messageText = text.trim();
+    setText("");
+
+    try {
+      await addDoc(collection(db, `chats/${chatId}/messages`), {
+        text: messageText,
+        senderId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+
+      await updateDoc(doc(db, "chats", chatId), {
+        lastMessageTime: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Send error:", err);
+    }
+  };
+
+  if (!user) return <div className="container mx-auto px-4 py-12 text-center text-muted-foreground">Login required</div>;
+
+  return (
+    <div className="container mx-auto px-2 md:px-4 py-4 max-w-4xl h-[calc(100vh-5rem)] flex flex-col">
+      <h1 className="mb-4 text-xl font-bold px-2">Support Chat</h1>
+
+      <div className="flex-1 overflow-y-auto flex flex-col gap-3 border rounded-lg p-4 bg-card/50 backdrop-blur-sm shadow-inner">
+        {messages.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center opacity-40 italic text-sm">
+            Start the conversation...
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isMe = m.senderId === user.uid;
+
+            return (
+              <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm md:text-base leading-relaxed ${
+                    isMe
+                      ? "bg-primary text-primary-foreground rounded-br-none shadow-md"
+                      : "bg-secondary text-secondary-foreground rounded-tl-none shadow-sm"
+                  }`}
+                >
+                  {!isMe && <div className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">Support Agent</div>}
+                  {m.text}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={scrollRef} />
+      </div>
+
+      <form onSubmit={sendMessage} className="flex mt-4 gap-2 px-1">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="flex-1 border rounded-full px-5 py-2.5 bg-background focus:ring-2 focus:ring-primary focus:outline-none h-11 md:h-12"
+          placeholder="Type your message..."
+        />
+        <button 
+          type="submit" 
+          disabled={!text.trim()}
+          className="bg-primary text-primary-foreground px-6 rounded-full font-bold h-11 md:h-12 transition-transform active:scale-95 disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
+    </div>
+  );
 }

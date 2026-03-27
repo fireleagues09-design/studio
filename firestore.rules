@@ -29,9 +29,7 @@ service cloud.firestore {
     // Users Collection
     // ======================
     match /users/{userId} {
-      // Allow owner to read/write their own profile
       allow get, create, update: if isUserAuthenticated() && request.auth.uid == userId;
-      // Allow admins or staff to search/view users
       allow get, list: if isAdmin() || isSupport();
       allow delete: if isAdmin();
 
@@ -43,11 +41,10 @@ service cloud.firestore {
     }
 
     // ======================
-    // ✅ CHAT SUPPORT SYSTEM (FINAL FIX - PERMISSIVE AUTH READ)
+    // ✅ CHAT SUPPORT SYSTEM (FINAL FIX)
     // ======================
     match /chats/{chatId} {
       // allow authenticated user to create and read chats
-      // simplified to avoid strict property checks that trigger recursion
       allow create, read, list: if isUserAuthenticated();
 
       // allow staff to pick/update chats
