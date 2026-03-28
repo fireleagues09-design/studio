@@ -262,7 +262,6 @@ export function Header() {
   const wallet = profile?.wallet || { deposit: 0, winning: 0, bonus: 0 };
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
-  const isSupportUser = profile?.isSupport === true;
   const isAdminUser = profile?.isAdmin === true;
   const isEmployeeUser = profile?.isEmployee === true;
 
@@ -270,7 +269,6 @@ export function Header() {
     { href: "/", label: "Home" },
     { href: "/tournaments", label: "Tournaments" },
     ...(user ? [{ href: "/support", label: "Support" }] : []),
-    ...(isSupportUser ? [{ href: "/support-panel", label: "Support Panel", icon: Headset }] : []),
   ];
   
   const renderThemeSwatches = () => (
@@ -327,11 +325,6 @@ export function Header() {
         <DropdownMenuItem asChild>
             <Link href="/support" className="cursor-pointer"><Headset className="mr-2 h-4 w-4" /><span>Live Support</span></Link>
         </DropdownMenuItem>
-        {isSupportUser && (
-            <DropdownMenuItem asChild>
-                <Link href="/support-panel" className="cursor-pointer"><MessageSquare className="mr-2 h-4 w-4" /><span>Support Panel</span></Link>
-            </DropdownMenuItem>
-        )}
         <DropdownMenuItem disabled className="cursor-not-allowed">
             <ClipboardList className="mr-2 h-4 w-4" />
             <span>Orders</span>
@@ -406,11 +399,6 @@ export function Header() {
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support"><Headset className="mr-2 h-4 w-4" />Live Support</Link></Button>
         </SheetClose>
-        {isSupportUser && (
-            <SheetClose asChild>
-                <Button variant="ghost" asChild className="w-full justify-start"><Link href="/support-panel"><MessageSquare className="mr-2 h-4 w-4" />Support Panel</Link></Button>
-            </SheetClose>
-        )}
         <Button variant="ghost" className="w-full justify-start" disabled><ClipboardList className="mr-2 h-4 w-4" />Orders</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Tag className="mr-2 h-4 w-4" />Bonus Code</Button>
