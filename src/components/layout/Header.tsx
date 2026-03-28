@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -262,8 +263,8 @@ export function Header() {
   const totalBalance = wallet.deposit + wallet.winning + wallet.bonus;
 
   const isAdminUser = profile?.isAdmin === true;
-  const isEmployeeUser = profile?.isEmployee === true;
-  const isSupportUser = profile?.isSupport === true;
+  const isEmployeeUser = profile?.isEmployee === true || profile?.isEmployee === 1;
+  const isSupportUser = profile?.isSupport === true || profile?.isSupport === 1;
   const isStaff = isAdminUser || isEmployeeUser || isSupportUser;
 
   const navLinks = [
@@ -343,7 +344,15 @@ export function Header() {
             <Link href="/wallet" className="cursor-pointer"><Wallet className="mr-2 h-4 w-4" /><span>Wallet</span></Link>
         </DropdownMenuItem>
         
-        {(isAdminUser || isEmployeeUser) && <DropdownMenuSeparator />}
+        {isStaff && <DropdownMenuSeparator />}
+        {isStaff && (
+            <DropdownMenuItem asChild>
+                <Link href="/support-panel" className="cursor-pointer text-primary font-semibold">
+                    <Headset className="mr-2 h-4 w-4" />
+                    <span>Support Panel</span>
+                </Link>
+            </DropdownMenuItem>
+        )}
         {isAdminUser && (
             <DropdownMenuItem asChild>
                 <Link href="/admin" className="cursor-pointer"><Shield className="mr-2 h-4 w-4" /><span>Admin Panel</span></Link>
