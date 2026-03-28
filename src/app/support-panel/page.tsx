@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -14,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -323,7 +322,7 @@ export default function SupportPanel() {
               className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5"
             >
               {messages.map((m, idx) => {
-                  // Sender Sense Logic: My messages (admin) are on the Right
+                  // SENDER SENSE: My messages (admin) are on the Right
                   const isMe = m.senderType === 'admin';
                   return (
                     <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
