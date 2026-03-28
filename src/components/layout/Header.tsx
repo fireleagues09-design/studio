@@ -264,6 +264,8 @@ export function Header() {
 
   const isAdminUser = profile?.isAdmin === true;
   const isEmployeeUser = profile?.isEmployee === true;
+  const isSupportUser = profile?.isSupport === true;
+  const isStaff = isAdminUser || isEmployeeUser || isSupportUser;
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -411,7 +413,14 @@ export function Header() {
             </Button>
         </SheetClose>
 
-        {(isAdminUser || isEmployeeUser) && <Separator className="my-2"/>}
+        {(isAdminUser || isEmployeeUser || isSupportUser) && <Separator className="my-2"/>}
+        {isStaff && (
+            <SheetClose asChild>
+                <Button variant="ghost" asChild className="w-full justify-start text-primary font-semibold">
+                    <Link href="/support-panel"><Headset className="mr-2 h-4 w-4" />Support Panel</Link>
+                </Button>
+            </SheetClose>
+        )}
         {isAdminUser && (
             <SheetClose asChild>
                 <Button variant="ghost" asChild className="w-full justify-start"><Link href="/admin"><Shield className="mr-2 h-4 w-4" />Admin Panel</Link></Button>
