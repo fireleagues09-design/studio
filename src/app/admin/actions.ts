@@ -85,6 +85,50 @@ export async function setAdminStatus(
     }
 }
 
+export async function updateUserAdminAction(
+    userId: string,
+    data: { 
+        username?: string; 
+        email?: string; 
+        phone?: string; 
+        realName?: string;
+        wallet?: { deposit?: number; winning?: number; bonus?: number };
+    },
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) return { success: false, message: adminCheck.message };
+
+    try {
+        const userRef = db.collection('users').doc(userId);
+        
+        // Handle uniqueness checks if username is changing
+        if (data.username) {
+            const existing = await db.collection('users').where('username', '==', data.username.toLowerCase()).get();
+            if (!existing.empty && existing.docs[0].id !== userId) {
+                return { success: false, message: 'Username already taken.' };
+            }
+        }
+
+        const updateData: any = {};
+        if (data.username) updateData.username = data.username.toLowerCase();
+        if (data.email) updateData.email = data.email;
+        if (data.phone) updateData.phone = data.phone;
+        if (data.realName) updateData.realName = data.realName;
+        
+        if (data.wallet) {
+            if (data.wallet.deposit !== undefined) updateData['wallet.deposit'] = Number(data.wallet.deposit);
+            if (data.wallet.winning !== undefined) updateData['wallet.winning'] = Number(data.wallet.winning);
+            if (data.wallet.bonus !== undefined) updateData['wallet.bonus'] = Number(data.wallet.bonus);
+        }
+
+        await userRef.update(updateData);
+        return { success: true, message: "User details updated successfully." };
+    } catch (error: any) {
+        return { success: false, message: error.message || "Failed to update user." };
+    }
+}
+
 export async function addSliderByUrl(
   imageUrl: string,
   collectionName: 'homeSliders' | 'landingSliders',
