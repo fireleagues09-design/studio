@@ -412,13 +412,15 @@ export function Header() {
             </Button>
         </SheetClose>
 
-        {(isAdminUser || isEmployeeUser || isSupportUser) && <Separator className="my-2"/>}
         {isStaff && (
-            <SheetClose asChild>
-                <Button variant="ghost" asChild className="w-full justify-start text-primary font-semibold">
-                    <Link href="/support-panel"><Headset className="mr-2 h-4 w-4" />Support Panel</Link>
-                </Button>
-            </SheetClose>
+            <>
+                <Separator className="my-2"/>
+                <SheetClose asChild>
+                    <Button variant="ghost" asChild className="w-full justify-start text-primary font-semibold">
+                        <Link href="/support-panel"><Headset className="mr-2 h-4 w-4" />Support Panel</Link>
+                    </Button>
+                </SheetClose>
+            </>
         )}
         {isAdminUser && (
             <SheetClose asChild>
