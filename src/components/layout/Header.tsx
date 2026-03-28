@@ -72,6 +72,7 @@ import { useLoading } from "@/context/LoadingContext";
 import BestiePage from '@/components/BestiePage';
 import { Alert } from "../ui/alert";
 import { CompleteProfileDialog } from "@/components/CompleteProfileDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 type WalletData = {
@@ -613,8 +614,8 @@ export function Header() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right">
-                  <SheetHeader>
+                <SheetContent side="right" className="flex flex-col pr-0">
+                  <SheetHeader className="px-6 shrink-0">
                     <SheetTitle>
                        <SheetClose asChild>
                           <Link href="/" className="flex items-center space-x-2">
@@ -624,68 +625,70 @@ export function Header() {
                       </SheetClose>
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="flex flex-col space-y-4 mt-6">
-                    {navLinks.map((link) => (
-                       <SheetClose asChild key={link.href}>
-                          <Link
-                            href={link.href}
-                            className="text-lg font-medium flex items-center gap-2"
-                          >
-                            {link.label}
-                          </Link>
-                      </SheetClose>
-                    ))}
-                    <div className="border-t pt-4 flex flex-col space-y-3">
-                      {loading ? (
-                          <div className="space-y-2">
-                              <Skeleton className="h-10 w-full" />
-                              <Skeleton className="h-10 w-full" />
-                          </div>
-                      ) : user && profile ? (
-                         mobileUserMenuItems
-                      ) : (
-                        <>
-                          <div className="px-2 space-y-1">
-                              <div className="flex items-center justify-between py-2">
-                                  <Label className="font-normal">Dark Mode</Label>
-                                  <Switch 
-                                      id="mobile-dark-mode-guest"
-                                      checked={mode === 'dark'}
-                                      onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
-                                  />
-                              </div>
-                              <Accordion type="single" collapsible className="w-full">
-                                  <AccordionItem value="colors" className="border-b-0">
-                                      <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline">
-                                          UI Colour
-                                      </AccordionTrigger>
-                                      <AccordionContent>
-                                          {renderMobileThemeSwatches()}
-                                      </AccordionContent>
-                                  </AccordionItem>
-                              </Accordion>
-                          </div>
-                            <Separator />
-                          <SheetClose asChild>
-                              <Button variant="outline" asChild className="w-full justify-start">
-                                <Link href="/login">
-                                  <LogIn className="mr-2 h-4 w-4" />
-                                  Login
-                                </Link>
-                              </Button>
-                          </SheetClose>
-                          <SheetClose asChild>
-                              <Button asChild className="w-full justify-start">
-                                <Link href="/register">
-                                   <UserPlus className="mr-2 h-4 w-4" />
-                                   Register
-                                </Link>
-                              </Button>
-                          </SheetClose>
-                        </>
-                      )}
+                  <ScrollArea className="flex-1 -mx-6 px-6 mt-6">
+                    <div className="flex flex-col space-y-4 pb-12">
+                      {navLinks.map((link) => (
+                         <SheetClose asChild key={link.href}>
+                            <Link
+                              href={link.href}
+                              className="text-lg font-medium flex items-center gap-2"
+                            >
+                              {link.label}
+                            </Link>
+                        </SheetClose>
+                      ))}
+                      <div className="border-t pt-4 flex flex-col space-y-3">
+                        {loading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        ) : user && profile ? (
+                           mobileUserMenuItems
+                        ) : (
+                          <>
+                            <div className="px-2 space-y-1">
+                                <div className="flex items-center justify-between py-2">
+                                    <Label className="font-normal">Dark Mode</Label>
+                                    <Switch 
+                                        id="mobile-dark-mode-guest"
+                                        checked={mode === 'dark'}
+                                        onCheckedChange={(checked) => setMode(checked ? 'dark' : 'light')}
+                                    />
+                                </div>
+                                <Accordion type="single" collapsible className="w-full">
+                                    <AccordionItem value="colors" className="border-b-0">
+                                        <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline">
+                                            UI Colour
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            {renderMobileThemeSwatches()}
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                </Accordion>
+                            </div>
+                              <Separator />
+                            <SheetClose asChild>
+                                <Button variant="outline" asChild className="w-full justify-start">
+                                  <Link href="/login">
+                                    <LogIn className="mr-2 h-4 w-4" />
+                                    Login
+                                  </Link>
+                                </Button>
+                            </SheetClose>
+                            <SheetClose asChild>
+                                <Button asChild className="w-full justify-start">
+                                  <Link href="/register">
+                                     <UserPlus className="mr-2 h-4 w-4" />
+                                     Register
+                                  </Link>
+                                </Button>
+                            </SheetClose>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </ScrollArea>
                 </SheetContent>
               </Sheet>
             </div>
