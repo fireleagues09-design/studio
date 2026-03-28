@@ -322,15 +322,15 @@ export default function SupportPanel() {
               className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5"
             >
               {messages.map((m, idx) => {
-                  const isAgent = m.senderType === 'admin';
+                  const isMe = user && m.senderId === user.uid;
                   return (
-                    <div key={m.id} className={cn("flex w-full", isAgent ? "justify-start" : "justify-end")}>
-                        <div className={cn("flex flex-col max-w-[80%]", isAgent ? "items-start" : "items-end")}>
+                    <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
+                        <div className={cn("flex flex-col max-w-[80%]", isMe ? "items-end" : "items-start")}>
                             <div className={cn(
                                 "px-4 py-2 rounded-2xl text-sm shadow-sm",
-                                isAgent 
-                                    ? "bg-card border text-foreground rounded-tl-none" 
-                                    : "bg-primary text-primary-foreground rounded-tr-none"
+                                isMe 
+                                    ? "bg-primary text-primary-foreground rounded-tr-none" 
+                                    : "bg-card border text-foreground rounded-tl-none"
                             )}>
                                 <p className="whitespace-pre-wrap">{decryptMessage(m.text)}</p>
                             </div>

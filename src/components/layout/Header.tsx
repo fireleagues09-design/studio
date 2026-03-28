@@ -511,7 +511,6 @@ export function Header() {
                       : "text-foreground/60"
                   )}
                   >
-                  {link.icon && <link.icon className="h-4 w-4" />}
                   {link.label}
                   </Link>
               ))}
@@ -622,7 +621,6 @@ export function Header() {
                             href={link.href}
                             className="text-lg font-medium flex items-center gap-2"
                           >
-                            {link.icon && <link.icon className="h-5 w-5" />}
                             {link.label}
                           </Link>
                       </SheetClose>
