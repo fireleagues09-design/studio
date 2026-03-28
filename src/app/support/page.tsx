@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -310,7 +311,8 @@ export default function SupportPage() {
                     </div>
                 ) : (
                     messages.map((m, idx) => {
-                        const isMe = m.senderId === user.uid;
+                        // Sender Sense Logic: My messages (player) are on the Right
+                        const isMe = m.senderType === 'player';
                         const showAvatar = !isMe && (idx === 0 || messages[idx-1].senderType !== 'admin');
                         
                         return (

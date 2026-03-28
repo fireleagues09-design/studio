@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from "react";
@@ -322,7 +323,8 @@ export default function SupportPanel() {
               className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5"
             >
               {messages.map((m, idx) => {
-                  const isMe = user && m.senderId === user.uid;
+                  // Sender Sense Logic: My messages (admin) are on the Right
+                  const isMe = m.senderType === 'admin';
                   return (
                     <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
                         <div className={cn("flex flex-col max-w-[80%]", isMe ? "items-end" : "items-start")}>
