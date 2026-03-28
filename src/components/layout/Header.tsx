@@ -270,7 +270,6 @@ export function Header() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/tournaments", label: "Tournaments" },
-    ...(user ? [{ href: "/support", label: "Support" }] : []),
   ];
   
   const renderThemeSwatches = () => (
