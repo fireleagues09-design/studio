@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { Flame } from "lucide-react";
 
@@ -12,6 +11,9 @@ export function Footer() {
             <span className="font-bold text-lg">FireLeagues</span>
           </div>
           <nav className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <Link href="/contact" className="hover:text-primary">
+              Contact Us
+            </Link>
             <Link href="/terms" className="hover:text-primary">
               Terms
             </Link>
