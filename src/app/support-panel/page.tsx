@@ -5,15 +5,16 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, limit, deleteDoc
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -36,14 +36,19 @@ export default function SupportPanel() {
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
-  const [replyImage, setReplyImage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   
+  // File state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { hideLoader } = useLoading();
   const { toast } = useToast();
   const router = useRouter();
@@ -113,20 +118,50 @@ export default function SupportPanel() {
     }
   }, [messages]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            toast({ title: "File too large", description: "Image must be under 5MB.", variant: "destructive" });
+            return;
+        }
+        setSelectedFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadReplyImage = async (): Promise<string | null> => {
+    if (!selectedFile || !user) return null;
+    setIsUploading(true);
+    try {
+        const fileName = `${Date.now()}_${selectedFile.name}`;
+        const storageRef = ref(storage, `support/${user.uid}/replies/${fileName}`);
+        const snapshot = await uploadBytes(storageRef, selectedFile);
+        return await getDownloadURL(snapshot.ref);
+    } catch (err) {
+        console.error("Staff upload error:", err);
+        return null;
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!text.trim() || !selectedChat || !user || isSending || selectedChat.status === 'closed') return;
 
     const msgText = text.trim();
-    const imageUrl = replyImage.trim();
-    setText("");
-    setReplyImage("");
     setIsSending(true);
 
     try {
+      let uploadedUrl = null;
+      if (selectedFile) {
+          uploadedUrl = await uploadReplyImage();
+      }
+
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
         text: encryptMessage(msgText), 
-        imageUrl: imageUrl || null,
+        imageUrl: uploadedUrl || null,
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -137,6 +172,10 @@ export default function SupportPanel() {
         assignedAdmin: user.uid,
         lastMessageTime: serverTimestamp()
       });
+
+      setText("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
     } catch (err) {
       console.error("Staff send error:", err);
     } finally {
@@ -376,7 +415,34 @@ export default function SupportPanel() {
 
             {selectedChat.status !== 'closed' ? (
                 <div className="p-4 border-t bg-background shadow-2xl space-y-3">
+                    {previewUrl && (
+                        <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit">
+                            <div className="relative h-12 w-12 rounded border overflow-hidden">
+                                <img src={previewUrl} className="h-full w-full object-cover" />
+                                <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                    <X className="h-4 w-4 text-white" />
+                                </button>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground font-medium">Ready to send</span>
+                        </div>
+                    )}
                     <form onSubmit={sendMessage} className="flex gap-2">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                        />
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-full flex-shrink-0"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        </Button>
                         <Input
                             value={text}
                             onChange={(e) => setText(e.target.value)}
@@ -384,19 +450,10 @@ export default function SupportPanel() {
                             placeholder="Type response..."
                             autoComplete="off"
                         />
-                        <Button type="submit" disabled={!text.trim() || isSending} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
-                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        <Button type="submit" disabled={!text.trim() || isSending || isUploading} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
+                            {isSending || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         </Button>
                     </form>
-                    <div className="flex items-center gap-2 px-2">
-                        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                        <Input 
-                            value={replyImage} 
-                            onChange={e => setReplyImage(e.target.value)} 
-                            className="h-7 text-[10px] rounded-full bg-secondary/50 border-none"
-                            placeholder="Optional Image URL reply..." 
-                        />
-                    </div>
                 </div>
             ) : (
                 <div className="p-6 border-t bg-muted/20 text-center flex flex-col items-center justify-center gap-2">

@@ -5,10 +5,11 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { 
     collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit, where, getDoc
 } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, User as UserIcon } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, User as UserIcon, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -38,10 +39,12 @@ export default function SupportPage() {
     const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
     const [ticketUsername, setTicketUsername] = useState("");
     const [ticketMessage, setTicketMessage] = useState("");
-    const [ticketScreenshot, setTicketScreenshot] = useState("");
     const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const { hideLoader, showLoader } = useLoading();
     const { toast } = useToast();
 
@@ -59,7 +62,6 @@ export default function SupportPage() {
 
         const syncIdentityAndFetchData = async () => {
             try {
-                // Fetch current user details for pre-filling
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
                     setTicketUsername(userDoc.data().username || "");
@@ -160,6 +162,26 @@ export default function SupportPage() {
         setView('chat');
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast({ title: "File too large", description: "Please select an image under 5MB.", variant: "destructive" });
+                return;
+            }
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const uploadScreenshot = async (userId: string): Promise<string | null> => {
+        if (!selectedFile) return null;
+        const fileName = `${Date.now()}_${selectedFile.name}`;
+        const storageRef = ref(storage, `support/${userId}/tickets/${fileName}`);
+        const snapshot = await uploadBytes(storageRef, selectedFile);
+        return await getDownloadURL(snapshot.ref);
+    };
+
     const handleTicketSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !ticketUsername.trim() || !ticketMessage.trim()) return;
@@ -167,23 +189,27 @@ export default function SupportPage() {
         setIsSubmittingTicket(true);
         try {
             const idToken = await user.getIdToken();
-            // Encrypt ticket message for privacy
+            let uploadedUrl = null;
+            if (selectedFile) {
+                uploadedUrl = await uploadScreenshot(user.uid);
+            }
+
             const encrypted = encryptMessage(ticketMessage.trim());
             
             const result = await submitTicketAction(
                 idToken,
                 ticketUsername.trim(),
                 encrypted,
-                ticketScreenshot.trim() || undefined
+                uploadedUrl || undefined
             );
 
             if (result.success && result.ticketId) {
                 toast({ title: "Ticket Submitted", description: `Reference: #${result.ticketId}` });
                 setIsTicketDialogOpen(false);
                 setTicketMessage("");
-                setTicketScreenshot("");
+                setSelectedFile(null);
+                setPreviewUrl(null);
                 
-                // Show the ticket chat immediately
                 setChatId(result.ticketId);
                 setIsPendingFirstMessage(false);
                 setView('chat');
@@ -336,18 +362,41 @@ export default function SupportPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="ticket-ss">Screenshot Link (Optional)</Label>
-                                        <div className="relative">
-                                            <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input 
-                                                id="ticket-ss" 
-                                                className="pl-9"
-                                                placeholder="https://image-host.com/my-ss.png" 
-                                                value={ticketScreenshot}
-                                                onChange={e => setTicketScreenshot(e.target.value)}
-                                            />
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground px-1">Tip: Use an image host like ImgBB or PostImages.</p>
+                                        <Label>Screenshot / Attachment (Optional)</Label>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                            ref={fileInputRef} 
+                                            onChange={handleFileChange} 
+                                        />
+                                        {!previewUrl ? (
+                                            <Button 
+                                                type="button" 
+                                                variant="outline" 
+                                                className="w-full h-24 border-dashed flex flex-col gap-2"
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                                <span className="text-xs text-muted-foreground">Tap to select image from gallery</span>
+                                            </Button>
+                                        ) : (
+                                            <div className="relative w-full aspect-video rounded-lg border bg-secondary/30 overflow-hidden group">
+                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                                                <Button 
+                                                    type="button" 
+                                                    variant="destructive" 
+                                                    size="icon" 
+                                                    className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => {
+                                                        setSelectedFile(null);
+                                                        setPreviewUrl(null);
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                     <DialogFooter className="pt-2">
                                         <Button type="submit" disabled={isSubmittingTicket} className="w-full font-bold">

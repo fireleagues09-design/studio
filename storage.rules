@@ -3,22 +3,29 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Helper function to check if a user is an admin by looking at their custom claims.
-    // We'll use Firestore read for this as it's more flexible.
-    function isAdmin() {
-      return exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-             get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    function isUserAuthenticated() {
+      return request.auth != null;
     }
 
-    // Allow public read access for all files.
-    // This is generally safe for public assets like slider images.
+    function isAdmin() {
+      return isUserAuthenticated() &&
+             exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             (get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+              get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSupport == true ||
+              get(/databases/(default)/documents/users/$(request.auth.uid)).data.isEmployee == true);
+    }
+
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // Restrict write access to the 'sliders' folder to admins only.
     match /sliders/{fileName} {
-      allow write: if request.auth != null && isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Allow users to upload screenshots to their own folder, or staff to upload anywhere in support
+    match /support/{userId}/{allPaths=**} {
+      allow write: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
   }
 }
