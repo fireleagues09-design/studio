@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { Avatar, AvatarImage, AvatarFallback } from "@/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
