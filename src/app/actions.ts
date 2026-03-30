@@ -64,7 +64,7 @@ export async function registerSoloPlayer(
 }
 
 /**
- * Starts a new support chat session with a sequential alphanumeric ID.
+ * Starts a new support chat session with a randomized alphanumeric ID.
  */
 export async function startSupportChatAction(
     idToken: string,
@@ -83,7 +83,9 @@ export async function startSupportChatAction(
         
         const chatIdString = await db.runTransaction(async (transaction) => {
             const configDoc = await transaction.get(configRef);
-            let nextCounter = 100000000000; 
+            
+            // Default random starting point if not set (Alphanumeric range)
+            let nextCounter = Math.floor(Math.random() * 1000000000) + 100000000000; 
             
             if (configDoc.exists) {
                 const data = configDoc.data();
@@ -93,6 +95,8 @@ export async function startSupportChatAction(
             }
             
             transaction.set(configRef, { lastChatCounter: nextCounter }, { merge: true });
+            
+            // Convert to Base-36 for alphanumeric mixed letters/numbers and capitalize
             const generatedId = nextCounter.toString(36).toUpperCase();
             const chatDocRef = db.collection('chats').doc(generatedId);
             
@@ -126,7 +130,7 @@ export async function startSupportChatAction(
 }
 
 /**
- * Submits a new formal ticket with a 9-digit numeric ID.
+ * Submits a new formal ticket with a randomized alphanumeric ID.
  */
 export async function submitTicketAction(
     idToken: string,
@@ -145,19 +149,20 @@ export async function submitTicketAction(
         const ticketIdString = await db.runTransaction(async (transaction) => {
             const configDoc = await transaction.get(configRef);
             
-            // Start at 100,000,000 (9 digits)
-            let nextTicketId = 100000000; 
+            // Different range for tickets to avoid overlap, starting with a random seed
+            let nextTicketCounter = Math.floor(Math.random() * 1000000000) + 500000000000; 
             
             if (configDoc.exists) {
                 const data = configDoc.data();
-                if (data && typeof data.lastTicketId === 'number') {
-                    nextTicketId = data.lastTicketId + 1;
+                if (data && typeof data.lastTicketCounter === 'number') {
+                    nextTicketCounter = data.lastTicketCounter + 1;
                 }
             }
             
-            transaction.set(configRef, { lastTicketId: nextTicketId }, { merge: true });
+            transaction.set(configRef, { lastTicketCounter: nextTicketCounter }, { merge: true });
             
-            const generatedId = nextTicketId.toString();
+            // Convert to Base-36 Alphanumeric and Capitalize
+            const generatedId = nextTicketCounter.toString(36).toUpperCase();
             const chatDocRef = db.collection('chats').doc(generatedId);
             
             transaction.set(chatDocRef, {
@@ -173,7 +178,7 @@ export async function submitTicketAction(
 
             const messageDocRef = chatDocRef.collection('messages').doc();
             transaction.set(messageDocRef, {
-                text: message, // Message is already encrypted by client if desired, or stored as plain for tickets
+                text: message,
                 senderId: userId,
                 senderType: 'player',
                 createdAt: FieldValue.serverTimestamp()
