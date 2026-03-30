@@ -40,11 +40,15 @@ export default function SupportPage() {
     const [ticketUsername, setTicketUsername] = useState("");
     const [ticketMessage, setTicketMessage] = useState("");
     const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+    
+    // File States
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const chatFileInputRef = useRef<HTMLInputElement>(null);
     const { hideLoader, showLoader } = useLoading();
     const { toast } = useToast();
 
@@ -174,10 +178,10 @@ export default function SupportPage() {
         }
     };
 
-    const uploadScreenshot = async (userId: string): Promise<string | null> => {
+    const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
         if (!selectedFile) return null;
         const fileName = `${Date.now()}_${selectedFile.name}`;
-        const storageRef = ref(storage, `support/${userId}/tickets/${fileName}`);
+        const storageRef = ref(storage, `support/${userId}/${folder}/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
     };
@@ -191,7 +195,7 @@ export default function SupportPage() {
             const idToken = await user.getIdToken();
             let uploadedUrl = null;
             if (selectedFile) {
-                uploadedUrl = await uploadScreenshot(user.uid);
+                uploadedUrl = await uploadImage(user.uid, 'tickets');
             }
 
             const encrypted = encryptMessage(ticketMessage.trim());
@@ -226,14 +230,19 @@ export default function SupportPage() {
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!text.trim() || !user || isSending || activeChat?.status === 'closed') return;
+        if ((!text.trim() && !selectedFile) || !user || isSending || activeChat?.status === 'closed') return;
 
         const messageText = text.trim();
-        const encrypted = encryptMessage(messageText);
-        setText("");
         setIsSending(true);
 
         try {
+            let uploadedUrl = null;
+            if (selectedFile) {
+                uploadedUrl = await uploadImage(user.uid, 'chat');
+            }
+
+            const encrypted = messageText ? encryptMessage(messageText) : "";
+
             if (isPendingFirstMessage) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.exists() ? userDoc.data() : null;
@@ -253,12 +262,29 @@ export default function SupportPage() {
                 if (result.success && result.chatId) {
                     setChatId(result.chatId);
                     setIsPendingFirstMessage(false);
+                    
+                    // If there was an image, we need to add it as a second message or update the first.
+                    // The startSupportChatAction creates the first message.
+                    // For simplicity, if both exist, we handle the image in the first message logic in actions if needed, 
+                    // but here we'll just add it as a message if it's not the very first one or if we need to update it.
+                    if (uploadedUrl) {
+                        // The action creates a message. If we want to include an image in the initial message, 
+                        // the action.ts would need updating. For now, we'll add a second message if an image was uploaded.
+                        await addDoc(collection(db, `chats/${result.chatId}/messages`), {
+                            text: "", 
+                            imageUrl: uploadedUrl,
+                            senderId: user.uid,
+                            senderType: 'player',
+                            createdAt: serverTimestamp(),
+                        });
+                    }
                 } else {
                     throw new Error(result.message);
                 }
             } else if (chatId) {
                 await addDoc(collection(db, `chats/${chatId}/messages`), {
                     text: encrypted, 
+                    imageUrl: uploadedUrl || null,
                     senderId: user.uid,
                     senderType: 'player',
                     createdAt: serverTimestamp(),
@@ -268,6 +294,10 @@ export default function SupportPage() {
                     lastMessageTime: serverTimestamp(),
                 });
             }
+            
+            setText("");
+            setSelectedFile(null);
+            setPreviewUrl(null);
         } catch (err: any) {
             console.error("Send error:", err);
             toast({ title: "Error", description: err.message || "Failed to send message.", variant: "destructive" });
@@ -504,7 +534,7 @@ export default function SupportPage() {
                 {activeChat?.screenshotUrl && (
                     <div className="flex justify-center mb-4">
                         <div className="max-w-xs w-full bg-muted rounded-xl p-2 border border-dashed border-primary/30">
-                            <p className="text-[10px] font-bold uppercase text-center mb-2 text-muted-foreground">Attached Screenshot</p>
+                            <p className="text-[10px] font-bold uppercase text-center mb-2 text-muted-foreground">Initial Ticket Attachment</p>
                             <a href={activeChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
                                 <img 
                                     src={activeChat.screenshotUrl} 
@@ -543,11 +573,11 @@ export default function SupportPage() {
                                             ? "bg-primary text-primary-foreground rounded-tr-none" 
                                             : "bg-secondary text-foreground rounded-tl-none border"
                                     )}>
-                                        <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
+                                        {m.text && <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>}
                                         {m.imageUrl && (
-                                            <div className="mt-2 rounded-lg overflow-hidden border">
+                                            <div className={cn("rounded-lg overflow-hidden border", m.text && "mt-2")}>
                                                 <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
-                                                    <img src={m.imageUrl} alt="Attached" className="max-w-full h-auto" />
+                                                    <img src={m.imageUrl} alt="Attached" className="max-w-full h-auto max-h-60 object-contain" />
                                                 </a>
                                             </div>
                                         )}
@@ -562,24 +592,56 @@ export default function SupportPage() {
                 )}
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 space-y-3">
                 {activeChat?.status !== 'closed' ? (
-                    <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
-                        <Input
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
-                            placeholder="Type your message..."
-                            autoComplete="off"
-                        />
-                        <Button 
-                            type="submit" 
-                            disabled={!text.trim() || isSending}
-                            className="rounded-full w-10 h-10 p-0 flex-shrink-0"
-                        >
-                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        </Button>
-                    </form>
+                    <>
+                        {previewUrl && (
+                            <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit ml-4">
+                                <div className="relative h-12 w-12 rounded border overflow-hidden">
+                                    <img src={previewUrl} className="h-full w-full object-cover" />
+                                    <button 
+                                        onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} 
+                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="h-4 w-4 text-white" />
+                                    </button>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-medium">Ready to send</span>
+                            </div>
+                        )}
+                        <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                ref={chatFileInputRef} 
+                                onChange={handleFileChange} 
+                            />
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-full flex-shrink-0"
+                                onClick={() => chatFileInputRef.current?.click()}
+                            >
+                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                            </Button>
+                            <Input
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                placeholder="Type your message..."
+                                autoComplete="off"
+                            />
+                            <Button 
+                                type="submit" 
+                                disabled={(!text.trim() && !selectedFile) || isSending}
+                                className="rounded-full w-10 h-10 p-0 flex-shrink-0"
+                            >
+                                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                        </form>
+                    </>
                 ) : (
                     <div className="p-4 bg-secondary/50 rounded-xl text-center border border-dashed flex items-center justify-center gap-3">
                         <CheckCircle2 className="h-4 w-4 text-muted-foreground" />

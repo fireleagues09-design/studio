@@ -8,7 +8,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
-import { useRouter } from "next/navigation";
+import { useRouter } from "navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon, X } from "lucide-react";
@@ -148,7 +148,7 @@ export default function SupportPanel() {
 
   const sendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!text.trim() || !selectedChat || !user || isSending || selectedChat.status === 'closed') return;
+    if ((!text.trim() && !selectedFile) || !selectedChat || !user || isSending || selectedChat.status === 'closed') return;
 
     const msgText = text.trim();
     setIsSending(true);
@@ -160,7 +160,7 @@ export default function SupportPanel() {
       }
 
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
-        text: encryptMessage(msgText), 
+        text: msgText ? encryptMessage(msgText) : "", 
         imageUrl: uploadedUrl || null,
         senderId: user.uid,
         senderType: 'admin',
@@ -375,7 +375,7 @@ export default function SupportPanel() {
                       <div className="max-w-xs w-full bg-card rounded-xl p-3 border shadow-sm">
                           <div className="flex items-center gap-2 mb-2 text-blue-500">
                               <ImageIcon className="h-3.5 w-3.5" />
-                              <span className="text-[10px] font-black uppercase tracking-widest">Initial Attachment</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest">Initial Ticket Attachment</span>
                           </div>
                           <a href={selectedChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
                               <img src={selectedChat.screenshotUrl} alt="Screenshot" className="rounded-lg object-contain w-full hover:brightness-90 transition-all cursor-zoom-in" />
@@ -395,11 +395,11 @@ export default function SupportPanel() {
                                     ? "bg-primary text-primary-foreground rounded-tr-none" 
                                     : "bg-card border text-foreground rounded-tl-none"
                             )}>
-                                <p className="whitespace-pre-wrap leading-relaxed">{decryptMessage(m.text)}</p>
+                                {m.text && <p className="whitespace-pre-wrap leading-relaxed">{decryptMessage(m.text)}</p>}
                                 {m.imageUrl && (
-                                    <div className="mt-2 rounded-lg overflow-hidden border">
+                                    <div className={cn("rounded-lg overflow-hidden border", m.text && "mt-2")}>
                                         <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
-                                            <img src={m.imageUrl} alt="Staff attachment" className="max-w-full h-auto" />
+                                            <img src={m.imageUrl} alt="Staff attachment" className="max-w-full h-auto max-h-60 object-contain" />
                                         </a>
                                     </div>
                                 )}
@@ -450,7 +450,7 @@ export default function SupportPanel() {
                             placeholder="Type response..."
                             autoComplete="off"
                         />
-                        <Button type="submit" disabled={!text.trim() || isSending || isUploading} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
+                        <Button type="submit" disabled={(!text.trim() && !selectedFile) || isSending || isUploading} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
                             {isSending || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         </Button>
                     </form>
