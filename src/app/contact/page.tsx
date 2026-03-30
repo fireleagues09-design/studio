@@ -34,7 +34,7 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              If you are a registered player, our live support team is available to assist you with real-time chat and ticket tracking.
+              If you are a registered player or non registered player, our live support team is available to assist you with real-time chat and ticket tracking.
             </p>
             <Button asChild className="w-full font-bold">
               <Link href="/support">
