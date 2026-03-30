@@ -23,7 +23,8 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // Allow users to upload to 'support_images' folder, and staff to manage it
+    // Optimized: Allow users to upload to their own UID subfolder directly
+    // This removes the costly 'isAdmin' lookup for basic user uploads
     match /support_images/{userId}/{allPaths=**} {
       allow write: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
     }

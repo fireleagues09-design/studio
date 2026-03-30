@@ -45,7 +45,6 @@ export default function SupportPanel() {
   // File state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,18 +131,14 @@ export default function SupportPanel() {
 
   const uploadReplyImage = async (): Promise<string | null> => {
     if (!selectedFile || !user) return null;
-    setIsUploading(true);
     try {
         const fileName = `${Date.now()}_${selectedFile.name}`;
-        // Consistent root folder name as requested
         const storageRef = ref(storage, `support_images/${user.uid}/replies/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
-    } catch (err) {
+    } catch (err: any) {
         console.error("Staff upload error:", err);
-        return null;
-    } finally {
-        setIsUploading(false);
+        throw new Error("Failed to upload image. Please try again.");
     }
   };
 
@@ -177,8 +172,9 @@ export default function SupportPanel() {
       setText("");
       setSelectedFile(null);
       setPreviewUrl(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Staff send error:", err);
+      toast({ title: "Error", description: err.message || "Failed to send response.", variant: "destructive" });
     } finally {
       setIsSending(false);
     }
@@ -224,7 +220,7 @@ export default function SupportPanel() {
   if (!isMounted || !isAuthorized) return null;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background text-foreground">
       <AlertDialog open={!!chatToDelete} onOpenChange={(open) => !open && setChatToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -419,7 +415,7 @@ export default function SupportPanel() {
                     {previewUrl && (
                         <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit">
                             <div className="relative h-12 w-12 rounded border overflow-hidden">
-                                <img src={previewUrl} className="h-full w-full object-cover" />
+                                <img src={previewUrl} className="h-full w-full object-cover" alt="Selected Preview" />
                                 <button onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                     <X className="h-4 w-4 text-white" />
                                 </button>
@@ -441,6 +437,7 @@ export default function SupportPanel() {
                             size="icon" 
                             className="rounded-full flex-shrink-0"
                             onClick={() => fileInputRef.current?.click()}
+                            disabled={isSending}
                         >
                             <ImageIcon className="h-5 w-5 text-muted-foreground" />
                         </Button>
@@ -450,9 +447,10 @@ export default function SupportPanel() {
                             className="flex-1 rounded-full px-4"
                             placeholder="Type response..."
                             autoComplete="off"
+                            disabled={isSending}
                         />
-                        <Button type="submit" disabled={(!text.trim() && !selectedFile) || isSending || isUploading} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
-                            {isSending || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        <Button type="submit" disabled={(!text.trim() && !selectedFile) || isSending} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
+                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         </Button>
                     </form>
                 </div>

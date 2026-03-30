@@ -44,7 +44,6 @@ export default function SupportPage() {
     // File States
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -181,10 +180,14 @@ export default function SupportPage() {
     const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
         if (!selectedFile) return null;
         const fileName = `${Date.now()}_${selectedFile.name}`;
-        // Consistent folder naming as requested
-        const storageRef = ref(storage, `support_images/${userId}/${folder}/${fileName}`);
-        const snapshot = await uploadBytes(storageRef, selectedFile);
-        return await getDownloadURL(snapshot.ref);
+        try {
+            const storageRef = ref(storage, `support_images/${userId}/${folder}/${fileName}`);
+            const snapshot = await uploadBytes(storageRef, selectedFile);
+            return await getDownloadURL(snapshot.ref);
+        } catch (error: any) {
+            console.error("Storage upload error:", error);
+            throw new Error("Failed to upload image. Please try again or check your internet connection.");
+        }
     };
 
     const handleTicketSubmit = async (e: React.FormEvent) => {
@@ -439,7 +442,7 @@ export default function SupportPage() {
                                     <DialogFooter className="pt-2">
                                         <Button type="submit" disabled={isSubmittingTicket} className="w-full font-bold">
                                             {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                                            Submit Formal Ticket
+                                            {isSubmittingTicket ? 'Uploading...' : 'Submit Formal Ticket'}
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -593,7 +596,7 @@ export default function SupportPage() {
                         {previewUrl && (
                             <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit ml-4">
                                 <div className="relative h-12 w-12 rounded border overflow-hidden">
-                                    <img src={previewUrl} className="h-full w-full object-cover" />
+                                    <img src={previewUrl} className="h-full w-full object-cover" alt="Selected Preview" />
                                     <button 
                                         onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} 
                                         className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
@@ -618,6 +621,7 @@ export default function SupportPage() {
                                 size="icon" 
                                 className="rounded-full flex-shrink-0"
                                 onClick={() => chatFileInputRef.current?.click()}
+                                disabled={isSending}
                             >
                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
                             </Button>
@@ -627,6 +631,7 @@ export default function SupportPage() {
                                 className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 placeholder="Type your message..."
                                 autoComplete="off"
+                                disabled={isSending}
                             />
                             <Button 
                                 type="submit" 
