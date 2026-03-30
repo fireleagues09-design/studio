@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/badge';
+import { Badge } from '@/components/ui/badge';
 import { startSupportChatAction, submitTicketAction } from '@/app/actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';

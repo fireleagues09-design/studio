@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/badge";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
