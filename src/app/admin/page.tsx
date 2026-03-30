@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -243,6 +244,7 @@ export default function AdminPage() {
 
     const [totalUsers, setTotalUsers] = useState(0);
     const [totalTournaments, setTotalTournaments] = useState(0);
+    const [suspendedUsersCount, setSuspendedUsersCount] = useState(0);
 
     const [activeTab, setActiveTab] = useState('transactions');
     const [isMounted, setIsMounted] = useState(false);
@@ -314,6 +316,12 @@ export default function AdminPage() {
              setTotalUsers(countSnapshot.data().count);
         });
 
+        const suspendedQuery = query(usersRef, where("suspended", "==", true));
+        const unsubscribeSuspended = onSnapshot(suspendedQuery, async () => {
+            const countSnapshot = await getCountFromServer(suspendedQuery);
+            setSuspendedUsersCount(countSnapshot.data().count);
+        });
+
         const transactionsQuery = query(
             collection(db, "transactions"), 
             where("status", "==", "Pending"), 
@@ -348,6 +356,7 @@ export default function AdminPage() {
         return () => {
             unsubscribeTournaments();
             unsubscribeUsers();
+            unsubscribeSuspended();
             unsubscribeTransactions();
             unsubscribePayment();
         };
@@ -434,41 +443,57 @@ export default function AdminPage() {
             </header>
 
              <section>
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                     <Card className="bg-primary/5 border-primary/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Users</CardTitle>
+                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Users</CardTitle>
                             <div className="p-2 bg-primary/10 rounded-full">
                                 <Users className="h-4 w-4 text-primary" />
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{totalUsers}</div>
-                            <p className="text-[10px] text-muted-foreground">Total registered accounts</p>
+                            <div className="text-xl font-bold">{totalUsers}</div>
+                            <p className="text-[10px] text-muted-foreground">Registered accounts</p>
                         </CardContent>
                     </Card>
+                    
+                    <Link href="/admin/suspended" className="block transition-transform hover:scale-[1.02] active:scale-95">
+                        <Card className="bg-destructive/5 border-destructive/10 h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Suspended</CardTitle>
+                                <div className="p-2 bg-destructive/10 rounded-full text-destructive">
+                                    <Ban className="h-4 w-4" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-xl font-bold text-destructive">{suspendedUsersCount}</div>
+                                <p className="text-[10px] text-muted-foreground">Blocked players</p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
                     <Card className="bg-blue-500/5 border-blue-500/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Events</CardTitle>
+                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Events</CardTitle>
                             <div className="p-2 bg-blue-500/10 rounded-full">
                                 <TrophyIcon className="h-4 w-4 text-blue-500" />
                             </div>
                         </CardHeader>
                         <CardContent>
-                             <div className="text-2xl font-bold">{totalTournaments}</div>
-                            <p className="text-[10px] text-muted-foreground">Tournaments created</p>
+                             <div className="text-xl font-bold">{totalTournaments}</div>
+                            <p className="text-[10px] text-muted-foreground">Created</p>
                         </CardContent>
                     </Card>
                     <Card className="bg-amber-500/5 border-amber-500/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pending</CardTitle>
+                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pending</CardTitle>
                             <div className="p-2 bg-amber-500/10 rounded-full">
                                 <Activity className="h-4 w-4 text-amber-500" />
                             </div>
                         </CardHeader>
                         <CardContent>
-                           <div className="text-2xl font-bold">{pendingTransactions.length}</div>
-                           <p className="text-[10px] text-muted-foreground">Requests needing review</p>
+                           <div className="text-xl font-bold">{pendingTransactions.length}</div>
+                           <p className="text-[10px] text-muted-foreground">Review needed</p>
                         </CardContent>
                     </Card>
                 </div>
