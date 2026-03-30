@@ -42,6 +42,7 @@ export default function SupportPanel() {
   const [isSending, setIsSending] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+  const [activeType, setActiveType] = useState<'chat' | 'ticket'>('chat');
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   
   // File state
@@ -81,6 +82,7 @@ export default function SupportPanel() {
     const q = query(
       collection(db, "chats"),
       where("status", "in", statusFilter),
+      where("type", "==", activeType),
       orderBy("createdAt", "desc"),
       limit(50)
     );
@@ -90,7 +92,7 @@ export default function SupportPanel() {
     });
 
     return () => unsub();
-  }, [isAuthorized, isMounted, activeTab]);
+  }, [isAuthorized, isMounted, activeTab, activeType]);
 
   useEffect(() => {
     if (!selectedChat) {
@@ -219,6 +221,17 @@ export default function SupportPanel() {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+      if (!selectedChat) return;
+      try {
+          await deleteDoc(doc(db, `chats/${selectedChat.id}/messages`, messageId));
+          toast({ title: "Message Unsent" });
+      } catch (err) {
+          console.error("Message delete error:", err);
+          toast({ title: "Error", description: "Could not unsend message.", variant: 'destructive' });
+      }
+  }
+
   if (!isMounted || !isAuthorized) return null;
 
   return (
@@ -260,13 +273,34 @@ export default function SupportPanel() {
                     <TabsTrigger value="history" className="text-xs font-bold">Archived</TabsTrigger>
                 </TabsList>
             </Tabs>
+
+            <div className="flex gap-1 p-1 bg-secondary/50 rounded-lg">
+                <Button 
+                    variant={activeType === 'chat' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="flex-1 h-7 text-[10px] font-black uppercase"
+                    onClick={() => { setActiveType('chat'); setSelectedChat(null); }}
+                >
+                    <MessageSquare className="h-3 w-3 mr-1.5" />
+                    Chats
+                </Button>
+                <Button 
+                    variant={activeType === 'ticket' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="flex-1 h-7 text-[10px] font-black uppercase"
+                    onClick={() => { setActiveType('ticket'); setSelectedChat(null); }}
+                >
+                    <ClipboardList className="h-3 w-3 mr-1.5" />
+                    Tickets
+                </Button>
+            </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
           {chats.length === 0 ? (
             <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center gap-3">
                 <CheckCircle className="h-8 w-8 opacity-20" />
-                <p>{activeTab === 'active' ? "Queue is empty." : "No history found."}</p>
+                <p>{activeTab === 'active' ? `No ${activeType}s in queue.` : `No archived ${activeType}s.`}</p>
             </div>
           ) : (
             chats.map((c) => (
@@ -400,8 +434,20 @@ export default function SupportPanel() {
               {messages.map((m, idx) => {
                   const isMe = m.senderType === 'admin';
                   return (
-                    <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
-                        <div className={cn("flex flex-col max-w-[80%]", isMe ? "items-end" : "items-start")}>
+                    <div key={m.id} className={cn("flex w-full group", isMe ? "justify-end" : "justify-start")}>
+                        <div className={cn("flex flex-col max-w-[80%] relative", isMe ? "items-end" : "items-start")}>
+                            {selectedChat.status !== 'closed' && (
+                                <button 
+                                    onClick={() => deleteMessage(m.id)}
+                                    className={cn(
+                                        "absolute top-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background border rounded-full shadow-sm z-10",
+                                        isMe ? "-left-8" : "-right-8"
+                                    )}
+                                    title="Unsend message"
+                                >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                </button>
+                            )}
                             <div className={cn(
                                 "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
                                 isMe 
@@ -461,7 +507,7 @@ export default function SupportPanel() {
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             className="flex-1 rounded-full px-4"
-                            placeholder="Type response..."
+                            placeholder={selectedChat.type === 'ticket' ? "Reply to ticket..." : "Type response..."}
                             autoComplete="off"
                             disabled={isSending}
                         />
@@ -486,10 +532,10 @@ export default function SupportPanel() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 opacity-40">
               <div className="p-8 bg-secondary/30 rounded-full mb-6">
-                <MessageSquare className="h-16 w-16" />
+                {activeType === 'chat' ? <MessageSquare className="h-16 w-16" /> : <ClipboardList className="h-16 w-16" />}
               </div>
               <p className="text-lg font-black uppercase tracking-tighter">Workspace Idle</p>
-              <p className="text-xs font-medium max-w-xs text-center mt-2">Select a live chat or formal ticket from the queue to start assisting players.</p>
+              <p className="text-xs font-medium max-w-xs text-center mt-2">Select a {activeType} from the queue to start assisting players.</p>
           </div>
         )}
       </div>

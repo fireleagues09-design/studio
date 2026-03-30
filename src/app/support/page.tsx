@@ -9,7 +9,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, X, XCircle, User as UserIcon } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, X, XCircle, User as UserIcon, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -142,7 +142,7 @@ export default function SupportPage() {
             where("userId", "==", user.uid),
             where("status", "==", "closed"),
             orderBy("createdAt", "desc"),
-            limit(10)
+            limit(20)
         );
         const historySnap = await getDocs(qHistory);
         setHistoryChats(historySnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -234,6 +234,13 @@ export default function SupportPage() {
 
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
+        
+        // Block player replies if it's a ticket
+        if (activeChat?.type === 'ticket') {
+            toast({ title: "Ticket Locked", description: "Only support agents can reply to formal tickets." });
+            return;
+        }
+
         if ((!text.trim() && !selectedFile) || !user || isSending || activeChat?.status === 'closed') return;
 
         const messageText = text.trim();
@@ -331,6 +338,9 @@ export default function SupportPage() {
             </div>
         );
     }
+
+    const pastChats = historyChats.filter(c => c.type === 'chat');
+    const myTickets = historyChats.filter(c => c.type === 'ticket');
 
     if (view === 'home') {
         return (
@@ -450,37 +460,71 @@ export default function SupportPage() {
                         </Dialog>
                     </div>
 
-                    {historyChats.length > 0 && (
-                        <div className="space-y-4 pt-4">
-                            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground px-1">
-                                <History className="h-4 w-4" />
-                                <span>Conversation History</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                        {/* PAST CHATS SECTION */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                <span>Recent Chats</span>
                             </div>
-                            <div className="grid gap-3">
-                                {historyChats.map((c) => (
-                                    <Card key={c.id} className="hover:bg-accent/50 transition-colors cursor-pointer border-border/50" onClick={() => selectHistoryChat(c.id)}>
-                                        <CardContent className="p-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-2 bg-secondary rounded-lg">
-                                                    {c.type === 'ticket' ? <ClipboardList className="h-5 w-5 text-blue-500" /> : <MessageSquare className="h-5 w-5 text-primary" />}
+                            {pastChats.length > 0 ? (
+                                <div className="grid gap-3">
+                                    {pastChats.map((c) => (
+                                        <Card key={c.id} className="hover:bg-accent/50 transition-colors cursor-pointer border-border/50" onClick={() => selectHistoryChat(c.id)}>
+                                            <CardContent className="p-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                                        <MessageSquare className="h-4 w-4 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-xs">Case #{c.id.slice(-6)}</p>
+                                                        <p className="text-[9px] text-muted-foreground uppercase">
+                                                            {c.createdAt ? format(c.createdAt.toDate(), 'MMM dd, p') : 'N/A'}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-sm">Case #{c.id}</p>
-                                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">
-                                                        {c.createdAt ? format(c.createdAt.toDate(), 'PPP p') : 'N/A'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {c.type === 'ticket' && <Badge variant="outline" className="text-[8px] h-4 text-blue-500 border-blue-500/20">TICKET</Badge>}
-                                                <Badge variant="secondary" className="font-bold text-[10px] uppercase h-5">Closed</Badge>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
+                                                <Badge variant="secondary" className="text-[8px] h-4">CLOSED</Badge>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-muted-foreground italic px-1">No previous chats.</p>
+                            )}
                         </div>
-                    )}
+
+                        {/* TICKETS SECTION */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">
+                                <ClipboardList className="h-3.5 w-3.5" />
+                                <span>My Tickets</span>
+                            </div>
+                            {myTickets.length > 0 ? (
+                                <div className="grid gap-3">
+                                    {myTickets.map((c) => (
+                                        <Card key={c.id} className="hover:bg-accent/50 transition-colors cursor-pointer border-blue-500/20" onClick={() => selectHistoryChat(c.id)}>
+                                            <CardContent className="p-3 flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                        <ClipboardList className="h-4 w-4 text-blue-500" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-xs">Ticket #{c.id}</p>
+                                                        <p className="text-[9px] text-muted-foreground uppercase">
+                                                            {c.createdAt ? format(c.createdAt.toDate(), 'MMM dd, p') : 'N/A'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="secondary" className="text-[8px] h-4">RESOLVED</Badge>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-muted-foreground italic px-1">No submitted tickets.</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -608,54 +652,64 @@ export default function SupportPage() {
             <div className="pt-4 space-y-3">
                 {activeChat?.status !== 'closed' ? (
                     <>
-                        {previewUrl && (
-                            <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit ml-4">
-                                <div className="relative h-12 w-12 rounded border overflow-hidden">
-                                    <img src={previewUrl} className="h-full w-full object-cover" alt="Selected Preview" />
-                                    <button 
-                                        onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} 
-                                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                                    >
-                                        <X className="h-4 w-4 text-white" />
-                                    </button>
-                                </div>
-                                <span className="text-[10px] text-muted-foreground font-medium">Ready to send</span>
+                        {activeChat?.type === 'ticket' ? (
+                            <div className="p-4 bg-blue-500/5 rounded-xl text-center border border-blue-500/20 flex flex-col items-center justify-center gap-2">
+                                <Lock className="h-4 w-4 text-blue-500" />
+                                <p className="text-xs font-bold text-blue-600 uppercase tracking-tighter">Read-Only Ticket</p>
+                                <p className="text-[10px] text-muted-foreground">Tickets are monitored by staff. Only agents can reply here.</p>
                             </div>
+                        ) : (
+                            <>
+                                {previewUrl && (
+                                    <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit ml-4">
+                                        <div className="relative h-12 w-12 rounded border overflow-hidden">
+                                            <img src={previewUrl} className="h-full w-full object-cover" alt="Selected Preview" />
+                                            <button 
+                                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} 
+                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="h-4 w-4 text-white" />
+                                            </button>
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground font-medium">Ready to send</span>
+                                    </div>
+                                )}
+                                <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        ref={chatFileInputRef} 
+                                        onChange={handleFileChange} 
+                                    />
+                                    <Button 
+                                        type="button" 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="rounded-full flex-shrink-0"
+                                        onClick={() => chatFileInputRef.current?.click()}
+                                        disabled={isSending}
+                                    >
+                                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                    </Button>
+                                    <Input
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                        placeholder="Type your message..."
+                                        autoComplete="off"
+                                        disabled={isSending}
+                                    />
+                                    <Button 
+                                        type="submit" 
+                                        disabled={(!text.trim() && !selectedFile) || isSending}
+                                        className="rounded-full w-10 h-10 p-0 flex-shrink-0"
+                                    >
+                                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    </Button>
+                                </form>
+                            </>
                         )}
-                        <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                ref={chatFileInputRef} 
-                                onChange={handleFileChange} 
-                            />
-                            <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-full flex-shrink-0"
-                                onClick={() => chatFileInputRef.current?.click()}
-                                disabled={isSending}
-                            >
-                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                            </Button>
-                            <Input
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                                className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
-                                placeholder="Type your message..."
-                                autoComplete="off"
-                                disabled={isSending}
-                            />
-                            <Button 
-                                type="submit" 
-                                disabled={(!text.trim() && !selectedFile) || isSending}
-                                className="rounded-full w-10 h-10 p-0 flex-shrink-0"
-                            >
-                                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                            </Button>
-                        </form>
                     </>
                 ) : (
                     <div className="p-4 bg-secondary/50 rounded-xl text-center border border-dashed flex items-center justify-center gap-3">
