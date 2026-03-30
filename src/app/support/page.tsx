@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/badge';
 import { startSupportChatAction, submitTicketAction } from '@/app/actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -498,7 +498,7 @@ export default function SupportPage() {
                             <h1 className="text-sm font-bold leading-none">
                                 {activeChat?.type === 'ticket' ? "Formal Ticket" : "Live Support"}
                             </h1>
-                            {activeChat?.status !== 'closed' && (
+                            {activeChat?.status !== 'closed' && activeChat?.whatsappEnabled === true && (
                                 <Button 
                                     variant="outline" 
                                     size="sm" 

@@ -17,8 +17,10 @@ import { format } from 'date-fns';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -343,6 +345,20 @@ export default function SupportPanel() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                {selectedChat.status !== 'closed' && (
+                    <div className="flex items-center gap-2 mr-2 pr-2 border-r">
+                        <Switch 
+                            id="wa-toggle"
+                            checked={selectedChat.whatsappEnabled === true}
+                            onCheckedChange={(checked) => {
+                                updateDoc(doc(db, "chats", selectedChat.id), { whatsappEnabled: checked });
+                                toast({ title: checked ? "WhatsApp Enabled" : "WhatsApp Disabled" });
+                            }}
+                        />
+                        <Label htmlFor="wa-toggle" className="text-[9px] font-black uppercase text-muted-foreground cursor-pointer">WhatsApp</Label>
+                    </div>
+                )}
+                
                 {selectedChat.status !== 'closed' ? (
                     <Button variant="outline" size="sm" onClick={endChat} className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10 text-xs font-bold">
                         <XCircle className="h-3.5 w-3.5 mr-1.5" />
