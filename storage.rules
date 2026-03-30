@@ -23,8 +23,8 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // Allow users to upload screenshots to their own folder, or staff to upload anywhere in support
-    match /support/{userId}/{allPaths=**} {
+    // Allow users to upload to 'support_images' folder, and staff to manage it
+    match /support_images/{userId}/{allPaths=**} {
       allow write: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
   }

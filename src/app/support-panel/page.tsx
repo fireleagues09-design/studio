@@ -135,7 +135,8 @@ export default function SupportPanel() {
     setIsUploading(true);
     try {
         const fileName = `${Date.now()}_${selectedFile.name}`;
-        const storageRef = ref(storage, `support/${user.uid}/replies/${fileName}`);
+        // Consistent root folder name as requested
+        const storageRef = ref(storage, `support_images/${user.uid}/replies/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
     } catch (err) {
@@ -462,7 +463,7 @@ export default function SupportPanel() {
                         Archived Session
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setChatToDelete(selectedChat.id)} className="text-destructive font-bold text-[10px]">
-                        <Trash2 className="h-3 w-3 mr-1" />
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
                         PURGE DATA
                     </Button>
                 </div>

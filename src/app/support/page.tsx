@@ -181,7 +181,8 @@ export default function SupportPage() {
     const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
         if (!selectedFile) return null;
         const fileName = `${Date.now()}_${selectedFile.name}`;
-        const storageRef = ref(storage, `support/${userId}/${folder}/${fileName}`);
+        // Consistent folder naming as requested
+        const storageRef = ref(storage, `support_images/${userId}/${folder}/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
     };
@@ -263,13 +264,7 @@ export default function SupportPage() {
                     setChatId(result.chatId);
                     setIsPendingFirstMessage(false);
                     
-                    // If there was an image, we need to add it as a second message or update the first.
-                    // The startSupportChatAction creates the first message.
-                    // For simplicity, if both exist, we handle the image in the first message logic in actions if needed, 
-                    // but here we'll just add it as a message if it's not the very first one or if we need to update it.
                     if (uploadedUrl) {
-                        // The action creates a message. If we want to include an image in the initial message, 
-                        // the action.ts would need updating. For now, we'll add a second message if an image was uploaded.
                         await addDoc(collection(db, `chats/${result.chatId}/messages`), {
                             text: "", 
                             imageUrl: uploadedUrl,
