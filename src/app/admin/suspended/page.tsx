@@ -10,12 +10,14 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Ban, Search, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Ban, Search, User as UserIcon, CheckCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { updateUserSuspension } from '../actions';
+import { useToast } from '@/hooks/use-toast';
 
 type SuspendedUser = {
     id: string;
@@ -34,9 +36,11 @@ export default function SuspendedUsersPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<{[key: string]: boolean}>({});
     
     const router = useRouter();
     const { hideLoader } = useLoading();
+    const { toast } = useToast();
 
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
@@ -87,6 +91,25 @@ export default function SuspendedUsersPage() {
             unsubscribeSuspended();
         };
     }, [isAdmin, authLoading]);
+
+    const handleUnsuspend = async (userId: string) => {
+        if (!auth.currentUser) return;
+        setActionLoading(prev => ({...prev, [userId]: true}));
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            // We use an empty note for unsuspension
+            const result = await updateUserSuspension(userId, false, "", idToken);
+            if (result.success) {
+                toast({ title: "Success", description: "User has been unsuspended." });
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setActionLoading(prev => ({...prev, [userId]: false}));
+        }
+    };
 
     const filteredUsers = suspendedUsers.filter(u => 
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,10 +195,19 @@ export default function SuspendedUsersPage() {
                                             </p>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button size="sm" variant="outline" className="h-8 rounded-lg" asChild>
-                                                <Link href="/admin/users">
-                                                    Manage
-                                                </Link>
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="h-8 rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                                onClick={() => handleUnsuspend(u.id)}
+                                                disabled={actionLoading[u.id]}
+                                            >
+                                                {actionLoading[u.id] ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                                ) : (
+                                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                                )}
+                                                Unsuspend
                                             </Button>
                                         </TableCell>
                                     </TableRow>
