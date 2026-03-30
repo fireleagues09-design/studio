@@ -9,7 +9,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, User as UserIcon, X } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, User as UserIcon, X, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -276,6 +276,19 @@ export default function SupportPage() {
         }
     };
 
+    const endChat = async () => {
+        if (!chatId) return;
+        try {
+            await updateDoc(doc(db, 'chats', chatId), { status: 'closed' });
+            toast({ title: "Session Closed", description: "You have closed the support session." });
+            syncHistory();
+            setView('home');
+        } catch (err) {
+            console.error("Close error:", err);
+            toast({ title: "Error", description: "Failed to close session.", variant: "destructive" });
+        }
+    };
+
     if (!isMounted) return null;
     
     if (!user) {
@@ -357,7 +370,7 @@ export default function SupportPage() {
                                             placeholder="Explain what happened..." 
                                             className="min-h-[120px] resize-none"
                                             value={ticketMessage}
-                                            onChange={e => setTicketMessage(e.target.value)}
+                                            onChange={e => setTicketMessage(e.target.value)} 
                                             required
                                         />
                                     </div>
@@ -462,6 +475,17 @@ export default function SupportPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {!isPendingFirstMessage && activeChat?.status !== 'closed' && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 h-7 px-2"
+                            onClick={endChat}
+                        >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Close
+                        </Button>
+                    )}
                     {activeChat?.status === 'closed' ? (
                         <Badge variant="outline" className="text-[10px] uppercase py-0.5 font-bold">Closed</Badge>
                     ) : (
