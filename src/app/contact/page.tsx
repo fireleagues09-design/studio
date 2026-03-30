@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLoading } from "@/context/LoadingContext";
 import { useEffect } from "react";
-import { Mail, Phone, MapPin, Headset, ArrowRight } from "lucide-react";
+import { Mail, Phone, Headset, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -72,16 +72,6 @@ export default function ContactPage() {
                 <div>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">WhatsApp</p>
                   <p className="text-sm font-semibold">+91 98765 43210</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-muted rounded-full">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Location</p>
-                  <p className="text-sm font-semibold">Mumbai, Maharashtra, India</p>
                 </div>
               </div>
             </div>
