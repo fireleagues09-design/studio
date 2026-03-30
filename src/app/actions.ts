@@ -1,4 +1,3 @@
-
 'use server';
 
 import { auth, db } from '@/lib/firebase-admin';
@@ -66,7 +65,6 @@ export async function registerSoloPlayer(
 
 /**
  * Starts a new support chat session with a sequential alphanumeric ID.
- * Only called when the player sends their FIRST message.
  */
 export async function startSupportChatAction(
     idToken: string,
@@ -85,43 +83,30 @@ export async function startSupportChatAction(
         
         const chatIdString = await db.runTransaction(async (transaction) => {
             const configDoc = await transaction.get(configRef);
-            
-            /**
-             * Starting at 36^7 ensures the first ID generated is 8 characters in Base36.
-             * 36^7 = 78,364,164,096. 
-             * 100,000,000,000 in Base36 is "2B0IK3S0".
-             */
             let nextCounter = 100000000000; 
             
             if (configDoc.exists) {
                 const data = configDoc.data();
                 if (data && typeof data.lastChatCounter === 'number') {
                     nextCounter = data.lastChatCounter + 1;
-                } else if (data && typeof data.lastChatId === 'number') {
-                    nextCounter = Math.max(nextCounter, data.lastChatId + 1);
                 }
             }
             
-            // Update the global counter in Firestore
             transaction.set(configRef, { lastChatCounter: nextCounter }, { merge: true });
-            
-            // Convert numeric counter to Alphanumeric Uppercase (Base36)
             const generatedId = nextCounter.toString(36).toUpperCase();
-            
             const chatDocRef = db.collection('chats').doc(generatedId);
             
-            // 1. Create the Chat Session
             transaction.set(chatDocRef, {
                 playerDisplayName,
                 userHandle,
                 playerPhotoURL,
                 userId,
                 status: "waiting",
+                type: "chat",
                 createdAt: FieldValue.serverTimestamp(),
                 lastMessageTime: FieldValue.serverTimestamp()
             });
 
-            // 2. Add the First Message immediately
             const messageDocRef = chatDocRef.collection('messages').doc();
             transaction.set(messageDocRef, {
                 text: encryptedFirstMessage,
@@ -135,7 +120,71 @@ export async function startSupportChatAction(
 
         return { success: true, chatId: chatIdString };
     } catch (error: any) {
-        console.error('Error creating sequential support chat:', error);
+        console.error('Error creating support chat:', error);
         return { success: false, message: error.message || 'Failed to start support session.' };
+    }
+}
+
+/**
+ * Submits a new formal ticket with a 9-digit numeric ID.
+ */
+export async function submitTicketAction(
+    idToken: string,
+    username: string,
+    message: string,
+    screenshotUrl?: string
+): Promise<{ success: boolean; ticketId?: string; message?: string }> {
+    if (!idToken) return { success: false, message: 'Authorization required.' };
+
+    try {
+        const decodedToken = await auth.verifyIdToken(idToken);
+        const userId = decodedToken.uid;
+
+        const configRef = db.collection('settings').doc('support_config');
+        
+        const ticketIdString = await db.runTransaction(async (transaction) => {
+            const configDoc = await transaction.get(configRef);
+            
+            // Start at 100,000,000 (9 digits)
+            let nextTicketId = 100000000; 
+            
+            if (configDoc.exists) {
+                const data = configDoc.data();
+                if (data && typeof data.lastTicketId === 'number') {
+                    nextTicketId = data.lastTicketId + 1;
+                }
+            }
+            
+            transaction.set(configRef, { lastTicketId: nextTicketId }, { merge: true });
+            
+            const generatedId = nextTicketId.toString();
+            const chatDocRef = db.collection('chats').doc(generatedId);
+            
+            transaction.set(chatDocRef, {
+                playerDisplayName: username,
+                userHandle: username,
+                userId,
+                status: "waiting",
+                type: "ticket",
+                screenshotUrl: screenshotUrl || null,
+                createdAt: FieldValue.serverTimestamp(),
+                lastMessageTime: FieldValue.serverTimestamp()
+            });
+
+            const messageDocRef = chatDocRef.collection('messages').doc();
+            transaction.set(messageDocRef, {
+                text: message, // Message is already encrypted by client if desired, or stored as plain for tickets
+                senderId: userId,
+                senderType: 'player',
+                createdAt: FieldValue.serverTimestamp()
+            });
+            
+            return generatedId;
+        });
+
+        return { success: true, ticketId: ticketIdString };
+    } catch (error: any) {
+        console.error('Error submitting ticket:', error);
+        return { success: false, message: error.message || 'Failed to submit ticket.' };
     }
 }

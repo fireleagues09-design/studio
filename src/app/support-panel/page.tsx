@@ -10,7 +10,7 @@ import { useLoading } from "@/context/LoadingContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -28,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 
 export default function SupportPanel() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -35,6 +36,7 @@ export default function SupportPanel() {
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
+  const [replyImage, setReplyImage] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -116,12 +118,15 @@ export default function SupportPanel() {
     if (!text.trim() || !selectedChat || !user || isSending || selectedChat.status === 'closed') return;
 
     const msgText = text.trim();
+    const imageUrl = replyImage.trim();
     setText("");
+    setReplyImage("");
     setIsSending(true);
 
     try {
       await addDoc(collection(db, `chats/${selectedChat.id}/messages`), {
         text: encryptMessage(msgText), 
+        imageUrl: imageUrl || null,
         senderId: user.uid,
         senderType: 'admin',
         createdAt: serverTimestamp(),
@@ -167,7 +172,7 @@ export default function SupportPanel() {
     try {
         await deleteDoc(doc(db, "chats", chatToDelete));
         if (selectedChat?.id === chatToDelete) setSelectedChat(null);
-        toast({ title: "Success", description: "Session deleted." });
+        toast({ title: "Success", description: "Session deleted permanently." });
     } catch (err) {
         console.error("Delete error:", err);
         toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
@@ -185,7 +190,7 @@ export default function SupportPanel() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Conversation History?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove this support session from the database. This action cannot be undone.
+              This will permanently remove this support session (Ticket ID: {chatToDelete}) from the database. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -213,13 +218,13 @@ export default function SupportPanel() {
             
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="active" className="text-xs">Active</TabsTrigger>
-                    <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
+                    <TabsTrigger value="active" className="text-xs font-bold">Active</TabsTrigger>
+                    <TabsTrigger value="history" className="text-xs font-bold">Archived</TabsTrigger>
                 </TabsList>
             </Tabs>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
           {chats.length === 0 ? (
             <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center gap-3">
                 <CheckCircle className="h-8 w-8 opacity-20" />
@@ -238,24 +243,27 @@ export default function SupportPanel() {
                 )}
               >
                 <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border">
+                    <Avatar className="h-10 w-10 border shrink-0">
                         {c.playerPhotoURL && <AvatarImage src={c.playerPhotoURL} alt={c.playerDisplayName} />}
-                        <AvatarFallback className="text-xs">{(c.playerDisplayName || "P").charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-xs bg-secondary">{(c.playerDisplayName || "P").charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm truncate text-foreground">{c.playerDisplayName || "Unknown Player"}</div>
+                        <div className="flex items-center gap-1">
+                            <div className="font-bold text-sm truncate text-foreground">{c.playerDisplayName || "Unknown Player"}</div>
+                            {c.type === 'ticket' && <Badge variant="outline" className="text-[7px] px-1 h-3 border-blue-500/30 text-blue-500 uppercase tracking-tighter">Ticket</Badge>}
+                        </div>
                         {c.userHandle && c.userHandle !== 'unregistered' && (
-                          <div className="text-[10px] text-blue-500 font-mono">@{c.userHandle}</div>
+                          <div className="text-[10px] text-primary/70 font-mono">@{c.userHandle}</div>
                         )}
                         <div className="flex items-center gap-1.5 mt-1">
                             <span className={cn(
                                 "h-1.5 w-1.5 rounded-full",
                                 c.status === 'open' ? "bg-green-500" : c.status === 'closed' ? "bg-muted-foreground" : "bg-amber-500"
                             )} />
-                            <span className="text-[10px] text-muted-foreground uppercase font-medium">{c.status}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">{c.status}</span>
                         </div>
                     </div>
-                    {activeTab === 'history' && (
+                    {activeTab === 'history' ? (
                       <Button 
                           variant="ghost" 
                           size="icon" 
@@ -267,6 +275,8 @@ export default function SupportPanel() {
                       >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
+                    ) : (
+                        <div className="text-[9px] font-bold text-muted-foreground tabular-nums">#{c.id.slice(-4)}</div>
                     )}
                 </div>
               </div>
@@ -282,33 +292,33 @@ export default function SupportPanel() {
       )}>
         {selectedChat ? (
           <>
-            <div className="p-4 border-b bg-background/50 backdrop-blur-md flex justify-between items-center z-10">
+            <div className="p-4 border-b bg-background/50 backdrop-blur-md flex justify-between items-center z-10 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <Button variant="ghost" size="icon" className="md:hidden flex-shrink-0" onClick={() => setSelectedChat(null)}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <Avatar className="h-9 w-9 border flex-shrink-0">
                     {selectedChat.playerPhotoURL && <AvatarImage src={selectedChat.playerPhotoURL} />}
-                    <AvatarFallback>{(selectedChat.playerDisplayName || "P").charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="bg-secondary">{(selectedChat.playerDisplayName || "P").charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="leading-none min-w-0">
                     <h3 className="font-bold text-sm text-foreground truncate whitespace-nowrap">{selectedChat.playerDisplayName || "Unknown Player"}</h3>
-                    <p className="text-[10px] text-muted-foreground font-mono truncate mt-1">ID: {selectedChat.id}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono truncate mt-1">Ref: #{selectedChat.id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {selectedChat.status !== 'closed' ? (
-                    <Button variant="outline" size="sm" onClick={endChat} className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10 text-xs">
+                    <Button variant="outline" size="sm" onClick={endChat} className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10 text-xs font-bold">
                         <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                        Close Case
+                        Resolve Case
                     </Button>
                 ) : (
                     <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-bold gap-1 text-muted-foreground">
+                        <Badge variant="outline" className="font-bold gap-1 text-muted-foreground bg-muted/50">
                             <History className="h-3 w-3" />
-                            History Mode
+                            Archived
                         </Badge>
-                        <Button variant="outline" size="sm" onClick={reopenChat} className="h-8 text-primary border-primary/20 hover:bg-primary/10 text-xs font-bold">
+                        <Button variant="outline" size="sm" onClick={reopenChat} className="h-8 text-primary border-primary/20 hover:bg-primary/10 text-xs font-bold shadow-sm">
                             <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                             Reopen
                         </Button>
@@ -319,23 +329,43 @@ export default function SupportPanel() {
 
             <div 
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5"
+              className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5 scrollbar-hide"
             >
+              {selectedChat.screenshotUrl && (
+                  <div className="flex justify-start mb-6">
+                      <div className="max-w-xs w-full bg-card rounded-xl p-3 border shadow-sm">
+                          <div className="flex items-center gap-2 mb-2 text-blue-500">
+                              <ImageIcon className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Initial Attachment</span>
+                          </div>
+                          <a href={selectedChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                              <img src={selectedChat.screenshotUrl} alt="Screenshot" className="rounded-lg object-contain w-full hover:brightness-90 transition-all cursor-zoom-in" />
+                          </a>
+                      </div>
+                  </div>
+              )}
+
               {messages.map((m, idx) => {
-                  // SENDER SENSE: My messages (admin) are on the Right
                   const isMe = m.senderType === 'admin';
                   return (
                     <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
                         <div className={cn("flex flex-col max-w-[80%]", isMe ? "items-end" : "items-start")}>
                             <div className={cn(
-                                "px-4 py-2 rounded-2xl text-sm shadow-sm",
+                                "px-4 py-2.5 rounded-2xl text-sm shadow-sm",
                                 isMe 
                                     ? "bg-primary text-primary-foreground rounded-tr-none" 
                                     : "bg-card border text-foreground rounded-tl-none"
                             )}>
-                                <p className="whitespace-pre-wrap">{decryptMessage(m.text)}</p>
+                                <p className="whitespace-pre-wrap leading-relaxed">{decryptMessage(m.text)}</p>
+                                {m.imageUrl && (
+                                    <div className="mt-2 rounded-lg overflow-hidden border">
+                                        <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
+                                            <img src={m.imageUrl} alt="Staff attachment" className="max-w-full h-auto" />
+                                        </a>
+                                    </div>
+                                )}
                             </div>
-                            <span className="text-[9px] text-muted-foreground mt-1 px-1">
+                            <span className="text-[9px] text-muted-foreground mt-1 px-1 font-medium">
                                 {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
                             </span>
                         </div>
@@ -345,30 +375,49 @@ export default function SupportPanel() {
             </div>
 
             {selectedChat.status !== 'closed' ? (
-                <form onSubmit={sendMessage} className="p-4 border-t bg-background flex gap-2">
-                    <Input
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="flex-1"
-                        placeholder="Reply to player..."
-                        autoComplete="off"
-                    />
-                    <Button type="submit" disabled={!text.trim() || isSending} className="rounded-full w-10 h-10 p-0">
-                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                </form>
+                <div className="p-4 border-t bg-background shadow-2xl space-y-3">
+                    <form onSubmit={sendMessage} className="flex gap-2">
+                        <Input
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            className="flex-1 rounded-full px-4"
+                            placeholder="Type response..."
+                            autoComplete="off"
+                        />
+                        <Button type="submit" disabled={!text.trim() || isSending} className="rounded-full w-10 h-10 p-0 flex-shrink-0">
+                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </Button>
+                    </form>
+                    <div className="flex items-center gap-2 px-2">
+                        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Input 
+                            value={replyImage} 
+                            onChange={e => setReplyImage(e.target.value)} 
+                            className="h-7 text-[10px] rounded-full bg-secondary/50 border-none"
+                            placeholder="Optional Image URL reply..." 
+                        />
+                    </div>
+                </div>
             ) : (
-                <div className="p-6 border-t bg-muted/20 text-center flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground">
-                    <History className="h-3.5 w-3.5" />
-                    Viewing archived conversation.
+                <div className="p-6 border-t bg-muted/20 text-center flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        <History className="h-4 w-4" />
+                        Archived Session
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setChatToDelete(selectedChat.id)} className="text-destructive font-bold text-[10px]">
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        PURGE DATA
+                    </Button>
                 </div>
             )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 opacity-40">
-              <MessageSquare className="h-16 w-16 mb-4" />
-              <p className="text-lg font-bold">Workspace Idle</p>
-              <p className="text-sm">Select a conversation to begin assisting.</p>
+              <div className="p-8 bg-secondary/30 rounded-full mb-6">
+                <MessageSquare className="h-16 w-16" />
+              </div>
+              <p className="text-lg font-black uppercase tracking-tighter">Workspace Idle</p>
+              <p className="text-xs font-medium max-w-xs text-center mt-2">Select a live chat or formal ticket from the queue to start assisting players.</p>
           </div>
         )}
       </div>

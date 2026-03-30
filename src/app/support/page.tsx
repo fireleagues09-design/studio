@@ -8,7 +8,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2 } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, User as UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,10 @@ import Link from 'next/link';
 import { encryptMessage, decryptMessage } from '@/lib/encryption';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { startSupportChatAction } from '@/app/actions';
+import { startSupportChatAction, submitTicketAction } from '@/app/actions';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 export default function SupportPage() {
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -31,8 +34,15 @@ export default function SupportPage() {
     const [view, setView] = useState<'chat' | 'home'>('home');
     const [isPendingFirstMessage, setIsPendingFirstMessage] = useState(false);
     
+    // Ticket States
+    const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+    const [ticketUsername, setTicketUsername] = useState("");
+    const [ticketMessage, setTicketMessage] = useState("");
+    const [ticketScreenshot, setTicketScreenshot] = useState("");
+    const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+
     const chatContainerRef = useRef<HTMLDivElement>(null);
-    const { hideLoader } = useLoading();
+    const { hideLoader, showLoader } = useLoading();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -49,6 +59,12 @@ export default function SupportPage() {
 
         const syncIdentityAndFetchData = async () => {
             try {
+                // Fetch current user details for pre-filling
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    setTicketUsername(userDoc.data().username || "");
+                }
+
                 const qActive = query(
                     collection(db, "chats"),
                     where("userId", "==", user.uid),
@@ -144,6 +160,44 @@ export default function SupportPage() {
         setView('chat');
     };
 
+    const handleTicketSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !ticketUsername.trim() || !ticketMessage.trim()) return;
+
+        setIsSubmittingTicket(true);
+        try {
+            const idToken = await user.getIdToken();
+            // Encrypt ticket message for privacy
+            const encrypted = encryptMessage(ticketMessage.trim());
+            
+            const result = await submitTicketAction(
+                idToken,
+                ticketUsername.trim(),
+                encrypted,
+                ticketScreenshot.trim() || undefined
+            );
+
+            if (result.success && result.ticketId) {
+                toast({ title: "Ticket Submitted", description: `Reference: #${result.ticketId}` });
+                setIsTicketDialogOpen(false);
+                setTicketMessage("");
+                setTicketScreenshot("");
+                
+                // Show the ticket chat immediately
+                setChatId(result.ticketId);
+                setIsPendingFirstMessage(false);
+                setView('chat');
+                syncHistory();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err: any) {
+            toast({ title: "Submission Failed", description: err.message, variant: "destructive" });
+        } finally {
+            setIsSubmittingTicket(false);
+        }
+    };
+
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!text.trim() || !user || isSending || activeChat?.status === 'closed') return;
@@ -223,40 +277,114 @@ export default function SupportPage() {
                 </header>
 
                 <div className="grid gap-6">
-                    <Card className="hover:border-primary/50 transition-colors cursor-pointer group" onClick={startNewChat}>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                            <div className="p-3 bg-primary text-primary-foreground rounded-xl group-hover:scale-110 transition-transform">
-                                <PlusCircle className="h-6 w-6" />
-                            </div>
-                            <div className="space-y-1">
-                                <CardTitle>Start New Conversation</CardTitle>
-                                <CardDescription>Get help from an agent in real-time.</CardDescription>
-                            </div>
-                        </CardHeader>
-                    </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card className="hover:border-primary/50 transition-colors cursor-pointer group shadow-sm overflow-hidden" onClick={startNewChat}>
+                            <CardHeader className="flex flex-row items-center gap-4 bg-primary/5 p-6">
+                                <div className="p-3 bg-primary text-primary-foreground rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-primary/20">
+                                    <MessageSquare className="h-6 w-6" />
+                                </div>
+                                <div className="space-y-1">
+                                    <CardTitle className="text-lg">Live Support</CardTitle>
+                                    <CardDescription>Chat with an agent now.</CardDescription>
+                                </div>
+                            </CardHeader>
+                        </Card>
+
+                        <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Card className="hover:border-blue-500/50 transition-colors cursor-pointer group shadow-sm overflow-hidden border-blue-500/20">
+                                    <CardHeader className="flex flex-row items-center gap-4 bg-blue-500/5 p-6">
+                                        <div className="p-3 bg-blue-500 text-white rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/20">
+                                            <PlusCircle className="h-6 w-6" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <CardTitle className="text-lg">Submit a Ticket</CardTitle>
+                                            <CardDescription>Formal report with details.</CardDescription>
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Raise a Support Ticket</DialogTitle>
+                                    <DialogDescription>Provide details about your issue. Our team will review it shortly.</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleTicketSubmit} className="space-y-4 pt-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ticket-username">Your Username</Label>
+                                        <div className="relative">
+                                            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input 
+                                                id="ticket-username" 
+                                                className="pl-9"
+                                                placeholder="e.g. fireleagues_pro" 
+                                                value={ticketUsername} 
+                                                onChange={e => setTicketUsername(e.target.value)} 
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ticket-message">Message / Details</Label>
+                                        <Textarea 
+                                            id="ticket-message" 
+                                            placeholder="Explain what happened..." 
+                                            className="min-h-[120px] resize-none"
+                                            value={ticketMessage}
+                                            onChange={e => setTicketMessage(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ticket-ss">Screenshot Link (Optional)</Label>
+                                        <div className="relative">
+                                            <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input 
+                                                id="ticket-ss" 
+                                                className="pl-9"
+                                                placeholder="https://image-host.com/my-ss.png" 
+                                                value={ticketScreenshot}
+                                                onChange={e => setTicketScreenshot(e.target.value)}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground px-1">Tip: Use an image host like ImgBB or PostImages.</p>
+                                    </div>
+                                    <DialogFooter className="pt-2">
+                                        <Button type="submit" disabled={isSubmittingTicket} className="w-full font-bold">
+                                            {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                                            Submit Formal Ticket
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
 
                     {historyChats.length > 0 && (
                         <div className="space-y-4 pt-4">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground px-1">
+                            <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground px-1">
                                 <History className="h-4 w-4" />
-                                <span>Recent Conversations</span>
+                                <span>Conversation History</span>
                             </div>
                             <div className="grid gap-3">
                                 {historyChats.map((c) => (
-                                    <Card key={c.id} className="hover:bg-accent transition-colors cursor-pointer" onClick={() => selectHistoryChat(c.id)}>
+                                    <Card key={c.id} className="hover:bg-accent/50 transition-colors cursor-pointer border-border/50" onClick={() => selectHistoryChat(c.id)}>
                                         <CardContent className="p-4 flex items-center justify-between">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-2 bg-secondary rounded-lg">
-                                                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                                                    {c.type === 'ticket' ? <ClipboardList className="h-5 w-5 text-blue-500" /> : <MessageSquare className="h-5 w-5 text-primary" />}
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-sm">Session #{c.id}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {c.createdAt ? format(c.createdAt.toDate(), 'PPP') : 'N/A'}
+                                                    <p className="font-bold text-sm">Case #{c.id}</p>
+                                                    <p className="text-[10px] text-muted-foreground uppercase font-medium">
+                                                        {c.createdAt ? format(c.createdAt.toDate(), 'PPP p') : 'N/A'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <Badge variant="secondary" className="font-medium">Closed</Badge>
+                                            <div className="flex items-center gap-2">
+                                                {c.type === 'ticket' && <Badge variant="outline" className="text-[8px] h-4 text-blue-500 border-blue-500/20">TICKET</Badge>}
+                                                <Badge variant="secondary" className="font-bold text-[10px] uppercase h-5">Closed</Badge>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -276,17 +404,19 @@ export default function SupportPage() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-sm font-bold leading-none">Support Session</h1>
+                        <h1 className="text-sm font-bold leading-none">
+                            {activeChat?.type === 'ticket' ? "Formal Ticket" : "Live Support"}
+                        </h1>
                         <p className="text-[10px] text-muted-foreground mt-1 font-mono uppercase">
-                            {isPendingFirstMessage ? "Draft" : `ID: ${chatId}`}
+                            {isPendingFirstMessage ? "Draft" : `Ref: #${chatId}`}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {activeChat?.status === 'closed' ? (
-                        <Badge variant="outline" className="text-[10px] uppercase py-0.5">Closed</Badge>
+                        <Badge variant="outline" className="text-[10px] uppercase py-0.5 font-bold">Closed</Badge>
                     ) : (
-                        <div className="flex items-center gap-2 text-[10px] font-semibold text-green-500 uppercase px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-green-500 uppercase px-2 py-1 bg-green-500/10 rounded-full border border-green-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                             Live
                         </div>
@@ -298,6 +428,21 @@ export default function SupportPage() {
                 ref={chatContainerRef}
                 className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 md:p-6 bg-card border rounded-2xl shadow-inner relative scrollbar-hide"
             >
+                {activeChat?.screenshotUrl && (
+                    <div className="flex justify-center mb-4">
+                        <div className="max-w-xs w-full bg-muted rounded-xl p-2 border border-dashed border-primary/30">
+                            <p className="text-[10px] font-bold uppercase text-center mb-2 text-muted-foreground">Attached Screenshot</p>
+                            <a href={activeChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                                <img 
+                                    src={activeChat.screenshotUrl} 
+                                    alt="Screenshot" 
+                                    className="rounded-lg object-contain w-full hover:opacity-90 transition-opacity"
+                                />
+                            </a>
+                        </div>
+                    </div>
+                )}
+
                 {messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-50 text-center py-12">
                         <div className="p-6 bg-secondary rounded-full mb-4">
@@ -310,7 +455,6 @@ export default function SupportPage() {
                     </div>
                 ) : (
                     messages.map((m, idx) => {
-                        // SENDER SENSE: My messages (player) are on the Right
                         const isMe = m.senderType === 'player';
                         const showAvatar = !isMe && (idx === 0 || messages[idx-1].senderType !== 'admin');
                         
@@ -327,6 +471,13 @@ export default function SupportPage() {
                                             : "bg-secondary text-foreground rounded-tl-none border"
                                     )}>
                                         <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>
+                                        {m.imageUrl && (
+                                            <div className="mt-2 rounded-lg overflow-hidden border">
+                                                <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
+                                                    <img src={m.imageUrl} alt="Attached" className="max-w-full h-auto" />
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                     <span className="text-[9px] text-muted-foreground mt-1 px-1">
                                         {m.createdAt ? format(m.createdAt.toDate(), 'p') : 'Sending...'}
@@ -359,7 +510,7 @@ export default function SupportPage() {
                 ) : (
                     <div className="p-4 bg-secondary/50 rounded-xl text-center border border-dashed flex items-center justify-center gap-3">
                         <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm font-medium text-muted-foreground">This session is closed. Start a new one if you need more help.</p>
+                        <p className="text-sm font-medium text-muted-foreground">This session is closed. Submit a new ticket if you need more help.</p>
                     </div>
                 )}
             </div>
