@@ -8,7 +8,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from "@/lib/firebase";
 import { useLoading } from "@/context/LoadingContext";
-import { useRouter } from "navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Headset, Send, MessageSquare, ArrowLeft, XCircle, CheckCircle, Loader2, History, Trash2, RotateCcw, ShieldCheck, User as UserIcon, ClipboardList, Image as ImageIcon, X } from "lucide-react";
