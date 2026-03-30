@@ -61,7 +61,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Email</p>
-                  <p className="text-sm font-semibold">support@fireleagues.com</p>
+                  <p className="text-sm font-semibold">fireleagues29@gmail.com</p>
                 </div>
               </div>
             </div>
