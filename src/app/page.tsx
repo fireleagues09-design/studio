@@ -1,10 +1,9 @@
-
 'use client';
 
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Trophy, Shield, Zap } from "lucide-react";
 import TournamentCard from "@/components/TournamentCard";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -56,72 +55,102 @@ export default function Home() {
     }
   }, [loadingTournaments, loadingAuth, hideLoader]);
 
-  const viewAllLink = "/tournaments";
-
   if (loadingAuth || loadingTournaments) {
-    return null;
+    return (
+      <div className="container mx-auto px-4 py-12 space-y-8">
+        <Skeleton className="h-[400px] w-full rounded-2xl" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="aspect-square rounded-xl" />)}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-8 md:gap-12">
+    <div className="flex flex-col gap-8 md:gap-16">
       
-      <section className="container mx-auto px-4 pt-8 md:pt-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4 text-center md:text-left">
-                <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">
-                    Join the Ultimate Esports Arena
+      {/* Hero Section & SEO Content */}
+      <section className="container mx-auto px-4 pt-8 md:pt-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6 text-center lg:text-left">
+                {/* Static SEO Content - Visible to Google */}
+                <h1 className="text-4xl lg:text-6xl font-black tracking-tight leading-tight">
+                    FireLeagues - The Best <span className="text-primary">Free Fire Tournaments</span> in India
                 </h1>
-                <p className="text-lg text-muted-foreground">
-                    Compete in daily Free Fire tournaments, prove your skills, and win exciting prizes. Your battle for glory starts here.
+                <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                    FireLeagues is the ultimate online esports platform where players can join daily Free Fire tournaments, 
+                    compete with top-tier opponents, and win real rewards. Prove your skills in our professional arena and dominate the leaderboards.
                 </p>
-                {!loadingAuth && !user && (
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4">
-                        <Button asChild size="lg">
-                            <Link href="/register">Register Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                {!user && (
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+                        <Button asChild size="lg" className="h-14 px-8 text-lg font-bold rounded-full">
+                            <Link href="/register">Join Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
-                        <Button asChild variant="outline" size="lg">
+                        <Button asChild variant="outline" size="lg" className="h-14 px-8 text-lg font-bold rounded-full border-2">
                             <Link href="/login">Login</Link>
                         </Button>
                     </div>
                 )}
             </div>
-            <div className="w-full">
+            <div className="w-full relative">
+              <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full" />
               <HomeSlider isAuthenticated={!!user} />
             </div>
         </div>
       </section>
 
-      <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-8 md:pb-12">
-        
+      {/* Feature Section for SEO Keywords */}
+      <section className="bg-secondary/30 py-12 md:py-20 border-y border-border/50">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Trophy className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Big Prize Pools</h3>
+              <p className="text-sm text-muted-foreground">Compete for massive rewards in our sponsored daily matches and grand leagues.</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Shield className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Fair Play Security</h3>
+              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual verification ensure a 100% hacker-free environment.</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Zap className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Instant Support</h3>
+              <p className="text-sm text-muted-foreground">Get help within minutes through our dedicated 24/7 support ticket system and live chat.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-16">
         <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Upcoming Tournaments
-            </h2>
-            <Button variant="link" asChild>
-              <Link href={viewAllLink}>
-                View All <ArrowRight className="ml-2 h-4 w-4" />
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">Upcoming Tournaments</h2>
+              <p className="text-muted-foreground">Join these active lobbies before slots run out.</p>
+            </div>
+            <Button variant="ghost" asChild className="font-bold">
+              <Link href="/tournaments">
+                View All Matches <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
           {upcomingTournaments.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {upcomingTournaments.map((tournament) => (
                     <TournamentCard key={tournament.id} tournament={tournament} isAuthenticated={!!user} />
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-16 col-span-full bg-secondary rounded-lg">
-                    <h2 className="text-2xl font-semibold">No Tournaments Found</h2>
-                    <p className="text-muted-foreground mt-2">There are currently no upcoming tournaments. Please check back later!</p>
+                <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
+                    <h2 className="text-2xl font-bold opacity-50">Lobbies are being prepared...</h2>
+                    <p className="text-muted-foreground mt-2">New tournaments are added every hour. Check back shortly!</p>
                 </div>
             )
           }
         </section>
-
       </div>
       
     </div>
   );
 }
-    

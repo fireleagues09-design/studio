@@ -12,9 +12,22 @@ import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "FireLeagues - Free Fire Tournaments",
+  title: "FireLeagues - Play Free Fire Tournaments & Win Rewards",
   description:
-    "Join the ultimate Free Fire esports tournaments. Compete and win!",
+    "Join FireLeagues to play daily Free Fire tournaments, compete with top players, and win real rewards. The ultimate esports arena for mobile gamers in India.",
+  keywords: ["Free Fire Tournaments", "Esports India", "Mobile Gaming", "Win Rewards", "FireLeagues", "Gaming Community"],
+  openGraph: {
+    title: "FireLeagues - Ultimate Free Fire Arena",
+    description: "Compete in daily matches and prove your skills in our professional esports leagues.",
+    url: "https://fireleagues.xyz",
+    siteName: "FireLeagues",
+    locale: "en_IN",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 // This script prevents the theme from flickering on page load.
