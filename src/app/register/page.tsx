@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -17,6 +16,7 @@ import { db, auth, googleProvider } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { 
+    createUserWithEmailAndPassword,
     signInWithPopup,
     GoogleAuthProvider,
     linkWithCredential,
@@ -38,6 +38,10 @@ import {
 } from "@/components/ui/dialog";
 
 export default function RegisterPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -99,6 +103,27 @@ export default function RegisterPage() {
         toast({ title: "Success", description: "Logged in successfully!" });
     }
     router.push("/");
+  };
+
+  const handleEmailRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      toast({ title: "Error", description: "Please fill all fields.", variant: "destructive" });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    showLoader();
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await handleUserAfterLogin(userCredential.user);
+    } catch (error: any) {
+      hideLoader();
+      setLoading(false);
+      toast({ title: "Registration Failed", description: error.message, variant: "destructive" });
+    }
   };
   
   const handleAccountLink = async () => {
@@ -210,7 +235,7 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
-            Join now with Google to start competing.
+            Join now to start competing.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -225,16 +250,59 @@ export default function RegisterPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                  Or
+                  Or continue with
                 </span>
               </div>
             </div>
             
-            <div className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-lg border border-border/50 text-center">
-              <Info className="h-5 w-5 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Email Registration / Login will be available soon
-              </p>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <Input 
+                  id="confirm-password" 
+                  type="password" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <Button onClick={handleEmailRegister} disabled={loading} className="w-full">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign Up
+              </Button>
             </div>
           
           <div className="mt-4 text-center text-sm">

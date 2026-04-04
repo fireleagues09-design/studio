@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -18,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useLoading } from '@/context/LoadingContext';
 
 const profileSchema = z.object({
+  realName: z.string().min(2, 'Real name must be at least 2 characters.'),
   username: z.string()
     .min(6, 'Username must be at least 6 characters long.')
     .max(12, 'Username cannot be more than 12 characters long.')
@@ -47,6 +47,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
+      realName: '',
       username: '',
       password: '',
       confirmPassword: ''
@@ -82,9 +83,9 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
           console.warn("Could not set displayName on Auth user:", error);
       }
 
-      // Step 3: Call the secure server action to validate and save the username to Firestore
+      // Step 3: Call the secure server action to validate and save the details to Firestore
       const idToken = await user.getIdToken();
-      const result = await completeRegistration(idToken, data.username.toLowerCase());
+      const result = await completeRegistration(idToken, data.username.toLowerCase(), data.realName);
       
       if (result.success) {
           toast({ title: 'Success!', description: 'Your profile is now complete.' });
@@ -125,11 +126,28 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
         <DialogHeader>
           <DialogTitle className="text-2xl">Complete Your Profile</DialogTitle>
           <DialogDescription>
-            Choose a unique username and set a password to finish creating your account.
+            Provide your real name and choose a unique username to finish creating your account.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+            <FormField
+              control={form.control}
+              name="realName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Real Name</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="As per Government ID" 
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="username"
@@ -212,7 +230,7 @@ export function CompleteProfileDialog({ open, onSuccess }: CompleteProfileDialog
             />
             <div className="flex flex-col gap-2 pt-4">
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? 'Submitting...' : 'Create Account'}
+                  {isSubmitting ? 'Submitting...' : 'Complete Profile'}
               </Button>
                <Button
                   type="button"

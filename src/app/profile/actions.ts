@@ -1,4 +1,3 @@
-
 'use server';
 
 import { auth, db } from '@/lib/firebase-admin';
@@ -13,17 +12,21 @@ function formatAuthError(error: any): string {
 
 export async function completeRegistration(
     idToken: string,
-    username: string
+    username: string,
+    realName: string
 ): Promise<{ success: boolean; message:string }> {
     if (!idToken) {
         return { success: false, message: 'Authorization required.' };
     }
-    // Username validation
+    // Validation
     if (!username || username.length < 6 || username.length > 12) {
         return { success: false, message: 'Username must be 6-12 characters.' };
     }
     if (!/^[a-z0-9]+$/.test(username)) {
         return { success: false, message: 'Username can only contain lowercase letters and numbers.' };
+    }
+    if (!realName || realName.trim().length < 2) {
+        return { success: false, message: 'Real name must be at least 2 characters.' };
     }
 
     try {
@@ -42,6 +45,7 @@ export async function completeRegistration(
         const userRef = db.collection('users').doc(userId);
         await userRef.update({
             username: username,
+            realName: realName.trim(),
             isRegistered: true,
         });
 

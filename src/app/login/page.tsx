@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -25,7 +24,7 @@ import {
     type AuthCredential,
     type User
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { Eye, EyeOff, Loader2, Info } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
@@ -96,7 +95,7 @@ export default function LoginPage() {
         }
 
         try {
-          await setDoc(userDocRef, updatePayload, { merge: true });
+          await updateDoc(userDocRef, updatePayload);
         } catch (error) {
           console.warn("Could not update user providers/lastLogin:", error);
           // This failure is not critical, so we don't show an error toast to the user.
@@ -126,40 +125,12 @@ export default function LoginPage() {
         setLoading(false);
         console.error("Error signing in:", error);
 
-        if (error.code === 'auth/invalid-credential') {
-            try {
-                const methods = await fetchSignInMethodsForEmail(auth, email);
-                
-                if (methods.length === 0) {
-                    // Case A: User truly doesn't exist
-                    toast({
-                        title: "Account Not Found",
-                        description: "No account with this email exists. Please register.",
-                    });
-                    router.push('/register');
-                } else if (methods.includes('google.com') && !methods.includes('password')) {
-                    // Case C: User exists via Google but has no password
-                    toast({
-                        title: "Sign-in Method Mismatch",
-                        description: "This account was created using Google. Please use the 'Continue with Google' button to sign in or enter correct password",
-                        duration: 6000,
-                    });
-                } else {
-                    // Case B: User exists with a password, so it must be wrong.
-                    toast({ 
-                        title: "Login Failed", 
-                        description: "The entered password is wrong. Please try again.", 
-                        variant: "destructive" 
-                    });
-                }
-            } catch (fetchError) {
-                console.error("Error fetching sign-in methods:", fetchError);
-                toast({ 
-                    title: "Login Failed", 
-                    description: "An error occurred while checking your email. Please try again.", 
-                    variant: "destructive" 
-                });
-            }
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            toast({ 
+                title: "Login Failed", 
+                description: "The credentials you entered are incorrect. Please try again.", 
+                variant: "destructive" 
+            });
         } else {
             toast({ 
                 title: "Login Failed", 
@@ -300,11 +271,44 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-lg border border-border/50 text-center">
-              <Info className="h-5 w-5 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">
-                Email Registration / Login will be available soon
-              </p>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <Button onClick={handleEmailLogin} disabled={loading} className="w-full">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Login
+              </Button>
             </div>
 
           <div className="mt-4 text-center text-sm">
