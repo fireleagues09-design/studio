@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /management/
-Disallow: /support-panel/
+Disallow: /admin
+Disallow: /management
+Disallow: /support-panel
 
 Sitemap: https://fireleagues.xyz/sitemap.xml
