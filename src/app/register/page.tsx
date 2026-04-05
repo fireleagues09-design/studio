@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -24,8 +25,8 @@ import {
     type AuthCredential,
     type User
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { EyeOff, Eye, Loader2, Info } from "lucide-react";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { EyeOff, Eye, Loader2, AlertTriangle, Lock } from "lucide-react";
 import { useLoading } from "@/context/LoadingContext";
 import { GoogleLogo } from "@/components/GoogleLogo";
 import {
@@ -36,6 +37,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -43,6 +45,14 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Access Control States
+  const [authConfig, setAuthConfig] = useState({
+    registrationEnabled: true,
+    maintenanceNote: ""
+  });
+  const [configLoading, setConfigLoading] = useState(true);
+
   const { toast } = useToast();
   const router = useRouter();
   const { hideLoader, showLoader } = useLoading();
@@ -56,7 +66,18 @@ export default function RegisterPage() {
   const [linkingLoading, setLinkingLoading] = useState(false);
 
   useEffect(() => {
-    hideLoader();
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'auth_config'), (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            setAuthConfig({
+                registrationEnabled: data.registrationEnabled ?? true,
+                maintenanceNote: data.maintenanceNote ?? ""
+            });
+        }
+        setConfigLoading(false);
+        hideLoader();
+    });
+    return () => unsubscribe();
   }, [hideLoader]);
 
   // This centralized function ensures the Firestore document is always present after a successful auth event.
@@ -67,13 +88,12 @@ export default function RegisterPage() {
     const isGoogleUser = providers.includes('google.com');
 
     if (!userDoc.exists()) {
-        // Create the document if it's missing for an existing Auth user.
         const newUsername = user.displayName?.replace(/\s/g, '').toLowerCase() || user.email?.split('@')[0] || `user${user.uid.substring(0, 5)}`;
         await setDoc(userDocRef, {
             username: newUsername,
             email: user.email,
-            isRegistered: false, // Force profile completion if doc was missing
-            emailVerified: user.emailVerified || isGoogleUser, // Force true if it's a Google user.
+            isRegistered: false,
+            emailVerified: user.emailVerified || isGoogleUser,
             wallet: { deposit: 0, winning: 0, bonus: 0 },
             registeredOn: serverTimestamp(),
             lastLogin: serverTimestamp(),
@@ -81,15 +101,12 @@ export default function RegisterPage() {
         });
         toast({ title: "Welcome!", description: "Your account is ready. Let's complete your profile." });
     } else {
-        // If doc exists, update lastLogin and providers list.
         const existingData = userDoc.data();
         const updatePayload: {providers: string[]; lastLogin: any; emailVerified?: boolean} = {
             providers: providers,
             lastLogin: serverTimestamp()
         };
 
-        // Also update emailVerified status on existing users if they log in with Google
-        // and it's not already marked as verified in Firestore.
         if (isGoogleUser && !existingData.emailVerified) {
             updatePayload.emailVerified = true;
         }
@@ -98,7 +115,6 @@ export default function RegisterPage() {
           await setDoc(userDocRef, updatePayload, { merge: true });
         } catch (error) {
           console.warn("Could not update user providers/lastLogin:", error);
-          // This failure is not critical, so we don't show an error toast to the user.
         }
         toast({ title: "Success", description: "Logged in successfully!" });
     }
@@ -106,6 +122,10 @@ export default function RegisterPage() {
   };
 
   const handleEmailRegister = async () => {
+    if (!authConfig.registrationEnabled) {
+        toast({ title: "Registration Disabled", description: authConfig.maintenanceNote || "New registrations are temporarily closed.", variant: "destructive" });
+        return;
+    }
     if (!email || !password || !confirmPassword) {
       toast({ title: "Error", description: "Please fill all fields.", variant: "destructive" });
       return;
@@ -127,36 +147,26 @@ export default function RegisterPage() {
   };
   
   const handleAccountLink = async () => {
-    if (!linkingEmail || !linkingPassword || !linkingCredential) {
-        toast({ title: "Error", description: "Linking information is missing. Please try again.", variant: "destructive"});
-        return;
-    };
+    if (!linkingEmail || !linkingPassword || !linkingCredential) return;
     setLinkingLoading(true);
     showLoader();
-
     try {
-        // 1. Sign in with the original method (email/password) to verify ownership
         const userCredential = await signInWithEmailAndPassword(auth, linkingEmail, linkingPassword);
         const user = userCredential.user;
-
-        // 2. Link the new Google credential to the now-signed-in user
         await linkWithCredential(user, linkingCredential);
-
-        // 3. Let the unified handler deal with Firestore doc creation/update
         await handleUserAfterLogin(user);
-
     } catch (error: any) {
         hideLoader();
         setLinkingLoading(false);
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-             toast({ title: "Linking Failed", description: "The password you entered was incorrect. Please try again.", variant: "destructive" });
-        } else {
-             toast({ title: "Linking Failed", description: error.message || "An unknown error occurred.", variant: "destructive" });
-        }
+        toast({ title: "Linking Failed", description: "Incorrect password.", variant: "destructive" });
     }
   };
   
   const handleGoogleLogin = async () => {
+      if (!authConfig.registrationEnabled) {
+          toast({ title: "Registration Disabled", description: authConfig.maintenanceNote || "New registrations are temporarily closed.", variant: "destructive" });
+          return;
+      }
       setLoading(true);
       showLoader();
       try {
@@ -169,21 +179,16 @@ export default function RegisterPage() {
         if (error.code === 'auth/account-exists-with-different-credential') {
             const email = error.customData.email;
             const credential = GoogleAuthProvider.credentialFromError(error);
-            
             setLinkingEmail(email);
             setLinkingCredential(credential);
             setIsLinking(true);
-            
-            toast({ 
-                title: "Account Exists", 
-                description: "This email is already linked to a password account. Please enter your password to connect them.",
-                duration: 6000
-            });
         } else if (error.code !== 'auth/popup-closed-by-user') {
-            toast({ title: "Login Failed", description: error.message || "Could not log in with Google.", variant: "destructive" });
+            toast({ title: "Login Failed", description: error.message, variant: "destructive" });
         }
       }
   }
+
+  if (configLoading) return null;
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] bg-background text-foreground py-12 px-4">
@@ -192,7 +197,7 @@ export default function RegisterPage() {
                 <DialogHeader>
                 <DialogTitle>Link Google Account</DialogTitle>
                 <DialogDescription>
-                    The email <span className="font-semibold text-primary">{linkingEmail}</span> is already associated with a password-based account. To connect your Google account, please enter the password for that account.
+                    The email <span className="font-semibold text-primary">{linkingEmail}</span> is already associated with a password account. Enter password to connect.
                 </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -202,8 +207,6 @@ export default function RegisterPage() {
                     <Input
                         id="link-password"
                         type={showLinkingPassword ? "text" : "password"}
-                        placeholder="Your original password"
-                        required
                         value={linkingPassword}
                         onChange={(e) => setLinkingPassword(e.target.value)}
                         className="pr-10"
@@ -213,10 +216,10 @@ export default function RegisterPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute inset-y-0 right-0 flex items-center justify-center h-full w-10 text-muted-foreground"
+                        className="absolute inset-y-0 right-0 h-full w-10"
                         onClick={() => setShowLinkingPassword((prev) => !prev)}
                     >
-                        {showLinkingPassword ? <EyeOff /> : <Eye />}
+                        {showLinkingPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     </div>
                 </div>
@@ -224,90 +227,112 @@ export default function RegisterPage() {
                 <DialogFooter>
                 <Button variant="outline" onClick={() => setIsLinking(false)} disabled={linkingLoading}>Cancel</Button>
                 <Button onClick={handleAccountLink} disabled={linkingLoading}>
-                    {linkingLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {linkingLoading ? 'Linking...' : 'Link Accounts'}
                 </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
 
-      <Card className="w-full max-w-sm mx-auto bg-card border-border shadow-lg">
+      <Card className="w-full max-w-sm mx-auto bg-card border-border shadow-lg overflow-hidden">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
-            Join now to start competing.
+            {authConfig.registrationEnabled ? "Join now to start competing." : "Registrations are temporarily closed."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-            <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-              <GoogleLogo className="mr-2 h-5 w-5" />
-              Continue with Google
-            </Button>
-
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
             
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input 
-                    id="password" 
-                    type={showPassword ? "text" : "password"} 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+            {authConfig.registrationEnabled ? (
+                <>
+                    <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+                        <GoogleLogo className="mr-2 h-5 w-5" />
+                        Continue with Google
+                    </Button>
+
+                    <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-2 text-muted-foreground">
+                                Or
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input 
+                                id="email" 
+                                type="email" 
+                                placeholder="name@example.com" 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password">Password</Label>
+                            <div className="relative">
+                            <Input 
+                                id="password" 
+                                type={showPassword ? "text" : "password"} 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                onClick={() => setShowPassword(!showPassword)}
+                                disabled={loading}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="confirm-password">Confirm Password</Label>
+                            <Input 
+                                id="confirm-password" 
+                                type="password" 
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                disabled={loading}
+                            />
+                        </div>
+                        <Button onClick={handleEmailRegister} disabled={loading} className="w-full font-bold">
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Sign Up
+                        </Button>
+                    </div>
+                </>
+            ) : (
+                <div className="space-y-6 py-4">
+                    <div className="flex justify-center">
+                        <div className="p-4 bg-destructive/10 rounded-full">
+                            <Lock className="h-10 w-10 text-destructive" />
+                        </div>
+                    </div>
+                    <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle className="text-xs font-bold uppercase tracking-widest">Notice</AlertTitle>
+                        <AlertDescription className="text-xs mt-1 leading-relaxed">
+                            {authConfig.maintenanceNote || "New registrations are currently disabled for site maintenance. Please check back later."}
+                        </AlertDescription>
+                    </Alert>
+                    <Button variant="outline" className="w-full" asChild>
+                        <Link href="/">Back to Home</Link>
+                    </Button>
                 </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input 
-                  id="confirm-password" 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <Button onClick={handleEmailRegister} disabled={loading} className="w-full">
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign Up
-              </Button>
-            </div>
+            )}
           
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="underline text-primary/90 hover:text-primary">
+            <Link href="/login" className="underline text-primary/90 hover:text-primary font-bold">
               Sign in
             </Link>
           </div>

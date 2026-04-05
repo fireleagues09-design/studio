@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Key, Lock, Settings } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
-import { updateTransaction, updatePaymentDetails } from './actions';
+import { updateTransaction, updatePaymentDetails, updateAuthConfig } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
@@ -255,6 +255,15 @@ export default function AdminPage() {
     const [paymentSettingsLoading, setPaymentSettingsLoading] = useState(true);
     const [isSavingPayment, setIsSavingPayment] = useState(false);
 
+    // Auth Config States
+    const [authConfig, setAuthConfig] = useState({
+        emailLoginEnabled: true,
+        googleLoginEnabled: true,
+        registrationEnabled: true,
+        maintenanceNote: ""
+    });
+    const [isSavingAuthConfig, setIsSavingAuthConfig] = useState(false);
+
     const router = useRouter();
     const { toast } = useToast();
     const { hideLoader } = useLoading();
@@ -351,6 +360,19 @@ export default function AdminPage() {
             setPaymentSettingsLoading(false);
         });
 
+        const authConfigRef = doc(db, 'settings', 'auth_config');
+        const unsubscribeAuth = onSnapshot(authConfigRef, (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setAuthConfig({
+                    emailLoginEnabled: data.emailLoginEnabled ?? true,
+                    googleLoginEnabled: data.googleLoginEnabled ?? true,
+                    registrationEnabled: data.registrationEnabled ?? true,
+                    maintenanceNote: data.maintenanceNote ?? ""
+                });
+            }
+        });
+
 
         // Cleanup listeners
         return () => {
@@ -359,6 +381,7 @@ export default function AdminPage() {
             unsubscribeSuspended();
             unsubscribeTransactions();
             unsubscribePayment();
+            unsubscribeAuth();
         };
     }, [isAdmin, user]);
     
@@ -417,6 +440,22 @@ export default function AdminPage() {
             setIsSavingPayment(false);
         }
     };
+
+    const handleAuthConfigSave = async () => {
+        if (!auth.currentUser) return;
+        setIsSavingAuthConfig(true);
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const result = await updateAuthConfig(authConfig, idToken);
+            if (result.success) {
+                toast({ title: 'Success', description: 'Authentication settings updated.' });
+            } else throw new Error(result.message);
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        } finally {
+            setIsSavingAuthConfig(false);
+        }
+    }
 
     const pendingDeposits = pendingTransactions.filter(t => t.type === 'deposit');
     const pendingWithdrawals = pendingTransactions.filter(t => t.type === 'withdrawal');
@@ -501,7 +540,7 @@ export default function AdminPage() {
 
              <div className="w-full">
                 <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'settings'].map((tab) => (
+                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'auth', 'settings'].map((tab) => (
                         <Button
                             key={tab}
                             variant={activeTab === tab ? 'default' : 'secondary'}
@@ -804,6 +843,69 @@ export default function AdminPage() {
                                             </Button>
                                         </div>
                                     )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
+                    {activeTab === 'auth' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <Card className="border-border/50 rounded-2xl">
+                                <CardHeader>
+                                    <CardTitle className="text-xl flex items-center gap-2">
+                                        <Lock className="h-5 w-5 text-primary" />
+                                        Access Controls
+                                    </CardTitle>
+                                    <CardDescription>Toggle login and registration methods globally</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/50">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-bold">Email Login</Label>
+                                                <p className="text-[10px] text-muted-foreground uppercase">Password Access</p>
+                                            </div>
+                                            <Switch 
+                                                checked={authConfig.emailLoginEnabled}
+                                                onCheckedChange={(v) => setAuthConfig(prev => ({...prev, emailLoginEnabled: v}))}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/50">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-bold">Google Login</Label>
+                                                <p className="text-[10px] text-muted-foreground uppercase">OAuth 2.0</p>
+                                            </div>
+                                            <Switch 
+                                                checked={authConfig.googleLoginEnabled}
+                                                onCheckedChange={(v) => setAuthConfig(prev => ({...prev, googleLoginEnabled: v}))}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/50">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-sm font-bold">User Registration</Label>
+                                                <p className="text-[10px] text-muted-foreground uppercase">New Accounts</p>
+                                            </div>
+                                            <Switch 
+                                                checked={authConfig.registrationEnabled}
+                                                onCheckedChange={(v) => setAuthConfig(prev => ({...prev, registrationEnabled: v}))}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Maintenance Message</Label>
+                                        <Textarea 
+                                            placeholder="Display a note when registration or login is disabled..."
+                                            className="rounded-xl min-h-[100px] border-muted-foreground/20 focus:border-primary"
+                                            value={authConfig.maintenanceNote}
+                                            onChange={(e) => setAuthConfig(prev => ({...prev, maintenanceNote: e.target.value}))}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground italic">This message will appear on the Login and Registration pages if a restricted method is used.</p>
+                                    </div>
+
+                                    <Button onClick={handleAuthConfigSave} disabled={isSavingAuthConfig} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                                        {isSavingAuthConfig ? 'Saving Settings...' : 'Update Access Rules'}
+                                    </Button>
                                 </CardContent>
                             </Card>
                         </div>
