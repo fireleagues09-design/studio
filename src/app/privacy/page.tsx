@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +20,7 @@ export default function PrivacyPage() {
         </CardHeader>
         <CardContent className="prose prose-invert max-w-none">
           <p>
-            FireLeagues ("us", "we", or "our") operates the fireleagues.com
+            FireLeagues ("us", "we", or "our") operates the fireleagues.in
             website (the "Service"). This page informs you of our policies
             regarding the collection, use, and disclosure of personal data when
             you use our Service and the choices you have associated with that

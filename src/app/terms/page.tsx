@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,7 @@ export default function TermsPage() {
           <p>
             Welcome to FireLeagues! These terms and conditions outline the rules
             and regulations for the use of FireLeagues's Website, located at
-            fireleagues.com.
+            fireleagues.in.
           </p>
 
           <p>
