@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   description:
     "Join FireLeagues to play daily Free Fire tournaments, compete with top players, and win real rewards. The ultimate esports arena for mobile gamers in India.",
   keywords: ["Free Fire Tournaments", "Esports India", "Mobile Gaming", "Win Rewards", "FireLeagues", "Gaming Community"],
+  metadataBase: new URL("https://fireleagues.xyz"),
   openGraph: {
     title: "FireLeagues - Ultimate Free Fire Arena",
     description: "Compete in daily matches and prove your skills in our professional esports leagues.",
