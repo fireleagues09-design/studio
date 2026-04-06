@@ -77,11 +77,12 @@ export default function Home() {
                 <h1 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">
                     FireLeagues - Skill-Based <span className="text-primary">Competitive Gaming</span> Arena
                 </h1>
-                <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    FireLeagues is the ultimate platform where players can join daily skill-based Free Fire tournaments, 
-                    compete with top-tier opponents, and earn performance-based rewards. Prove your dominance in our professional arena.
-                </p>
                 {!user && (
+                  <>
+                    <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                        FireLeagues is the ultimate platform where players can join daily skill-based Free Fire tournaments, 
+                        compete with top-tier opponents, and earn performance-based rewards. Prove your dominance in our professional arena.
+                    </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
                         <Button asChild size="lg" className="h-14 px-8 text-lg font-bold rounded-full">
                             <Link href="/register">Start Competing <ArrowRight className="ml-2 h-5 w-5" /></Link>
@@ -90,6 +91,7 @@ export default function Home() {
                             <Link href="/login">Login</Link>
                         </Button>
                     </div>
+                  </>
                 )}
             </div>
             <div className="w-full relative">
