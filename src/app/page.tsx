@@ -105,18 +105,26 @@ export default function Home() {
       {/* Hero Section & SEO Content */}
       <section className="container mx-auto px-4 pt-8 md:pt-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6 text-center lg:text-left">
+            <div className="space-y-4 text-left">
                 {/* Static SEO Content - Visible to Google */}
                 <h1 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">
                     FireLeagues - Skill-Based <span className="text-primary">Competitive Gaming</span> Arena
                 </h1>
+                
+                {/* Sublines for Brand Reinforcement */}
+                <div className="flex flex-col gap-1 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                    <p>• India&apos;s Professional eSports Hub</p>
+                    <p>• Verified Competitive Fair Play</p>
+                    <p>• Performance-Based Elite Rewards</p>
+                </div>
+
                 {!user && (
-                  <>
-                    <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                  <div className="space-y-6 pt-2">
+                    <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl">
                         FireLeagues is the ultimate platform where players can join daily skill-based Free Fire tournaments, 
                         compete with top-tier opponents, and earn performance-based rewards. Prove your dominance in our professional arena.
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-start pt-2">
                         <Button asChild size="lg" className="h-14 px-8 text-lg font-bold rounded-full">
                             <Link href="/register">Start Competing <ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
@@ -124,7 +132,7 @@ export default function Home() {
                             <Link href="/login">Login</Link>
                         </Button>
                     </div>
-                  </>
+                  </div>
                 )}
             </div>
             <div className="w-full relative">
