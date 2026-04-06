@@ -402,7 +402,9 @@ export function Header() {
             <p className="text-sm font-semibold">{profile?.username || user?.displayName}</p>
             <p className="text-xs text-muted-foreground">{user?.email}</p>
         </div>
-        <Separator className="my-2"/>
+        
+        <Separator className="mx-2 my-1 opacity-50" />
+        
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start"><Link href="/profile"><User className="mr-2 h-4 w-4" />Profile</Link></Button>
         </SheetClose>
@@ -413,8 +415,6 @@ export function Header() {
         <Button variant="ghost" className="w-full justify-start" disabled><Gift className="mr-2 h-4 w-4" />Gift Shop</Button>
         <Button variant="ghost" className="w-full justify-start" disabled><Tag className="mr-2 h-4 w-4" />Bonus Code</Button>
         
-        <Separator className="my-2"/>
-        
         <SheetClose asChild>
             <Button variant="ghost" asChild className="w-full justify-start">
                 <Link href="/wallet"><Wallet className="mr-2 h-4 w-4" />Wallet</Link>
@@ -422,14 +422,11 @@ export function Header() {
         </SheetClose>
 
         {isStaff && (
-            <>
-                <Separator className="my-2"/>
-                <SheetClose asChild>
-                    <Button variant="ghost" asChild className="w-full justify-start text-primary font-semibold">
-                        <Link href="/support-panel"><Headset className="mr-2 h-4 w-4" />Support Panel</Link>
-                    </Button>
-                </SheetClose>
-            </>
+            <SheetClose asChild>
+                <Button variant="ghost" asChild className="w-full justify-start text-primary font-semibold">
+                    <Link href="/support-panel"><Headset className="mr-2 h-4 w-4" />Support Panel</Link>
+                </Button>
+            </SheetClose>
         )}
         {isAdminUser && (
             <SheetClose asChild>
@@ -442,11 +439,9 @@ export function Header() {
             </SheetClose>
         )}
         
-        <Separator className="my-2"/>
-        
         <div className="px-2 space-y-1">
             <div className="flex items-center justify-between py-2">
-                <Label className="font-normal">Dark Mode</Label>
+                <Label className="font-normal text-xs uppercase tracking-widest opacity-70">Dark Mode</Label>
                 <Switch 
                     id="mobile-dark-mode"
                     checked={mode === 'dark'}
@@ -455,7 +450,7 @@ export function Header() {
             </div>
             <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="colors" className="border-b-0">
-                    <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline">
+                    <AccordionTrigger className="p-0 py-2 font-normal hover:no-underline text-xs uppercase tracking-widest opacity-70">
                         UI Colour
                     </AccordionTrigger>
                     <AccordionContent>
@@ -465,9 +460,7 @@ export function Header() {
             </Accordion>
         </div>
         
-        <Separator className="my-2"/>
-        
-        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
+        <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
         </Button>
