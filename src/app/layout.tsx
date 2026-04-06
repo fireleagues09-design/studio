@@ -12,22 +12,46 @@ import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "FireLeagues - Skill-Based Free Fire Tournaments & Rewards",
+  title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
   description:
-    "Join FireLeagues to compete in daily Free Fire tournaments, test your skills against top players, and earn rewards. The ultimate competitive arena for mobile gamers in India.",
-  keywords: ["Free Fire Tournaments", "Esports India", "Mobile Gaming", "Earn Rewards", "FireLeagues", "Gaming Community", "Skill-based gaming"],
+    "Join FireLeagues (Fire Leagues), India's premier skill-based competitive arena. Compete in daily Free Fire tournaments, test your skills, and earn performance rewards. Professional esports matches for mobile gamers.",
+  keywords: [
+    "Fire Leagues", 
+    "FireLeagues", 
+    "FireLeagues.in",
+    "Free Fire Tournaments India", 
+    "Esports India", 
+    "Mobile Gaming Rewards", 
+    "Earn Rewards Gaming", 
+    "Gaming Community", 
+    "Skill-based competition",
+    "Garena Free Fire Matches",
+    "Competitive Arena India"
+  ],
   metadataBase: new URL("https://fireleagues.in"),
   openGraph: {
-    title: "FireLeagues - Ultimate Competitive Arena",
-    description: "Compete in daily matches and prove your skills in our professional esports leagues.",
+    title: "Fire Leagues - Ultimate Competitive Arena",
+    description: "Join FireLeagues to compete in daily matches and prove your skills in professional esports leagues.",
     url: "https://fireleagues.in",
     siteName: "FireLeagues",
     locale: "en_IN",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fire Leagues | Skill-Based Gaming Arena",
+    description: "Daily Free Fire tournaments with real performance rewards.",
+  },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

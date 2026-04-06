@@ -55,6 +55,24 @@ export default function Home() {
     }
   }, [loadingTournaments, loadingAuth, hideLoader]);
 
+  // Structured Data for Google (JSON-LD)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Fire Leagues",
+    "alternateName": ["FireLeagues", "FireLeagues India"],
+    "url": "https://fireleagues.in",
+    "description": "Premium skill-based Free Fire tournament platform in India. Join Fire Leagues to compete and earn performance rewards.",
+    "applicationCategory": "Gaming",
+    "genre": "eSports",
+    "operatingSystem": "Web, Mobile",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR"
+    }
+  };
+
   if (loadingAuth || loadingTournaments) {
     return (
       <div className="container mx-auto px-4 py-12 space-y-8">
@@ -68,6 +86,21 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8 md:gap-16">
+      {/* Hidden SEO Keywords & JSON-LD for Google Crawler */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="sr-only">
+        <h2>Fire Leagues - FireLeagues India</h2>
+        <p>
+          Welcome to Fire Leagues (FireLeagues), the ultimate eSports rewards platform. 
+          If you are searching for Fire Leagues or Fireleagues, you are in the right place. 
+          We offer skill-based competition, entry fee matches, and eSports performance rewards. 
+          FireLeagues.in is optimized for Free Fire players in India looking for a professional arena.
+          Fire Leagues Gaming, Fire Leagues Tournament, Fire Leagues eSports.
+        </p>
+      </div>
       
       {/* Hero Section & SEO Content */}
       <section className="container mx-auto px-4 pt-8 md:pt-16">
