@@ -84,7 +84,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
         if (!user) {
             toast({
                 title: 'Error',
-                description: 'You must be logged in to make a deposit.',
+                description: 'You must be logged in to add funds.',
                 variant: 'destructive',
             });
             return;
@@ -102,7 +102,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
         if (Number(amount) < 20) {
             toast({
                 title: 'Invalid Amount',
-                description: 'The minimum deposit amount is ₹20.',
+                description: 'The minimum fund addition is ₹20.',
                 variant: 'destructive',
             });
             return;
@@ -124,13 +124,13 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
             setOpen(false);
             toast({
                 title: 'Request Submitted',
-                description: 'Your deposit request has been received. It will be processed within 24 hours after verification.',
+                description: 'Your request has been received. Funds will be added to your deposit balance within 24 hours after verification.',
             });
         } catch (error) {
             console.error("Error submitting deposit request:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to submit deposit request. Please try again.',
+                description: 'Failed to submit request. Please try again.',
                 variant: 'destructive',
             });
         } finally {
@@ -150,15 +150,15 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                 <DialogHeader>
                     <DialogTitle>Add Funds to Wallet</DialogTitle>
                     <DialogDescription>
-                        Complete an offline payment and submit the details here.
+                        Complete an offline transfer and submit the details here.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
                     <div className="p-3 bg-secondary rounded-lg text-center space-y-2">
                         <div>
-                            <h3 className="font-semibold">Payment Instructions</h3>
+                            <h3 className="font-semibold">Transfer Instructions</h3>
                             <p className="text-sm text-muted-foreground">
-                                Scan the QR code or use the UPI ID below, then submit the details.
+                                Scan the QR code or use the UPI ID below, then submit your reference number.
                             </p>
                         </div>
 
@@ -204,7 +204,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="transactionId">Transaction ID / UTR</Label>
+                            <Label htmlFor="transactionId">Reference ID / UTR</Label>
                             <Input 
                                 id="transactionId"
                                 type="text"
@@ -253,15 +253,15 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
 
         const withdrawalAmount = Number(amount);
         if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
-            toast({ title: 'Error', description: 'Please enter a valid withdrawal amount.', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Please enter a valid amount.', variant: 'destructive' });
             return;
         }
         if (withdrawalAmount < 30 || withdrawalAmount > 30000) {
-            toast({ title: 'Error', description: 'Withdrawal amount must be between ₹30 and ₹30,000.', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Amount must be between ₹30 and ₹30,000.', variant: 'destructive' });
             return;
         }
         if (withdrawalAmount > winnings) {
-             toast({ title: 'Error', description: 'Withdrawal amount cannot exceed your winnings balance.', variant: 'destructive' });
+             toast({ title: 'Error', description: 'Amount cannot exceed your available rewards balance.', variant: 'destructive' });
             return;
         }
 
@@ -287,8 +287,8 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
 
             if (result.success) {
                 toast({
-                    title: 'Request Submitted',
-                    description: 'Your withdrawal request has been received and will be processed soon.'
+                    title: 'Transfer Request Submitted',
+                    description: 'Your request has been received and will be processed following manual verification.'
                 });
                 setOpen(false);
                 // Reset fields
@@ -325,16 +325,16 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Withdraw Winnings</DialogTitle>
+                    <DialogTitle>Withdraw Rewards</DialogTitle>
                     <DialogDescription>
-                        Request a withdrawal to your bank account or UPI. Amount will be deducted from your winnings.
+                        Transfer your performance rewards to your bank account or UPI.
                     </DialogDescription>
                 </DialogHeader>
                 
                  <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                        Withdrawals are limited to a minimum of ₹30 and a maximum of ₹30,000 per transaction, with up to 7 requests per day.
+                        Withdrawals are processed from your Rewards balance (₹30 - ₹30,000 per request).
                     </AlertDescription>
                 </Alert>
 
@@ -344,7 +344,7 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                         <Input
                             id="withdraw-amount"
                             type="number"
-                            placeholder={`Max: ₹${winnings.toFixed(2)}`}
+                            placeholder={`Available Rewards: ₹${winnings.toFixed(2)}`}
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             required
@@ -368,7 +368,7 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                                 <Input id="upi-id" placeholder="yourname@bank" value={upiId} onChange={e => setUpiId(e.target.value)} />
                             </div>
                             <Button onClick={() => handleSubmit('upi')} disabled={loading} className="w-full">
-                                {loading ? 'Submitting...' : 'Request via UPI'}
+                                {loading ? 'Submitting...' : 'Request Transfer'}
                             </Button>
                         </div>
                     </TabsContent>
@@ -391,7 +391,7 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                                 <Input id="ifsc-code" placeholder="Enter IFSC code" value={ifscCode} onChange={e => setIfscCode(e.target.value)} />
                             </div>
                              <Button onClick={() => handleSubmit('bank')} disabled={loading} className="w-full">
-                                {loading ? 'Submitting...' : 'Request via Bank Transfer'}
+                                {loading ? 'Submitting...' : 'Request Transfer'}
                             </Button>
                         </div>
                     </TabsContent>
@@ -424,7 +424,6 @@ export default function WalletPage() {
                         const profileData = doc.data() as UserProfile;
                         setProfile(profileData);
                     } else {
-                        // The global handler in Header.tsx will deal with this.
                         setProfile(null);
                     }
                     setLoading(false);
@@ -457,7 +456,6 @@ export default function WalletPage() {
         if (user) {
             fetchTransactions();
         } else if (!loading) {
-            // If the auth state is resolved and there's no user, don't attempt to load transactions.
             setLoadingTransactions(false);
         }
      }, [user, dateRange, loading]);
@@ -485,7 +483,6 @@ export default function WalletPage() {
                     orderBy("date", "desc")
                 );
             } else {
-                // Default query: last 10 transactions
                 q = query(
                     transactionsRef,
                     where("userId", "==", user.uid),
@@ -504,7 +501,7 @@ export default function WalletPage() {
             console.error("Error fetching transactions:", error);
             toast({
                 title: "Error",
-                description: "Could not fetch transaction history.",
+                description: "Could not fetch history.",
                 variant: "destructive"
             });
         } finally {
@@ -520,8 +517,6 @@ export default function WalletPage() {
     }
 
     if (!profile) {
-        // Return null or a loading skeleton while the global logout handler in the header kicks in.
-        // This prevents the page from crashing when profile is null.
         return null;
     }
 
@@ -532,13 +527,13 @@ export default function WalletPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-3xl">My Wallet</CardTitle>
-                        <CardDescription>View your balances and transaction history.</CardDescription>
+                        <CardDescription>Monitor your competitive balance and reward history.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                          <div className="p-4 bg-secondary rounded-lg space-y-4">
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <div>
-                                    <p className="flex items-center gap-2 text-muted-foreground mb-2"><Wallet className="h-4 w-4" /> Total Balance</p>
+                                    <p className="flex items-center gap-2 text-muted-foreground mb-2"><Wallet className="h-4 w-4" /> Combined Balance</p>
                                     <p className="text-4xl font-bold text-primary">₹{totalBalance.toFixed(2)}</p>
                                 </div>
                                 <div className="flex gap-2">
@@ -550,21 +545,21 @@ export default function WalletPage() {
                                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-md">
                                     <PiggyBank className="h-6 w-6 text-primary/80"/>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Deposit</p>
+                                        <p className="text-xs text-muted-foreground">Deposit Balance</p>
                                         <p className="font-semibold">₹{wallet.deposit.toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-md">
                                     <CircleDollarSign className="h-6 w-6 text-primary/80"/>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Winnings</p>
+                                        <p className="text-xs text-muted-foreground">Performance Rewards</p>
                                         <p className="font-semibold">₹{wallet.winning.toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-md">
                                     <Gift className="h-6 w-6 text-primary/80"/>
                                     <div>
-                                        <p className="text-xs text-muted-foreground">Bonus</p>
+                                        <p className="text-xs text-muted-foreground">Promotional Bonus</p>
                                         <p className="font-semibold">₹{wallet.bonus.toFixed(2)}</p>
                                     </div>
                                 </div>
@@ -577,8 +572,8 @@ export default function WalletPage() {
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <CardTitle>Transaction History</CardTitle>
-                                <CardDescription>Your last 10 transactions. Use the filter to see more.</CardDescription>
+                                <CardTitle>History</CardTitle>
+                                <CardDescription>Recent activity from your competitive sessions.</CardDescription>
                             </div>
                              <div className="flex items-center gap-2">
                                 <Popover>
@@ -602,7 +597,7 @@ export default function WalletPage() {
                                             format(dateRange.from, "LLL dd, y")
                                         )
                                         ) : (
-                                        <span>Pick a date range</span>
+                                        <span>Select date range</span>
                                         )}
                                     </Button>
                                     </PopoverTrigger>
@@ -623,7 +618,7 @@ export default function WalletPage() {
                                     size="icon"
                                     onClick={fetchTransactions}
                                     disabled={loadingTransactions}
-                                    aria-label="Refresh transactions"
+                                    aria-label="Refresh list"
                                 >
                                     <RefreshCw className={cn("h-4 w-4", loadingTransactions && "animate-spin")} />
                                 </Button>
@@ -635,7 +630,7 @@ export default function WalletPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Type</TableHead>
+                                        <TableHead>Activity</TableHead>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
@@ -645,7 +640,7 @@ export default function WalletPage() {
                                     {loadingTransactions ? (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center">
-                                                Loading transactions...
+                                                Loading activity...
                                             </TableCell>
                                         </TableRow>
                                     ) : transactions.length > 0 ? (
@@ -709,7 +704,7 @@ export default function WalletPage() {
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center">
-                                                No transactions found for the selected period.
+                                                No activity found for this period.
                                             </TableCell>
                                         </TableRow>
                                     )}

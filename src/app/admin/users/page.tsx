@@ -128,8 +128,6 @@ export default function AdminUsersPage() {
           const txSnap = await getDocs(txQuery);
           setUserTransactions(txSnap.docs.map(d => ({id: d.id, ...d.data()})));
 
-          // Finding tournaments user registered for is complex since they are in subcollections
-          // For MVP, we'll search across main tournaments and see if uid is in registeredPlayers
           const tQuery = query(collection(db, 'tournaments'), where('registeredPlayers', 'array-contains', uid), limit(20));
           const tSnap = await getDocs(tQuery);
           setUserTournaments(tSnap.docs.map(d => ({id: d.id, ...d.data()})));
@@ -156,7 +154,7 @@ export default function AdminUsersPage() {
     <div className="container mx-auto px-4 py-6 md:py-12 max-w-6xl space-y-8">
       <header>
           <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground text-sm mt-1">Search and manage all player accounts and financial details.</p>
+          <p className="text-muted-foreground text-sm mt-1">Manage player accounts and reward details.</p>
       </header>
 
       <div className="relative">
@@ -305,7 +303,7 @@ function UserDetailsCard({ user, transactions, tournaments, loading, onUpdate }:
                                 </div>
                             </div>
                             <div className="space-y-4">
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">Wallet Summary</h4>
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">Reward Summary</h4>
                                 <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
@@ -320,7 +318,7 @@ function UserDetailsCard({ user, transactions, tournaments, loading, onUpdate }:
                                             <p className="text-xs font-bold">₹{wallet.deposit.toFixed(0)}</p>
                                         </div>
                                         <div className="text-center p-2 bg-background rounded-lg border">
-                                            <p className="text-[8px] uppercase font-bold text-muted-foreground">Winnings</p>
+                                            <p className="text-[8px] uppercase font-bold text-muted-foreground">Rewards</p>
                                             <p className="text-xs font-bold">₹{wallet.winning.toFixed(0)}</p>
                                         </div>
                                         <div className="text-center p-2 bg-background rounded-lg border">
@@ -352,7 +350,7 @@ function UserDetailsCard({ user, transactions, tournaments, loading, onUpdate }:
                                 ))}
                             </div>
                         ) : (
-                            <div className="p-12 text-center text-xs text-muted-foreground italic border-dashed border rounded-2xl">No tournament history found.</div>
+                            <div className="p-12 text-center text-xs text-muted-foreground italic border-dashed border rounded-2xl">No history found.</div>
                         )}
                     </TabsContent>
 
@@ -442,7 +440,7 @@ function EditUserDialog({ user, onUpdate }: { user: {id: string, data: UserDoc},
             <DialogContent className="sm:max-w-xl max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Edit Account: {data.username}</DialogTitle>
-                    <DialogDescription>Modify core account details and wallet balances. Use with caution.</DialogDescription>
+                    <DialogDescription>Modify core account details and balance. Use with caution.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-6 py-4 overflow-y-auto pr-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -465,14 +463,14 @@ function EditUserDialog({ user, onUpdate }: { user: {id: string, data: UserDoc},
                     </div>
 
                     <div className="space-y-4 border-t pt-4">
-                        <h4 className="text-sm font-bold flex items-center gap-2"><Wallet className="h-4 w-4" /> Wallet Balance Management</h4>
+                        <h4 className="text-sm font-bold flex items-center gap-2"><Wallet className="h-4 w-4" /> Account Balance Management</h4>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Deposit</Label>
                                 <Input type="number" step="0.01" value={deposit} onChange={e => setDeposit(e.target.value)} />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-black text-muted-foreground">Winnings</Label>
+                                <Label className="text-[10px] uppercase font-black text-muted-foreground">Rewards</Label>
                                 <Input type="number" step="0.01" value={winning} onChange={e => setWinning(e.target.value)} />
                             </div>
                             <div className="space-y-2">
@@ -514,13 +512,13 @@ function SuspendDialog({ user, onAction }: { user: {id: string, data: UserDoc}, 
                     <DialogDescription>
                         {isSuspended 
                             ? `Are you sure you want to restore access for ${user.data.username}?` 
-                            : `This will immediately block ${user.data.username} from accessing their account.`}
+                            : `This will immediately restrict ${user.data.username} from accessing the platform.`}
                     </DialogDescription>
                 </DialogHeader>
                 {!isSuspended && (
                     <div className="space-y-2 pt-2">
                         <Label>Reason for Suspension</Label>
-                        <Input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Violation of Terms, Hacking..." />
+                        <Input value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. Violation of Terms, Fair Play issue..." />
                     </div>
                 )}
                 <DialogFooter className="pt-4">

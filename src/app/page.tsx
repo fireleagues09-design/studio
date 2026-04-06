@@ -75,16 +75,16 @@ export default function Home() {
             <div className="space-y-6 text-center lg:text-left">
                 {/* Static SEO Content - Visible to Google */}
                 <h1 className="text-4xl lg:text-6xl font-black tracking-tight leading-tight">
-                    FireLeagues - The Best <span className="text-primary">Free Fire Tournaments</span> in India
+                    FireLeagues - Skill-Based <span className="text-primary">Competitive Gaming</span> Arena
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    FireLeagues is the ultimate online esports platform where players can join daily Free Fire tournaments, 
-                    compete with top-tier opponents, and win real rewards. Prove your skills in our professional arena and dominate the leaderboards.
+                    FireLeagues is the ultimate platform where players can join daily skill-based Free Fire tournaments, 
+                    compete with top-tier opponents, and earn performance-based rewards. Prove your dominance in our professional arena.
                 </p>
                 {!user && (
                     <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
                         <Button asChild size="lg" className="h-14 px-8 text-lg font-bold rounded-full">
-                            <Link href="/register">Join Now <ArrowRight className="ml-2 h-5 w-5" /></Link>
+                            <Link href="/register">Start Competing <ArrowRight className="ml-2 h-5 w-5" /></Link>
                         </Button>
                         <Button asChild variant="outline" size="lg" className="h-14 px-8 text-lg font-bold rounded-full border-2">
                             <Link href="/login">Login</Link>
@@ -105,18 +105,18 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="flex flex-col items-center text-center p-6 space-y-3">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Trophy className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Big Prize Pools</h3>
-              <p className="text-sm text-muted-foreground">Compete for massive rewards in our sponsored daily matches and grand leagues.</p>
+              <h3 className="text-xl font-bold">Elite Rewards</h3>
+              <p className="text-sm text-muted-foreground">Compete for significant rewards in our daily skill-based matches and grand leagues.</p>
             </div>
             <div className="flex flex-col items-center text-center p-6 space-y-3">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Shield className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Fair Play Security</h3>
-              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual verification ensure a 100% hacker-free environment.</p>
+              <h3 className="text-xl font-bold">Verified Fair Play</h3>
+              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual review process ensure a 100% hacker-free competitive environment.</p>
             </div>
             <div className="flex flex-col items-center text-center p-6 space-y-3">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Zap className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Instant Support</h3>
-              <p className="text-sm text-muted-foreground">Get help within minutes through our dedicated 24/7 support ticket system and live chat.</p>
+              <h3 className="text-xl font-bold">Expert Support</h3>
+              <p className="text-sm text-muted-foreground">Receive assistance within minutes through our dedicated 24/7 support ticket system and live agent chat.</p>
             </div>
           </div>
         </div>
@@ -126,8 +126,8 @@ export default function Home() {
         <section>
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">Upcoming Tournaments</h2>
-              <p className="text-muted-foreground">Join these active lobbies before slots run out.</p>
+              <h2 className="text-3xl font-bold tracking-tight">Active Lobbies</h2>
+              <p className="text-muted-foreground">Secure your entry before registration slots are filled.</p>
             </div>
             <Button variant="ghost" asChild className="font-bold">
               <Link href="/tournaments">
@@ -144,7 +144,7 @@ export default function Home() {
             ) : (
                 <div className="text-center py-20 bg-secondary/20 rounded-3xl border border-dashed">
                     <h2 className="text-2xl font-bold opacity-50">Lobbies are being prepared...</h2>
-                    <p className="text-muted-foreground mt-2">New tournaments are added every hour. Check back shortly!</p>
+                    <p className="text-muted-foreground mt-2">New tournaments are added regularly. Check back shortly!</p>
                 </div>
             )
           }

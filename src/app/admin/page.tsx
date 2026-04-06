@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -94,7 +93,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
             console.error("Error updating tournament:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to update tournament. Please try again.',
+                description: 'Failed to update lobby. Please try again.',
                 variant: 'destructive',
             });
         } finally {
@@ -111,14 +110,14 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Edit Tournament</DialogTitle>
+                    <DialogTitle>Edit Lobby</DialogTitle>
                     <DialogDescription>
-                        Make changes to "{tournament.name}".
+                        Modify parameters for "{tournament.name}".
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto px-6">
                      <div className="grid gap-2">
-                        <Label htmlFor="name">Tournament Name</Label>
+                        <Label htmlFor="name">Lobby Name</Label>
                         <Input id="name" value={name} onChange={e => setName(e.target.value)} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -137,7 +136,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                             <Input id="entryFee" value={entryFee} onChange={e => setEntryFee(e.target.value)} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="prize">Prize Pool (INR)</Label>
+                            <Label htmlFor="prize">Reward Pool (INR)</Label>
                             <Input id="prize" value={prize} onChange={e => setPrize(e.target.value)} />
                         </div>
                     </div>
@@ -198,13 +197,13 @@ function DeleteTournamentDialog({tournamentId, tournamentName }: { tournamentId:
             await deleteDoc(doc(db, 'tournaments', tournamentId));
             toast({
                 title: 'Success',
-                description: `Tournament "${tournamentName}" has been deleted.`
+                description: `Lobby "${tournamentName}" has been removed.`
             });
         } catch (error) {
             console.error("Error deleting tournament:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to delete tournament. Please try again.',
+                description: 'Failed to delete lobby. Please try again.',
                 variant: 'destructive',
             });
         }
@@ -219,14 +218,14 @@ function DeleteTournamentDialog({tournamentId, tournamentName }: { tournamentId:
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>Remove this lobby?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the tournament "{tournamentName}".
+                        This will permanently delete the lobby "{tournamentName}" and all associated data.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Confirm Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -390,7 +389,7 @@ export default function AdminPage() {
         newStatus: 'Completed' | 'Failed'
     ) => {
         if (!isAdmin || !auth.currentUser) {
-            toast({ title: 'Permission Denied', description: 'You do not have permission to perform this action.', variant: 'destructive' });
+            toast({ title: 'Permission Denied', description: 'Unauthorized access.', variant: 'destructive' });
             return;
         };
         
@@ -403,7 +402,7 @@ export default function AdminPage() {
             if (result.success) {
                 toast({
                     title: 'Success',
-                    description: `Transaction has been ${newStatus === 'Completed' ? 'approved' : 'rejected'}.`
+                    description: `Request has been ${newStatus === 'Completed' ? 'approved' : 'rejected'}.`
                 });
             } else {
                 throw new Error(result.message);
@@ -412,7 +411,7 @@ export default function AdminPage() {
             console.error('Failed to update transaction:', error);
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to update transaction.',
+                description: error.message || 'Failed to update record.',
                 variant: 'destructive'
             });
         } finally {
@@ -422,7 +421,7 @@ export default function AdminPage() {
 
     const handlePaymentDetailsSave = async () => {
         if (!auth.currentUser) {
-            toast({ title: "Authentication Error", description: "You are not logged in.", variant: "destructive" });
+            toast({ title: "Authentication Error", description: "Login required.", variant: "destructive" });
             return;
         };
         setIsSavingPayment(true);
@@ -430,7 +429,7 @@ export default function AdminPage() {
             const idToken = await auth.currentUser.getIdToken();
             const result = await updatePaymentDetails({ upiId, upiQrCodeUrl }, idToken);
             if (result.success) {
-                toast({ title: 'Success', description: 'Payment details have been updated.' });
+                toast({ title: 'Success', description: 'Receiver details updated.' });
             } else {
                 throw new Error(result.message);
             }
@@ -448,7 +447,7 @@ export default function AdminPage() {
             const idToken = await auth.currentUser.getIdToken();
             const result = await updateAuthConfig(authConfig, idToken);
             if (result.success) {
-                toast({ title: 'Success', description: 'Authentication settings updated.' });
+                toast({ title: 'Success', description: 'Access controls updated.' });
             } else throw new Error(result.message);
         } catch (error: any) {
             toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -477,36 +476,36 @@ export default function AdminPage() {
     return (
         <div className="container mx-auto px-4 py-6 md:py-12 space-y-8 max-w-7xl">
             <header className="flex flex-col gap-1">
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Admin Dashboard</h1>
-                <p className="text-muted-foreground text-sm">Welcome back, {user?.displayName || 'Admin'}</p>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">System Controls</h1>
+                <p className="text-muted-foreground text-sm">Managing FireLeagues Arena</p>
             </header>
 
              <section>
                 <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                     <Card className="bg-primary/5 border-primary/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Users</CardTitle>
+                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Competitors</CardTitle>
                             <div className="p-2 bg-primary/10 rounded-full">
                                 <Users className="h-4 w-4 text-primary" />
                             </div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-xl font-bold">{totalUsers}</div>
-                            <p className="text-[10px] text-muted-foreground">Registered accounts</p>
+                            <p className="text-[10px] text-muted-foreground">Joined arena</p>
                         </CardContent>
                     </Card>
                     
                     <Link href="/admin/suspended" className="block transition-transform hover:scale-[1.02] active:scale-95">
                         <Card className="bg-destructive/5 border-destructive/10 h-full">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Suspended</CardTitle>
+                                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Restricted</CardTitle>
                                 <div className="p-2 bg-destructive/10 rounded-full text-destructive">
                                     <Ban className="h-4 w-4" />
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-xl font-bold text-destructive">{suspendedUsersCount}</div>
-                                <p className="text-[10px] text-muted-foreground">Blocked players</p>
+                                <p className="text-[10px] text-muted-foreground">Access revoked</p>
                             </CardContent>
                         </Card>
                     </Link>
@@ -520,19 +519,19 @@ export default function AdminPage() {
                         </CardHeader>
                         <CardContent>
                              <div className="text-xl font-bold">{totalTournaments}</div>
-                            <p className="text-[10px] text-muted-foreground">Created</p>
+                            <p className="text-[10px] text-muted-foreground">Created lobbies</p>
                         </CardContent>
                     </Card>
                     <Card className="bg-amber-500/5 border-amber-500/10">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pending</CardTitle>
+                            <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Queue</CardTitle>
                             <div className="p-2 bg-amber-500/10 rounded-full">
                                 <Activity className="h-4 w-4 text-amber-500" />
                             </div>
                         </CardHeader>
                         <CardContent>
                            <div className="text-xl font-bold">{pendingTransactions.length}</div>
-                           <p className="text-[10px] text-muted-foreground">Review needed</p>
+                           <p className="text-[10px] text-muted-foreground">Pending verify</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -561,19 +560,19 @@ export default function AdminPage() {
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <Card className="border-none shadow-none bg-transparent">
                                 <CardHeader className="px-0">
-                                    <CardTitle className="text-xl">Pending Approvals</CardTitle>
-                                    <CardDescription>Review user financial requests</CardDescription>
+                                    <CardTitle className="text-xl">Pending Verification</CardTitle>
+                                    <CardDescription>Review deposits and reward transfers</CardDescription>
                                 </CardHeader>
                                 <CardContent className="px-0">
                                     <Tabs defaultValue="deposits" className="w-full">
                                         <TabsList className="grid w-full grid-cols-2 bg-secondary/50 rounded-xl p-1 mb-6">
                                             <TabsTrigger value="deposits" className="rounded-lg">
                                                 <ArrowDownLeft className="mr-2 h-4 w-4 text-green-500" />
-                                                Deposits
+                                                Incoming
                                             </TabsTrigger>
                                             <TabsTrigger value="withdrawals" className="rounded-lg">
                                                 <ArrowUpRight className="mr-2 h-4 w-4 text-red-500" />
-                                                Withdrawals
+                                                Outgoing
                                             </TabsTrigger>
                                         </TabsList>
                                         
@@ -614,7 +613,7 @@ export default function AdminPage() {
                                             )) : (
                                                 <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed">
                                                     <Activity className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                                                    <p className="text-sm text-muted-foreground">No pending deposits.</p>
+                                                    <p className="text-sm text-muted-foreground">No pending arrivals.</p>
                                                 </div>
                                             )}
                                         </TabsContent>
@@ -631,12 +630,12 @@ export default function AdminPage() {
                                                             </div>
                                                             <Dialog>
                                                                 <DialogTrigger asChild>
-                                                                    <Button variant="secondary" size="sm" className="rounded-full text-xs font-bold px-4">Details</Button>
+                                                                    <Button variant="secondary" size="sm" className="rounded-full text-xs font-bold px-4">Dest. Details</Button>
                                                                 </DialogTrigger>
                                                                 <DialogContent className="max-w-[90vw] sm:max-w-md rounded-2xl">
                                                                     <DialogHeader>
-                                                                        <DialogTitle>Withdrawal Info</DialogTitle>
-                                                                        <DialogDescription>Payment path for {withdrawal.userName}</DialogDescription>
+                                                                        <DialogTitle>Reward Transfer Info</DialogTitle>
+                                                                        <DialogDescription>Destination path for {withdrawal.userName}</DialogDescription>
                                                                     </DialogHeader>
                                                                     <div className="space-y-4 py-4">
                                                                         <div className="p-4 bg-muted/50 rounded-xl space-y-3">
@@ -667,8 +666,8 @@ export default function AdminPage() {
                                                                             )}
                                                                         </div>
                                                                         <div className="flex gap-2">
-                                                                            <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')}>Approve</Button>
-                                                                            <Button className="flex-1" variant="destructive" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')}>Reject</Button>
+                                                                            <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleTransactionUpdate(withdrawal, 'Completed')}>Verify & Transfer</Button>
+                                                                            <Button className="flex-1" variant="destructive" onClick={() => handleTransactionUpdate(withdrawal, 'Failed')}>Reject Request</Button>
                                                                         </div>
                                                                     </div>
                                                                 </DialogContent>
@@ -686,7 +685,7 @@ export default function AdminPage() {
                                             )) : (
                                                 <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed">
                                                     <Activity className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-                                                    <p className="text-sm text-muted-foreground">No pending withdrawals.</p>
+                                                    <p className="text-sm text-muted-foreground">No pending transfers.</p>
                                                 </div>
                                             )}
                                         </TabsContent>
@@ -699,7 +698,7 @@ export default function AdminPage() {
                     {activeTab === 'tournaments' && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold">Active Tournaments</h2>
+                                <h2 className="text-xl font-bold">Arena Lobbies</h2>
                                 <CreateTournamentDialog />
                             </div>
                             
@@ -724,7 +723,7 @@ export default function AdminPage() {
                                                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1">
                                                             <div className="flex items-center gap-1 font-bold">
                                                                 <DollarSign className="h-2.5 w-2.5" />
-                                                                <span>{t.entryFee === 'FREE' ? 'Free' : `₹${t.entryFee}`}</span>
+                                                                <span>{t.entryFee === 'FREE' ? 'Entry Free' : `Fee: ₹${t.entryFee}`}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <UsersRound className="h-2.5 w-2.5" />
@@ -761,11 +760,11 @@ export default function AdminPage() {
                                         <Users className="h-8 w-8 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold">User Directory</h3>
-                                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Search and manage player roles, wallet balances, and account status.</p>
+                                        <h3 className="text-xl font-bold">Competitor Directory</h3>
+                                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Search and manage player roles, reward balances, and access level.</p>
                                     </div>
                                     <Button asChild className="rounded-full px-8 shadow-lg shadow-primary/20">
-                                        <Link href="/admin/users">Launch User Manager</Link>
+                                        <Link href="/admin/users">Open Manager</Link>
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -780,8 +779,8 @@ export default function AdminPage() {
                                         <Gift className="h-8 w-8 text-pink-500" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold">Bestie Management</h3>
-                                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Special roles for your most dedicated players. Manage their visibility and rewards.</p>
+                                        <h3 className="text-xl font-bold">V.I.P. Management</h3>
+                                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">Special roles for your most dedicated competitors.</p>
                                     </div>
                                     <Button asChild variant="secondary" className="rounded-full px-8">
                                         <Link href="/admin/besties">View VIP List</Link>
@@ -799,7 +798,7 @@ export default function AdminPage() {
                                         <Wallet className="h-5 w-5 text-primary" />
                                         Collection Details
                                     </CardTitle>
-                                    <CardDescription>Configure your public payment endpoints</CardDescription>
+                                    <CardDescription>Configure your public receiving endpoints</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     {paymentSettingsLoading ? (
@@ -839,7 +838,7 @@ export default function AdminPage() {
                                             )}
 
                                             <Button onClick={handlePaymentDetailsSave} disabled={isSavingPayment} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
-                                                {isSavingPayment ? 'Updating System...' : 'Commit Payment Changes'}
+                                                {isSavingPayment ? 'Updating System...' : 'Commit Changes'}
                                             </Button>
                                         </div>
                                     )}
@@ -856,7 +855,7 @@ export default function AdminPage() {
                                         <Lock className="h-5 w-5 text-primary" />
                                         Access Controls
                                     </CardTitle>
-                                    <CardDescription>Toggle login and registration methods globally</CardDescription>
+                                    <CardDescription>Manage arena entry globally</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-8">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -882,8 +881,8 @@ export default function AdminPage() {
                                         </div>
                                         <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl border border-border/50">
                                             <div className="space-y-0.5">
-                                                <Label className="text-sm font-bold">User Registration</Label>
-                                                <p className="text-[10px] text-muted-foreground uppercase">New Accounts</p>
+                                                <Label className="text-sm font-bold">Arena Enrollment</Label>
+                                                <p className="text-[10px] text-muted-foreground uppercase">New Competitors</p>
                                             </div>
                                             <Switch 
                                                 checked={authConfig.registrationEnabled}
@@ -893,18 +892,18 @@ export default function AdminPage() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Maintenance Message</Label>
+                                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Arena Note</Label>
                                         <Textarea 
-                                            placeholder="Display a note when registration or login is disabled..."
+                                            placeholder="Display a note when enrollment or entry is restricted..."
                                             className="rounded-xl min-h-[100px] border-muted-foreground/20 focus:border-primary"
                                             value={authConfig.maintenanceNote}
                                             onChange={(e) => setAuthConfig(prev => ({...prev, maintenanceNote: e.target.value}))}
                                         />
-                                        <p className="text-[10px] text-muted-foreground italic">This message will appear on the Login and Registration pages if a restricted method is used.</p>
+                                        <p className="text-[10px] text-muted-foreground italic">This message will appear if an entry method is locked.</p>
                                     </div>
 
                                     <Button onClick={handleAuthConfigSave} disabled={isSavingAuthConfig} className="w-full rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
-                                        {isSavingAuthConfig ? 'Saving Settings...' : 'Update Access Rules'}
+                                        {isSavingAuthConfig ? 'Saving Settings...' : 'Update Arena Rules'}
                                     </Button>
                                 </CardContent>
                             </Card>

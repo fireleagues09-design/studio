@@ -58,12 +58,12 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) {
-             toast({ title: 'Error', description: 'You must be logged in to register.', variant: 'destructive' });
+             toast({ title: 'Error', description: 'Authentication required.', variant: 'destructive' });
              router.push('/login');
              return;
         }
         if (!inGameName || !inGameUid) {
-            toast({ title: 'Error', description: 'Please fill in all fields.', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Provide all in-game details.', variant: 'destructive' });
             return;
         }
         setLoading(true);
@@ -74,7 +74,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
             if (result.success) {
                 toast({
                     title: 'Registration Successful!',
-                    description: `You have successfully registered for "${tournament.name}".`
+                    description: `You have joined "${tournament.name}".`
                 });
                 onSuccess();
                 setOpen(false);
@@ -82,10 +82,10 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                 throw new Error(result.message);
             }
         } catch (error: any) {
-             console.error("Error during solo registration:", error);
+             console.error("Error during registration:", error);
              toast({
                 title: "Registration Error",
-                description: error.message || 'An unknown error occurred during registration.',
+                description: error.message || 'Lobby entry failed.',
                 variant: 'destructive'
             });
         } finally {
@@ -97,14 +97,14 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button size="lg" className="w-full font-bold">
-                    Register Solo
+                    Secure Solo Entry
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Register for {tournament.name}</DialogTitle>
+                    <DialogTitle>Join {tournament.name}</DialogTitle>
                     <DialogDescription>
-                        Please provide your in-game details to complete the registration.
+                        Provide your in-game identification to secure your slot.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,7 +114,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                             id="in-game-name" 
                             value={inGameName} 
                             onChange={e => setInGameName(e.target.value)} 
-                            placeholder="In-game name" 
+                            placeholder="Gaming alias" 
                             required 
                         />
                     </div>
@@ -124,7 +124,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                             id="in-game-uid" 
                             value={inGameUid} 
                             onChange={e => setInGameUid(e.target.value)} 
-                            placeholder="In-game UID" 
+                            placeholder="Unique ID" 
                             required 
                         />
                     </div>
@@ -133,7 +133,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                             <Button type="button" variant="secondary">Cancel</Button>
                         </DialogClose>
                         <Button type="submit" disabled={loading}>
-                            {loading ? 'Submitting...' : 'Submit Registration'}
+                            {loading ? 'Processing...' : 'Confirm Entry'}
                         </Button>
                     </DialogFooter>
                 </form>
@@ -155,8 +155,8 @@ function RoomCredentials({ roomId, roomPassword }: RoomCredentialsProps) {
         if (!text) return;
         navigator.clipboard.writeText(text);
         toast({
-            title: 'Copied to Clipboard',
-            description: `${fieldName} has been copied.`
+            title: 'Copied',
+            description: `${fieldName} copied to clipboard.`
         });
     }
 
@@ -165,7 +165,7 @@ function RoomCredentials({ roomId, roomPassword }: RoomCredentialsProps) {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5 text-primary" />
-                    Room Credentials
+                    Arena Credentials
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -223,16 +223,16 @@ function getButtonState({isRegistered, isFilled, status, teamType}: {isRegistere
         return { text: 'Registered', disabled: true };
     }
     if (status !== 'Upcoming') {
-         if (status === 'Ongoing') return { text: 'Tournament Started', disabled: true };
-         if (status === 'Finished') return { text: 'Tournament Finished', disabled: true };
+         if (status === 'Ongoing') return { text: 'Session Ongoing', disabled: true };
+         if (status === 'Finished') return { text: 'Session Concluded', disabled: true };
     }
     if (isFilled) {
-        return { text: 'Registrations Full', disabled: true };
+        return { text: 'Lobby Full', disabled: true };
     }
     if (teamType !== 'Solo') {
-        return { text: `Register ${teamType}`, disabled: true, tooltip: 'Team registration coming soon!'};
+        return { text: `Join ${teamType}`, disabled: true, tooltip: 'Team entry coming soon!'};
     }
-    return { text: `Register ${teamType}`, disabled: false };
+    return { text: `Join ${teamType}`, disabled: false };
 };
 
 function Leaderboard({ tournamentId }: { tournamentId: string }) {
@@ -249,7 +249,6 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                 return String(a.rank).localeCompare(String(b.rank), undefined, { numeric: true });
             });
 
-            // Fetch global suspension status only (hiding site usernames as per request)
             const withStatus = await Promise.all(rankedPlayers.map(async (p) => {
                 const userDoc = await getDoc(doc(db, 'users', p.userId));
                 if (userDoc.exists()) {
@@ -287,7 +286,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                 <TableHead>Rank</TableHead>
                                 <TableHead>In-Game Name</TableHead>
                                 <TableHead className="text-center">Kills</TableHead>
-                                <TableHead className="text-right">Prize Won</TableHead>
+                                <TableHead className="text-right">Rewards Earned</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -302,7 +301,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                                             {player.isSuspended && (
                                                 <Badge variant="destructive" className="h-5 px-1 py-0 text-[10px]">
                                                     <AlertTriangle className="h-3 w-3 mr-1" />
-                                                    Suspended
+                                                    Disqualified
                                                 </Badge>
                                             )}
                                         </div>
@@ -358,7 +357,6 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                     setIsRegistered(false);
                 }
             } else {
-                console.error("Tournament not found!");
                 setTournament(null);
             }
             setLoading(false);
@@ -412,7 +410,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
         if (!user) {
             return (
                 <Button size="lg" className="w-full font-bold" onClick={() => router.push('/login')}>
-                    Login to Register
+                    Sign In to Join
                 </Button>
             );
         }
@@ -426,12 +424,12 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                         <TooltipTrigger asChild>
                             <span className="w-full">
                                 <Button size="lg" className="w-full font-bold" disabled>
-                                    Register {teamType}
+                                    Verify Email to Compete
                                 </Button>
                             </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Please verify your email to register for tournaments.</p>
+                            <p>Verify your account to join skill-based lobbies.</p>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
@@ -511,15 +509,15 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
-                Prize Distribution
+                Reward Distribution
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Place</TableHead>
-                    <TableHead className="text-right">Prize</TableHead>
+                    <TableHead>Placement</TableHead>
+                    <TableHead className="text-right">Reward</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -542,14 +540,14 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5 text-primary" />
-                Registration Details
+                Session Intel
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Trophy className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Total Prize:</span>
+                  <span className="text-muted-foreground">Rewards Pool:</span>
                 </div>
                 <strong className="text-lg">₹{prize}</strong>
               </div>
@@ -565,7 +563,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Team Type:</span>
+                  <span className="text-muted-foreground">Lobby Type:</span>
                 </div>
                 <strong>{teamType}</strong>
               </div>
@@ -590,7 +588,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Time:</span>
+                  <span className="text-muted-foreground">Reporting:</span>
                 </div>
                 <strong>{time}</strong>
               </div>
@@ -598,7 +596,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
               <div className="pt-4">
                 <div className="flex justify-between text-sm text-muted-foreground mb-2">
                   <span>
-                    {slotsFilled} / {slots} Slots Filled
+                    {slotsFilled} / {slots} Slots Secured
                   </span>
                   <span className="font-semibold">{Math.round(progress)}%</span>
                 </div>
@@ -616,7 +614,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                Please Read All Rules Before Playing
+                Fair Play Rules
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -624,7 +622,7 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
                 {rules?.map((rule, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{rule}</span>
+                    <span className="text-sm leading-relaxed">{rule}</span>
                   </li>
                 ))}
               </ul>

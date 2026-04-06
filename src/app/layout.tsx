@@ -12,13 +12,13 @@ import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "FireLeagues - Play Free Fire Tournaments & Win Rewards",
+  title: "FireLeagues - Skill-Based Free Fire Tournaments & Rewards",
   description:
-    "Join FireLeagues to play daily Free Fire tournaments, compete with top players, and win real rewards. The ultimate esports arena for mobile gamers in India.",
-  keywords: ["Free Fire Tournaments", "Esports India", "Mobile Gaming", "Win Rewards", "FireLeagues", "Gaming Community"],
+    "Join FireLeagues to compete in daily Free Fire tournaments, test your skills against top players, and earn rewards. The ultimate competitive arena for mobile gamers in India.",
+  keywords: ["Free Fire Tournaments", "Esports India", "Mobile Gaming", "Earn Rewards", "FireLeagues", "Gaming Community", "Skill-based gaming"],
   metadataBase: new URL("https://fireleagues.in"),
   openGraph: {
-    title: "FireLeagues - Ultimate Free Fire Arena",
+    title: "FireLeagues - Ultimate Competitive Arena",
     description: "Compete in daily matches and prove your skills in our professional esports leagues.",
     url: "https://fireleagues.in",
     siteName: "FireLeagues",
