@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Key, Lock, Settings } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Key, Lock, Settings, Globe } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -26,21 +27,12 @@ import { updateTransaction, updatePaymentDetails, updateAuthConfig } from './act
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
+import BrandingAdmin from '@/components/BrandingAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLoading } from '@/context/LoadingContext';
 import { Switch } from '@/components/ui/switch';
 import { CreateTournamentDialog } from '@/components/CreateTournamentDialog';
 import { cn } from '@/lib/utils';
-
-type UserData = {
-    id: string;
-    inGameName: string;
-    inGameUid: string;
-    phone: string;
-    email: string;
-    registeredOn: any;
-    isAdmin?: boolean;
-};
 
 type Transaction = {
     id: string;
@@ -48,8 +40,8 @@ type Transaction = {
     userName?: string;
     type: 'deposit' | 'entry_fee' | 'withdrawal' | 'prize';
     amount: number;
-    transactionId?: string; // from deposit
-    details?: any; // from withdrawal
+    transactionId?: string;
+    details?: any;
     date: any;
     status: 'Completed' | 'Pending' | 'Failed';
 };
@@ -247,7 +239,6 @@ export default function AdminPage() {
 
     const [activeTab, setActiveTab] = useState('transactions');
     const [isMounted, setIsMounted] = useState(false);
-    const isMobile = useIsMobile();
     
     const [upiId, setUpiId] = useState('');
     const [upiQrCodeUrl, setUpiQrCodeUrl] = useState('');
@@ -539,7 +530,7 @@ export default function AdminPage() {
 
              <div className="w-full">
                 <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'auth', 'settings'].map((tab) => (
+                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'auth', 'branding', 'settings'].map((tab) => (
                         <Button
                             key={tab}
                             variant={activeTab === tab ? 'default' : 'secondary'}
@@ -907,6 +898,12 @@ export default function AdminPage() {
                                     </Button>
                                 </CardContent>
                             </Card>
+                        </div>
+                    )}
+
+                    {activeTab === 'branding' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <BrandingAdmin />
                         </div>
                     )}
 

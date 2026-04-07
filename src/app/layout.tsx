@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -10,6 +11,7 @@ import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
+import { DynamicFavicon } from "@/components/DynamicFavicon";
 
 export const metadata: Metadata = {
   title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
@@ -99,6 +101,7 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("font-body antialiased")}>
+        <DynamicFavicon />
         <ThemeProvider
           storageKey="fireleagues-theme"
           modeStorageKey="fireleagues-mode"

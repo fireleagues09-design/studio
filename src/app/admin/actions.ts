@@ -313,6 +313,22 @@ export async function updateAuthConfig(
         return { success: true, message: "Authentication settings updated successfully." };
     } catch (error: any) {
         console.error('Error updating auth config:', error);
-        return { success: false, message: error.message || 'Failed to update settings.' };
+        return { success: false, message: error.message || "Failed to update settings." };
+    }
+}
+
+export async function updateBrandingSettings(
+    settings: { faviconUrl?: string },
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) return { success: false, message: adminCheck.message };
+
+    try {
+        await db.collection('settings').doc('branding').set(settings, { merge: true });
+        return { success: true, message: "Branding settings updated successfully." };
+    } catch (error: any) {
+        console.error('Error updating branding:', error);
+        return { success: false, message: error.message || "Failed to update branding settings." };
     }
 }
