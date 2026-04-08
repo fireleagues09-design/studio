@@ -8,7 +8,7 @@ import { getStorage } from "firebase/storage";
 const firebaseConfig = {
   "projectId": "fireleagues-drrjw",
   "appId": "1:388454536362:web:886eafbbcb0bd9ceb7acd3",
-  "storageBucket": "fireleagues-drrjw.appspot.com",
+  "storageBucket": "fireleagues-drrjw.firebasestorage.app",
   "apiKey": "AIzaSyAyQkLAUnzfEnQDZv8fY_sxJ1Epfq_IO4g",
   "authDomain": "fireleagues-drrjw.firebaseapp.com",
   "messagingSenderId": "388454536362"
