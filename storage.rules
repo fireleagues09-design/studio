@@ -3,13 +3,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ✅ Allow favicon uploads (requested fix)
-    match /fav-icon/{allPaths=**} {
-      allow read, write: if true;
-    }
-
-    // ✅ Allow support image uploads (ensures all tabs function correctly)
-    match /support_images/{allPaths=**} {
+    // ✅ GLOBAL IMAGES FOLDER (Requested Fix)
+    // Consolidating all uploads here for maximum performance and reliability
+    match /images/{allPaths=**} {
       allow read, write: if true;
     }
 

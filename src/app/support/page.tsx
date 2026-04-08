@@ -179,14 +179,15 @@ export default function SupportPage() {
 
     const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
         if (!selectedFile) return null;
-        const fileName = `${Date.now()}_${selectedFile.name}`;
+        const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
         try {
-            const storageRef = ref(storage, `support_images/${userId}/${folder}/${fileName}`);
+            // FIX: Pointing all uploads to the standardized 'images/' folder
+            const storageRef = ref(storage, `images/support/${userId}/${folder}/${fileName}`);
             const snapshot = await uploadBytes(storageRef, selectedFile);
             return await getDownloadURL(snapshot.ref);
         } catch (error: any) {
             console.error("Storage upload error:", error);
-            throw new Error("Failed to upload image. Please try again or check your internet connection.");
+            throw new Error("Failed to upload image. Storage rules may be misconfigured or billing is required for this action.");
         }
     };
 
@@ -196,7 +197,7 @@ export default function SupportPage() {
 
         setIsSubmittingTicket(true);
         try {
-            const idToken = await user.getIdToken();
+            const idToken = await user.getIdToken(true);
             let uploadedUrl = null;
             if (selectedFile) {
                 uploadedUrl = await uploadImage(user.uid, 'tickets');
@@ -235,7 +236,6 @@ export default function SupportPage() {
     const sendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         
-        // Block player replies if it's a ticket
         if (activeChat?.type === 'ticket') {
             toast({ title: "Ticket Locked", description: "Only support agents can reply to formal tickets." });
             return;
@@ -260,7 +260,7 @@ export default function SupportPage() {
                 
                 const realName = userData?.realName || user.displayName || "Player";
                 const gamingHandle = userData?.username || null;
-                const idToken = await user.getIdToken();
+                const idToken = await user.getIdToken(true);
 
                 const result = await startSupportChatAction(
                     idToken,
@@ -461,7 +461,6 @@ export default function SupportPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                        {/* PAST CHATS SECTION */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">
                                 <MessageSquare className="h-3.5 w-3.5" />
@@ -493,7 +492,6 @@ export default function SupportPage() {
                             )}
                         </div>
 
-                        {/* TICKETS SECTION */}
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground px-1">
                                 <ClipboardList className="h-3.5 w-3.5" />

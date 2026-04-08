@@ -47,26 +47,28 @@ export default function BrandingAdmin() {
         setUploadSuccess(false);
         
         try {
-            console.log("Starting upload to storage path: fav-icon/...");
+            console.log("🚀 Starting upload process to /images/favicon/...");
             
-            // 1. Create storage reference inside the allowed fav-icon folder
-            const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-            const storageRef = ref(storage, `fav-icon/${fileName}`);
-            
-            // 2. Perform the upload
-            // This direct bytes upload is highly reliable with the updated rules
-            const snapshot = await uploadBytes(storageRef, file);
-            console.log("Upload to Storage complete.");
-
-            // 3. Get the permanent URL
-            const downloadUrl = await getDownloadURL(snapshot.ref);
-            console.log("Download URL generated:", downloadUrl);
-            
-            // 4. Save to Firestore via secure action
+            // 1. Force a fresh ID token to ensure permissions are current
             const user = auth.currentUser;
-            if (!user) throw new Error("Authentication required.");
-            const idToken = await user.getIdToken(true);
+            if (!user) throw new Error("Authentication required. Please re-login.");
+            await user.getIdToken(true);
+
+            // 2. Create storage reference inside the consolidated images folder
+            const fileName = `favicon_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+            const storageRef = ref(storage, `images/favicon/${fileName}`);
             
+            // 3. Perform the upload
+            console.log("📤 Transferring bytes...");
+            const snapshot = await uploadBytes(storageRef, file);
+            console.log("✅ Bytes transferred successfully.");
+
+            // 4. Get the public URL
+            const downloadUrl = await getDownloadURL(snapshot.ref);
+            console.log("🔗 URL Generated:", downloadUrl);
+            
+            // 5. Update Firestore via server action
+            const idToken = await user.getIdToken();
             const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
             if (result.success) {
@@ -75,16 +77,15 @@ export default function BrandingAdmin() {
                     title: "Favicon Updated!", 
                     description: "Your new browser icon is now live.",
                 });
-                // Clear success state after 3 seconds
                 setTimeout(() => setUploadSuccess(false), 3000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
-            console.error("Critical upload error:", error);
+            console.error("❌ FAILED TO UPLOAD:", error);
             toast({ 
                 title: "Upload Failed", 
-                description: error.message || "An error occurred during the upload process. Please check your connection.", 
+                description: error.message || "The server rejected the upload. Check if Firebase Storage API is enabled in your Google Cloud Console.", 
                 variant: "destructive" 
             });
         } finally {
@@ -108,7 +109,7 @@ export default function BrandingAdmin() {
                     <Globe className="h-5 w-5 text-primary" />
                     Browser Identity (Favicon)
                 </CardTitle>
-                <CardDescription>Upload an image directly to the Firebase 'fav-icon' folder.</CardDescription>
+                <CardDescription>Upload an image directly to the 'images/favicon' folder.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
@@ -127,7 +128,7 @@ export default function BrandingAdmin() {
                         <div className="space-y-1">
                             <h4 className="font-bold text-base">Select and Upload</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Uploading an image here will immediately update the browser tab icon for all users.
+                                Uploading an image here will save it to the consolidated 'images' directory and update your browser icon.
                             </p>
                         </div>
 

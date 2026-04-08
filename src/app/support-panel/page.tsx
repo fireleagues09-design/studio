@@ -136,13 +136,14 @@ export default function SupportPanel() {
   const uploadReplyImage = async (): Promise<string | null> => {
     if (!selectedFile || !user) return null;
     try {
-        const fileName = `${Date.now()}_${selectedFile.name}`;
-        const storageRef = ref(storage, `support_images/${user.uid}/replies/${fileName}`);
+        const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
+        // Pointing to consolidated 'images/' folder
+        const storageRef = ref(storage, `images/support/staff_replies/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
     } catch (err: any) {
         console.error("Staff upload error:", err);
-        throw new Error("Failed to upload image. Please try again.");
+        throw new Error("Failed to upload image. Please check Storage API status.");
     }
   };
 
@@ -253,7 +254,6 @@ export default function SupportPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Sidebar */}
       <div className={cn(
           "w-full md:w-80 border-r flex flex-col bg-muted/5 transition-all duration-300 shrink-0",
           selectedChat ? "hidden md:flex" : "flex"
@@ -357,7 +357,6 @@ export default function SupportPanel() {
         </div>
       </div>
 
-      {/* Workspace */}
       <div className={cn(
           "flex-1 flex flex-col bg-card/30 transition-all duration-300",
           !selectedChat ? "hidden md:flex" : "flex"
