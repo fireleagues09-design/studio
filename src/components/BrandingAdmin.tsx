@@ -39,9 +39,15 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Ensure it's a small image for performance
-        if (file.size > 1024 * 1024) {
-            toast({ title: "Image too large", description: "Favicons should ideally be under 500KB for faster loading.", variant: "destructive" });
+        // Increased limit to 5MB as requested
+        if (file.size > 5 * 1024 * 1024) {
+            toast({ 
+                title: "Image too large", 
+                description: "The maximum file size allowed is 5MB.", 
+                variant: "destructive" 
+            });
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
         }
 
         setIsUploading(true);
@@ -142,7 +148,7 @@ export default function BrandingAdmin() {
                         <div className="space-y-1">
                             <h4 className="font-bold text-base">Select and Upload</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Upload a PNG or SVG. Smaller files upload significantly faster.
+                                Upload a PNG or SVG. Max file size: 5MB.
                             </p>
                         </div>
 
