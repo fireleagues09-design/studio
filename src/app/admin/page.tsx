@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -530,7 +529,7 @@ export default function AdminPage() {
 
              <div className="w-full">
                 <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'auth', 'branding', 'settings'].map((tab) => (
+                    {['transactions', 'tournaments', 'users', 'besties', 'payments', 'auth', 'Fav-icon', 'settings'].map((tab) => (
                         <Button
                             key={tab}
                             variant={activeTab === tab ? 'default' : 'secondary'}
@@ -901,7 +900,7 @@ export default function AdminPage() {
                         </div>
                     )}
 
-                    {activeTab === 'branding' && (
+                    {activeTab === 'Fav-icon' && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <BrandingAdmin />
                         </div>
