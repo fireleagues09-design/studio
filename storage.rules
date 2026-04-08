@@ -8,7 +8,7 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Improved admin check: checks auth token claims first, then falls back to Firestore
+    // Optimized check for testing and production
     function isAdmin() {
       return isUserAuthenticated() && (
         request.auth.token.isAdmin == true || 
@@ -23,8 +23,14 @@ service firebase.storage {
       );
     }
 
+    // Public read for all assets
     match /{allPaths=**} {
       allow read: if true;
+    }
+
+    // Specific folder for favicons with resilient rules
+    match /fav-icon/{fileName} {
+      allow write: if isUserAuthenticated();
     }
 
     match /sliders/{fileName} {

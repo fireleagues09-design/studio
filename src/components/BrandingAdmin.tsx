@@ -48,35 +48,41 @@ export default function BrandingAdmin() {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
 
-            // Standardize naming to prevent stale cache issues where possible
-            const fileName = `favicon_${Date.now()}.png`;
-            const storageRef = ref(storage, `branding/${fileName}`);
+            // Standardize naming and use the requested folder path
+            const extension = file.name.split('.').pop();
+            const fileName = `favicon_${Date.now()}.${extension}`;
+            const storageRef = ref(storage, `fav-icon/${fileName}`);
             
-            console.log("Starting storage upload...");
+            console.log("Starting storage upload to fav-icon/ folder...");
+            
+            // Perform the upload
             const snapshot = await uploadBytes(storageRef, file);
-            console.log("Storage upload complete, getting URL...");
-            const downloadUrl = await getDownloadURL(snapshot.ref);
+            console.log("Uploaded successfully:", snapshot);
 
-            console.log("Saving to Firestore...");
+            // Get download URL
+            const downloadUrl = await getDownloadURL(snapshot.ref);
+            console.log("File URL acquired:", downloadUrl);
+
+            // Save to Firestore using server action
             const idToken = await user.getIdToken(true);
             const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
             if (result.success) {
                 setUploadSuccess(true);
                 toast({ 
-                    title: "Icon Updated", 
-                    description: "Browser favicon has been saved successfully.",
+                    title: "Upload Successful ✅", 
+                    description: "Your browser icon has been updated and saved.",
                 });
-                // Success feedback lasts for 3 seconds
-                setTimeout(() => setUploadSuccess(false), 3000);
+                // Success feedback lasts for 5 seconds
+                setTimeout(() => setUploadSuccess(false), 5000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
-            console.error("Favicon upload error:", error);
+            console.error("Favicon upload failed:", error);
             toast({ 
-                title: "Upload Failed", 
-                description: error.message || "Could not save favicon. Check your connection or permissions.", 
+                title: "Upload Failed ❌", 
+                description: error.message || "An unexpected error occurred during upload. Please check your connection.", 
                 variant: "destructive" 
             });
         } finally {
@@ -129,8 +135,8 @@ export default function BrandingAdmin() {
                             <div>
                                 <h4 className="font-bold text-base">Update Browser Icon</h4>
                                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    This icon appears in browser tabs, favorites, and bookmark bars. 
-                                    A square PNG or SVG (min 192x192) is recommended.
+                                    This icon appears in browser tabs and bookmark bars. 
+                                    Uploaded images are stored in the <code className="bg-muted px-1 rounded">fav-icon/</code> folder.
                                 </p>
                             </div>
 
@@ -164,7 +170,7 @@ export default function BrandingAdmin() {
                                     
                                     {isUploading && (
                                         <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
-                                            Saving to Arena...
+                                            Sending to bucket...
                                         </span>
                                     )}
                                 </div>
@@ -172,7 +178,7 @@ export default function BrandingAdmin() {
                                 {uploadSuccess && (
                                     <p className="text-[10px] text-green-600 font-bold flex items-center gap-1">
                                         <CheckCircle className="h-3 w-3" />
-                                        Update confirmed. Changes are now live.
+                                        Database updated. Your new brand icon is now live.
                                     </p>
                                 )}
                             </div>
@@ -182,8 +188,7 @@ export default function BrandingAdmin() {
 
                 <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
                     <p className="text-[10px] font-medium text-primary/80 leading-relaxed italic">
-                        * Note: Browser icon changes may take a few moments to propagate across all active sessions. 
-                        Users may need to refresh their browser cache to see the new icon immediately.
+                        * Note: If the icon doesn't update immediately, please clear your browser cache or refresh the page.
                     </p>
                 </div>
             </CardContent>
