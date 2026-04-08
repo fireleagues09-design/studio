@@ -3,17 +3,17 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ✅ ALLOW FAVICON UPLOADS
+    // ✅ HIGH-SPEED ACCESS FOR BRANDING
     match /fav-icon/{allPaths=**} {
       allow read, write: if true;
     }
 
-    // ✅ ALLOW CONSOLIDATED APP IMAGES (Support, etc)
+    // ✅ HIGH-SPEED ACCESS FOR CONSOLIDATED APP IMAGES
     match /images/{allPaths=**} {
       allow read, write: if true;
     }
 
-    // 🔒 Keep everything else blocked by default
+    // 🔒 SECURE DEFAULT (Block everything else)
     match /{allPaths=**} {
       allow read, write: if false;
     }

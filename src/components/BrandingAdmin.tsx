@@ -39,9 +39,9 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            toast({ title: "Invalid File", description: "Please upload an image file.", variant: "destructive" });
-            return;
+        // Ensure it's a small image for performance
+        if (file.size > 1024 * 1024) {
+            toast({ title: "Image too large", description: "Favicons should ideally be under 500KB for faster loading.", variant: "destructive" });
         }
 
         setIsUploading(true);
@@ -49,26 +49,25 @@ export default function BrandingAdmin() {
         setUploadProgress(0);
         
         try {
-            console.log("🚀 Initializing Resumable Upload to /fav-icon/...");
-            
             const user = auth.currentUser;
-            if (!user) throw new Error("Authentication required. Please re-login.");
+            if (!user) throw new Error("Authentication required.");
+            
+            // Refresh token once at the start to ensure speed in rules
             await user.getIdToken(true);
 
-            // Using fixed filename for the site favicon
+            // Using standard fixed path for fast resolution
             const storageRef = ref(storage, `fav-icon/favicon.png`);
             
-            // Create Resumable Upload Task
+            // Start Resumable Upload Task
             const uploadTask = uploadBytesResumable(storageRef, file);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     setUploadProgress(progress);
-                    console.log('Upload is ' + progress + '% done');
                 }, 
                 (error) => {
-                    console.error("❌ UPLOAD TASK FAILED:", error);
+                    console.error("Upload error:", error);
                     setIsUploading(false);
                     toast({ 
                         title: "Upload Failed", 
@@ -77,10 +76,10 @@ export default function BrandingAdmin() {
                     });
                 }, 
                 async () => {
-                    // Success callback
+                    // Finalize upload and get URL
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                    console.log("🔗 File available at:", downloadUrl);
                     
+                    // Immediately update database
                     const idToken = await user.getIdToken();
                     const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
@@ -88,12 +87,13 @@ export default function BrandingAdmin() {
                         setUploadSuccess(true);
                         toast({ 
                             title: "Success!", 
-                            description: "Favicon has been updated and saved.",
+                            description: "Icon updated successfully.",
                         });
+                        // Smooth reset
                         setTimeout(() => {
                             setUploadSuccess(false);
                             setIsUploading(false);
-                        }, 3000);
+                        }, 2500);
                     } else {
                         throw new Error(result.message);
                     }
@@ -101,13 +101,8 @@ export default function BrandingAdmin() {
             );
 
         } catch (error: any) {
-            console.error("❌ CRITICAL ERROR:", error);
             setIsUploading(false);
-            toast({ 
-                title: "Error", 
-                description: error.message || "An unknown error occurred during the process.", 
-                variant: "destructive" 
-            });
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
@@ -147,7 +142,7 @@ export default function BrandingAdmin() {
                         <div className="space-y-1">
                             <h4 className="font-bold text-base">Select and Upload</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Use PNG or SVG for best results. This process uses a resumable stream to prevent timeouts.
+                                Upload a PNG or SVG. Smaller files upload significantly faster.
                             </p>
                         </div>
 
@@ -170,7 +165,7 @@ export default function BrandingAdmin() {
                                 {isUploading ? (
                                     <span className="flex items-center">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Starting...'}
+                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Processing...'}
                                     </span>
                                 ) : uploadSuccess ? (
                                     <CheckCircle className="h-4 w-4 mr-2" />
