@@ -3,8 +3,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ✅ GLOBAL IMAGES FOLDER (Requested Fix)
-    // Consolidating all uploads here for maximum performance and reliability
+    // ✅ GLOBAL IMAGES FOLDER
+    // Consolidating all uploads here for maximum performance and reliability.
+    // This permissive rule prevents uploads from getting stuck due to slow database checks.
     match /images/{allPaths=**} {
       allow read, write: if true;
     }

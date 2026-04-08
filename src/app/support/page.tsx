@@ -179,15 +179,19 @@ export default function SupportPage() {
 
     const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
         if (!selectedFile) return null;
+        
+        // Refreshed token to avoid storage authorization hang
+        if (auth.currentUser) await auth.currentUser.getIdToken(true);
+        
         const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
         try {
-            // FIX: Pointing all uploads to the standardized 'images/' folder
+            // Updated to consolidated 'images/' folder for performance
             const storageRef = ref(storage, `images/support/${userId}/${folder}/${fileName}`);
             const snapshot = await uploadBytes(storageRef, selectedFile);
             return await getDownloadURL(snapshot.ref);
         } catch (error: any) {
             console.error("Storage upload error:", error);
-            throw new Error("Failed to upload image. Storage rules may be misconfigured or billing is required for this action.");
+            throw new Error("Failed to upload image. Please check if billing is linked if problems persist.");
         }
     };
 

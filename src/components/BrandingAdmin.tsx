@@ -58,7 +58,7 @@ export default function BrandingAdmin() {
             const fileName = `favicon_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
             const storageRef = ref(storage, `images/favicon/${fileName}`);
             
-            // 3. Perform the upload
+            // 3. Perform the upload using the reliable bytes pattern
             console.log("📤 Transferring bytes...");
             const snapshot = await uploadBytes(storageRef, file);
             console.log("✅ Bytes transferred successfully.");
@@ -85,7 +85,7 @@ export default function BrandingAdmin() {
             console.error("❌ FAILED TO UPLOAD:", error);
             toast({ 
                 title: "Upload Failed", 
-                description: error.message || "The server rejected the upload. Check if Firebase Storage API is enabled in your Google Cloud Console.", 
+                description: error.message || "The server rejected the upload. Ensure Firebase Storage API is active and billing is linked if using a custom project.", 
                 variant: "destructive" 
             });
         } finally {
@@ -128,7 +128,7 @@ export default function BrandingAdmin() {
                         <div className="space-y-1">
                             <h4 className="font-bold text-base">Select and Upload</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Uploading an image here will save it to the consolidated 'images' directory and update your browser icon.
+                                Uploading an image here will save it to the consolidated 'images' directory and update your browser icon instantly.
                             </p>
                         </div>
 

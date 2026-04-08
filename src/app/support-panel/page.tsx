@@ -136,14 +136,17 @@ export default function SupportPanel() {
   const uploadReplyImage = async (): Promise<string | null> => {
     if (!selectedFile || !user) return null;
     try {
+        // Refreshed token to avoid storage authorization hang
+        await user.getIdToken(true);
+        
         const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
-        // Pointing to consolidated 'images/' folder
+        // Pointing to consolidated 'images/' folder for maximum reliability
         const storageRef = ref(storage, `images/support/staff_replies/${fileName}`);
         const snapshot = await uploadBytes(storageRef, selectedFile);
         return await getDownloadURL(snapshot.ref);
     } catch (err: any) {
         console.error("Staff upload error:", err);
-        throw new Error("Failed to upload image. Please check Storage API status.");
+        throw new Error("Failed to upload image. Ensure project billing is active.");
     }
   };
 
