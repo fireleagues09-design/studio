@@ -8,12 +8,19 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    // Improved admin check: checks auth token claims first, then falls back to Firestore
     function isAdmin() {
-      return isUserAuthenticated() &&
-             exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-             (get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-              get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSupport == true ||
-              get(/databases/(default)/documents/users/$(request.auth.uid)).data.isEmployee == true);
+      return isUserAuthenticated() && (
+        request.auth.token.isAdmin == true || 
+        request.auth.token.isSupport == true || 
+        request.auth.token.isEmployee == true ||
+        (
+          exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+          (get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+           get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSupport == true ||
+           get(/databases/(default)/documents/users/$(request.auth.uid)).data.isEmployee == true)
+        )
+      );
     }
 
     match /{allPaths=**} {
@@ -28,8 +35,6 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
-    // Optimized: Allow users to upload to their own UID subfolder directly
-    // This removes the costly 'isAdmin' lookup for basic user uploads
     match /support_images/{userId}/{allPaths=**} {
       allow write: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
     }

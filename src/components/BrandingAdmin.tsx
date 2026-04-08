@@ -9,14 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, Globe } from 'lucide-react';
+import { Loader2, Upload, Globe, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import { updateBrandingSettings } from '@/app/admin/actions';
+import { cn } from '@/lib/utils';
 
 export default function BrandingAdmin() {
     const [faviconUrl, setFaviconUrl] = useState('');
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
 
@@ -41,29 +43,42 @@ export default function BrandingAdmin() {
         }
 
         setIsUploading(true);
+        setUploadSuccess(false);
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
 
-            // Upload image to Firebase Storage
-            const fileName = `favicon_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+            // Standardize naming to prevent stale cache issues where possible
+            const fileName = `favicon_${Date.now()}.png`;
             const storageRef = ref(storage, `branding/${fileName}`);
             
+            console.log("Starting storage upload...");
             const snapshot = await uploadBytes(storageRef, file);
+            console.log("Storage upload complete, getting URL...");
             const downloadUrl = await getDownloadURL(snapshot.ref);
 
-            // Update Firestore setting
-            const idToken = await user.getIdToken();
+            console.log("Saving to Firestore...");
+            const idToken = await user.getIdToken(true);
             const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
             if (result.success) {
-                toast({ title: "Success", description: "Favicon updated successfully." });
+                setUploadSuccess(true);
+                toast({ 
+                    title: "Icon Updated", 
+                    description: "Browser favicon has been saved successfully.",
+                });
+                // Success feedback lasts for 3 seconds
+                setTimeout(() => setUploadSuccess(false), 3000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
             console.error("Favicon upload error:", error);
-            toast({ title: "Upload Failed", description: error.message || "Failed to upload favicon.", variant: "destructive" });
+            toast({ 
+                title: "Upload Failed", 
+                description: error.message || "Could not save favicon. Check your connection or permissions.", 
+                variant: "destructive" 
+            });
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -115,32 +130,50 @@ export default function BrandingAdmin() {
                                 <h4 className="font-bold text-base">Update Browser Icon</h4>
                                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                                     This icon appears in browser tabs, favorites, and bookmark bars. 
-                                    A square PNG or SVG (min 192x192) is recommended for high-density displays.
+                                    A square PNG or SVG (min 192x192) is recommended.
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <input 
-                                    type="file" 
-                                    accept="image/*" 
-                                    className="hidden" 
-                                    ref={fileInputRef} 
-                                    onChange={handleFileChange} 
-                                />
-                                <Button 
-                                    onClick={() => fileInputRef.current?.click()} 
-                                    disabled={isUploading}
-                                    className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20"
-                                >
-                                    {isUploading ? (
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    ) : (
-                                        <Upload className="h-4 w-4 mr-2" />
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3">
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        ref={fileInputRef} 
+                                        onChange={handleFileChange} 
+                                    />
+                                    <Button 
+                                        onClick={() => fileInputRef.current?.click()} 
+                                        disabled={isUploading}
+                                        variant={uploadSuccess ? "outline" : "default"}
+                                        className={cn(
+                                            "rounded-xl h-11 px-6 font-bold shadow-lg transition-all",
+                                            uploadSuccess ? "border-green-500 text-green-500 hover:bg-green-50" : "shadow-primary/20"
+                                        )}
+                                    >
+                                        {isUploading ? (
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        ) : uploadSuccess ? (
+                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                        ) : (
+                                            <Upload className="h-4 w-4 mr-2" />
+                                        )}
+                                        {isUploading ? 'Uploading...' : uploadSuccess ? 'Icon Saved!' : 'Upload New Icon'}
+                                    </Button>
+                                    
+                                    {isUploading && (
+                                        <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                                            Saving to Arena...
+                                        </span>
                                     )}
-                                    {isUploading ? 'Uploading Image...' : 'Upload New Icon'}
-                                </Button>
-                                {isUploading && (
-                                    <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Processing...</span>
+                                </div>
+                                
+                                {uploadSuccess && (
+                                    <p className="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3" />
+                                        Update confirmed. Changes are now live.
+                                    </p>
                                 )}
                             </div>
                         </div>
