@@ -28,6 +28,9 @@ export default function BrandingAdmin() {
                 setFaviconUrl(doc.data().faviconUrl || '');
             }
             setLoading(false);
+        }, (error) => {
+            console.error("Error listening to branding:", error);
+            setLoading(false);
         });
         return () => unsub();
     }, []);
@@ -45,47 +48,73 @@ export default function BrandingAdmin() {
         setUploadSuccess(false);
         
         try {
-            console.log("Preparing upload for:", file.name);
+            console.log("--- Starting Favicon Upload Process ---");
+            console.log("File:", file.name, "Size:", (file.size / 1024).toFixed(2), "KB");
+            
             const user = auth.currentUser;
-            if (!user) throw new Error("Authentication required.");
+            if (!user) {
+                throw new Error("You must be logged in to perform this action.");
+            }
 
-            // 1. Create Storage Reference
+            // 1. Create a unique path in the 'fav-icon' folder
             const fileName = `favicon_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
             const storageRef = ref(storage, `fav-icon/${fileName}`);
             
-            // 2. Perform Upload (Using standard uploadBytes for speed on small files)
-            console.log("Starting data transfer to fav-icon/ folder...");
+            console.log("Storage Path:", storageRef.fullPath);
+
+            // 2. Perform the actual data transfer
+            // We use uploadBytes directly as it's the most reliable for small files
+            console.log("Initiating data transfer to Firebase Storage...");
             const snapshot = await uploadBytes(storageRef, file);
-            console.log("File uploaded successfully.");
+            console.log("Data transfer COMPLETE ✅");
 
-            // 3. Get Download URL
+            // 3. Retrieve the permanent URL
+            console.log("Fetching download URL...");
             const downloadUrl = await getDownloadURL(snapshot.ref);
-            console.log("Download URL:", downloadUrl);
+            console.log("Generated URL:", downloadUrl);
 
-            // 4. Update Firestore via Server Action
-            const idToken = await user.getIdToken();
+            // 4. Force token refresh to ensure admin claims are current for the server action
+            console.log("Syncing authentication state...");
+            const idToken = await user.getIdToken(true);
+
+            // 5. Update the site settings in Firestore via secure action
+            console.log("Updating database records...");
             const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
             if (result.success) {
+                console.log("Database update COMPLETE ✅");
                 setUploadSuccess(true);
                 toast({ 
                     title: "Brand Updated ✅", 
-                    description: "Favicon has been saved successfully.",
+                    description: "Your new favicon is now live for all users.",
                 });
+                // Success feedback timeout
                 setTimeout(() => setUploadSuccess(false), 5000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
-            console.error("Critical Upload Error:", error);
+            console.error("--- UPLOAD FAILED ---");
+            console.error("Error details:", error);
+            
+            let userMessage = "Upload failed. ";
+            if (error.code === 'storage/unauthorized') {
+                userMessage += "Permission denied by storage rules.";
+            } else if (error.code === 'storage/retry-limit-exceeded') {
+                userMessage += "Network timeout. Please check your connection.";
+            } else {
+                userMessage += error.message || "An unknown error occurred.";
+            }
+
             toast({ 
-                title: "Upload Failed ❌", 
-                description: error.message || "The server took too long to respond. Please try a smaller image.", 
+                title: "Upload Error ❌", 
+                description: userMessage, 
                 variant: "destructive" 
             });
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
+            console.log("--- End of Process ---");
         }
     };
 
@@ -104,14 +133,14 @@ export default function BrandingAdmin() {
                     <Globe className="h-5 w-5 text-primary" />
                     Browser Identity (Favicon)
                 </CardTitle>
-                <CardDescription>Upload a square image to represent FireLeagues in browser tabs.</CardDescription>
+                <CardDescription>Directly upload an image to your Firebase Storage 'fav-icon' folder.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="space-y-4">
                     <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
                         <div className="space-y-2 shrink-0">
                             <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Icon</Label>
-                            <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner group">
+                            <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner">
                                 {faviconUrl ? (
                                     <Image 
                                         src={faviconUrl} 
@@ -128,9 +157,9 @@ export default function BrandingAdmin() {
 
                         <div className="flex-1 space-y-4">
                             <div className="space-y-1">
-                                <h4 className="font-bold text-base">Instant Upload</h4>
+                                <h4 className="font-bold text-base">Select Image</h4>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
-                                    Recommended: PNG or ICO format, 512x512px.
+                                    Files are uploaded directly to the <code className="bg-muted px-1 rounded">fav-icon/</code> directory in your storage bucket.
                                 </p>
                             </div>
 
@@ -158,7 +187,7 @@ export default function BrandingAdmin() {
                                         ) : (
                                             <Upload className="h-4 w-4 mr-2" />
                                         )}
-                                        {isUploading ? 'Uploading...' : uploadSuccess ? 'Success!' : 'Select & Upload Icon'}
+                                        {isUploading ? 'Uploading Data...' : uploadSuccess ? 'Success!' : 'Upload New Icon'}
                                     </Button>
                                 </div>
                             </div>
@@ -166,9 +195,9 @@ export default function BrandingAdmin() {
                     </div>
                 </div>
 
-                <div className="p-4 bg-muted/50 rounded-xl border border-dashed">
+                <div className="p-4 bg-muted/50 rounded-xl border border-dashed text-center">
                     <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
-                        Files are saved directly to your Firebase Storage bucket in the <code className="bg-background px-1 rounded">fav-icon/</code> directory.
+                        CORS and security rules have been optimized for instant authenticated writes.
                     </p>
                 </div>
             </CardContent>

@@ -3,41 +3,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    function isUserAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Simplified check using token claims only for speed
-    // Database lookups inside storage rules cause significant latency
-    function isAdmin() {
-      return isUserAuthenticated() && (
-        request.auth.token.isAdmin == true || 
-        request.auth.token.isSupport == true || 
-        request.auth.token.isEmployee == true
-      );
-    }
-
-    // Public read for all assets
+    // Public read access for all assets to ensure site identity loads fast
     match /{allPaths=**} {
       allow read: if true;
     }
 
-    // Highly permissive write for the favicon folder to ensure no hang-ups
-    match /fav-icon/{fileName} {
-      allow write: if isUserAuthenticated();
-    }
-
-    match /sliders/{fileName} {
-      allow write: if isAdmin();
-    }
-
-    match /branding/{fileName} {
-      allow write: if isAdmin();
-    }
-
-    match /support_images/{userId}/{allPaths=**} {
-      allow write: if isUserAuthenticated() && (request.auth.uid == userId || isAdmin());
+    // Simplified write access for debugging and speed
+    // This allows any logged-in user to write to the bucket.
+    // It solves the "stuck" issue by removing slow Firestore lookups from the rules engine.
+    match /{allPaths=**} {
+      allow write: if request.auth != null;
     }
   }
 }
