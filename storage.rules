@@ -8,18 +8,13 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Optimized check for testing and production
+    // Simplified check using token claims only for speed
+    // Database lookups inside storage rules cause significant latency
     function isAdmin() {
       return isUserAuthenticated() && (
         request.auth.token.isAdmin == true || 
         request.auth.token.isSupport == true || 
-        request.auth.token.isEmployee == true ||
-        (
-          exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-          (get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-           get(/databases/(default)/documents/users/$(request.auth.uid)).data.isSupport == true ||
-           get(/databases/(default)/documents/users/$(request.auth.uid)).data.isEmployee == true)
-        )
+        request.auth.token.isEmployee == true
       );
     }
 
@@ -28,7 +23,7 @@ service firebase.storage {
       allow read: if true;
     }
 
-    // Specific folder for favicons with resilient rules
+    // Highly permissive write for the favicon folder to ensure no hang-ups
     match /fav-icon/{fileName} {
       allow write: if isUserAuthenticated();
     }

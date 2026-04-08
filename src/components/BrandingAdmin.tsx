@@ -36,7 +36,6 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Basic validation
         if (!file.type.startsWith('image/')) {
             toast({ title: "Invalid File", description: "Please upload an image file.", variant: "destructive" });
             return;
@@ -44,45 +43,44 @@ export default function BrandingAdmin() {
 
         setIsUploading(true);
         setUploadSuccess(false);
+        
         try {
+            console.log("Preparing upload for:", file.name);
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
 
-            // Standardize naming and use the requested folder path
-            const extension = file.name.split('.').pop();
-            const fileName = `favicon_${Date.now()}.${extension}`;
+            // 1. Create Storage Reference
+            const fileName = `favicon_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
             const storageRef = ref(storage, `fav-icon/${fileName}`);
             
-            console.log("Starting storage upload to fav-icon/ folder...");
-            
-            // Perform the upload
+            // 2. Perform Upload (Using standard uploadBytes for speed on small files)
+            console.log("Starting data transfer to fav-icon/ folder...");
             const snapshot = await uploadBytes(storageRef, file);
-            console.log("Uploaded successfully:", snapshot);
+            console.log("File uploaded successfully.");
 
-            // Get download URL
+            // 3. Get Download URL
             const downloadUrl = await getDownloadURL(snapshot.ref);
-            console.log("File URL acquired:", downloadUrl);
+            console.log("Download URL:", downloadUrl);
 
-            // Save to Firestore using server action
-            const idToken = await user.getIdToken(true);
+            // 4. Update Firestore via Server Action
+            const idToken = await user.getIdToken();
             const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
             if (result.success) {
                 setUploadSuccess(true);
                 toast({ 
-                    title: "Upload Successful ✅", 
-                    description: "Your browser icon has been updated and saved.",
+                    title: "Brand Updated ✅", 
+                    description: "Favicon has been saved successfully.",
                 });
-                // Success feedback lasts for 5 seconds
                 setTimeout(() => setUploadSuccess(false), 5000);
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
-            console.error("Favicon upload failed:", error);
+            console.error("Critical Upload Error:", error);
             toast({ 
                 title: "Upload Failed ❌", 
-                description: error.message || "An unexpected error occurred during upload. Please check your connection.", 
+                description: error.message || "The server took too long to respond. Please try a smaller image.", 
                 variant: "destructive" 
             });
         } finally {
@@ -104,15 +102,15 @@ export default function BrandingAdmin() {
             <CardHeader className="bg-secondary/10 border-b">
                 <CardTitle className="text-xl flex items-center gap-2">
                     <Globe className="h-5 w-5 text-primary" />
-                    Site Branding
+                    Browser Identity (Favicon)
                 </CardTitle>
-                <CardDescription>Configure global identity elements for FireLeagues.</CardDescription>
+                <CardDescription>Upload a square image to represent FireLeagues in browser tabs.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="space-y-4">
                     <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
                         <div className="space-y-2 shrink-0">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Favicon</Label>
+                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Icon</Label>
                             <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner group">
                                 {faviconUrl ? (
                                     <Image 
@@ -125,18 +123,14 @@ export default function BrandingAdmin() {
                                 ) : (
                                     <Globe className="h-8 w-8 text-muted-foreground/20" />
                                 )}
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Globe className="h-6 w-6 text-white" />
-                                </div>
                             </div>
                         </div>
 
                         <div className="flex-1 space-y-4">
-                            <div>
-                                <h4 className="font-bold text-base">Update Browser Icon</h4>
-                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    This icon appears in browser tabs and bookmark bars. 
-                                    Uploaded images are stored in the <code className="bg-muted px-1 rounded">fav-icon/</code> folder.
+                            <div className="space-y-1">
+                                <h4 className="font-bold text-base">Instant Upload</h4>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Recommended: PNG or ICO format, 512x512px.
                                 </p>
                             </div>
 
@@ -152,10 +146,9 @@ export default function BrandingAdmin() {
                                     <Button 
                                         onClick={() => fileInputRef.current?.click()} 
                                         disabled={isUploading}
-                                        variant={uploadSuccess ? "outline" : "default"}
                                         className={cn(
                                             "rounded-xl h-11 px-6 font-bold shadow-lg transition-all",
-                                            uploadSuccess ? "border-green-500 text-green-500 hover:bg-green-50" : "shadow-primary/20"
+                                            uploadSuccess ? "bg-green-600 hover:bg-green-700" : "shadow-primary/20"
                                         )}
                                     >
                                         {isUploading ? (
@@ -165,30 +158,17 @@ export default function BrandingAdmin() {
                                         ) : (
                                             <Upload className="h-4 w-4 mr-2" />
                                         )}
-                                        {isUploading ? 'Uploading...' : uploadSuccess ? 'Icon Saved!' : 'Upload New Icon'}
+                                        {isUploading ? 'Uploading...' : uploadSuccess ? 'Success!' : 'Select & Upload Icon'}
                                     </Button>
-                                    
-                                    {isUploading && (
-                                        <span className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
-                                            Sending to bucket...
-                                        </span>
-                                    )}
                                 </div>
-                                
-                                {uploadSuccess && (
-                                    <p className="text-[10px] text-green-600 font-bold flex items-center gap-1">
-                                        <CheckCircle className="h-3 w-3" />
-                                        Database updated. Your new brand icon is now live.
-                                    </p>
-                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                    <p className="text-[10px] font-medium text-primary/80 leading-relaxed italic">
-                        * Note: If the icon doesn't update immediately, please clear your browser cache or refresh the page.
+                <div className="p-4 bg-muted/50 rounded-xl border border-dashed">
+                    <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">
+                        Files are saved directly to your Firebase Storage bucket in the <code className="bg-background px-1 rounded">fav-icon/</code> directory.
                     </p>
                 </div>
             </CardContent>
