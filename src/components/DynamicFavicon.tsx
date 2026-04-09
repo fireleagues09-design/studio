@@ -9,7 +9,7 @@ import { db } from '@/lib/firebase';
  * DynamicFavicon Component
  * 
  * Listens to branding settings in Firestore and updates the browser's 
- * favicon link element in real-time.
+ * favicon link element in real-time with cache-busting logic.
  */
 export function DynamicFavicon() {
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
@@ -23,6 +23,8 @@ export function DynamicFavicon() {
           setFaviconUrl(data.faviconUrl);
         }
       }
+    }, (error) => {
+      console.error("Favicon listener error:", error);
     });
     return () => unsub();
   }, []);
@@ -32,6 +34,11 @@ export function DynamicFavicon() {
 
     // Update the DOM favicon link
     const updateIcon = () => {
+      // Browsers cache favicons very aggressively. 
+      // We append a version timestamp to force a refresh.
+      const bustCacheUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+
+      // 1. Update Standard Favicon
       let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
       
       if (!link) {
@@ -40,13 +47,24 @@ export function DynamicFavicon() {
         document.head.appendChild(link);
       }
       
-      link.href = faviconUrl;
+      link.href = bustCacheUrl;
       
-      // Also update apple-touch-icon if present for mobile bookmarks
+      // 2. Update Apple Touch Icon (for mobile bookmarks)
       let appleIcon: HTMLLinkElement | null = document.querySelector("link[rel='apple-touch-icon']");
-      if (appleIcon) {
-        appleIcon.href = faviconUrl;
+      if (!appleIcon) {
+        appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        document.head.appendChild(appleIcon);
       }
+      appleIcon.href = bustCacheUrl;
+
+      // 3. Update Shortcut Icon (legacy support)
+      let shortcutIcon: HTMLLinkElement | null = document.querySelector("link[rel='shortcut icon']");
+      if (shortcutIcon) {
+        shortcutIcon.href = bustCacheUrl;
+      }
+
+      console.log("Favicon updated with cache-bust:", bustCacheUrl);
     };
 
     updateIcon();
