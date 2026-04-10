@@ -10,53 +10,21 @@ import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { db } from "@/lib/firebase-admin";
 
-export async function generateMetadata(): Promise<Metadata> {
-  let faviconUrl = '/favicon.ico';
-  try {
-    const brandingDoc = await db.collection('settings').doc('branding').get();
-    if (brandingDoc.exists && brandingDoc.data()?.faviconUrl) {
-      faviconUrl = brandingDoc.data()?.faviconUrl;
-    }
-  } catch (e) {
-    console.warn("Metadata: Could not fetch dynamic favicon from Firestore, using default.", e);
-  }
-
-  // Use a timestamp to bypass aggressive browser/CDN caching
-  const bust = Date.now();
-  const finalUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${bust}`;
-
-  return {
-    title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
-    description: "Join FireLeagues (Fire Leagues), India's premier skill-based competitive arena. Compete in daily Free Fire tournaments, test your skills, and earn performance rewards.",
-    keywords: ["Fire Leagues", "FireLeagues", "Free Fire Tournaments India", "Esports India", "Mobile Gaming Rewards"],
-    metadataBase: new URL("https://fireleagues.in"),
-    icons: {
-      icon: [
-        { url: finalUrl, sizes: 'any' },
-        { url: finalUrl, type: 'image/png', sizes: '32x32' }
-      ],
-      shortcut: finalUrl,
-      apple: [
-        { url: finalUrl, sizes: '180x180', type: 'image/png' }
-      ],
-    },
-    openGraph: {
-      title: "Fire Leagues - Ultimate Competitive Arena",
-      description: "Join FireLeagues to compete in daily matches and prove your skills in professional esports leagues.",
-      url: "https://fireleagues.in",
-      siteName: "FireLeagues",
-      locale: "en_IN",
-      type: "website",
-    }
-  };
-}
+export const metadata: Metadata = {
+  title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
+  description: "Join FireLeagues, India's premier skill-based competitive arena. Compete in daily Free Fire tournaments and earn performance rewards.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
+};
 
 const nuclearCachePurge = `
 (function() {
   try {
-    // 1. Force Theme Persistence
+    // Force Theme Persistence
     const mode = localStorage.getItem('fireleagues-ui-mode') || 'dark';
     const theme = localStorage.getItem('fireleagues-theme') || 'orange';
     const root = document.documentElement;
@@ -65,12 +33,11 @@ const nuclearCachePurge = `
     allThemes.forEach(t => root.classList.remove('theme-' + t));
     root.classList.add('theme-' + theme);
 
-    // 2. Nuclear Service Worker Purge (Fixes aggressive Favicon caching)
+    // Unregister legacy service workers that might cache old icons
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for(let registration of registrations) {
           registration.unregister();
-          console.log('Legacy Service Worker Unregistered');
         }
       });
     }
