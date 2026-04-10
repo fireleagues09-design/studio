@@ -40,7 +40,7 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 5MB Max Limit as requested
+        // 5MB Limit
         if (file.size > 5 * 1024 * 1024) {
             toast({ 
                 title: "Image too large", 
@@ -59,51 +59,41 @@ export default function BrandingAdmin() {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
             
-            // Ensure we have a fresh token for storage rules
             await user.getIdToken(true);
 
-            // Using the path specified in your required rules
-            const storageRef = ref(storage, `fav-icon/favicon.png`);
+            // 🔥 STEP 3 & 4 FIX: Use a unique filename every time.
+            // This forces the CDN and Browser to bypass ALL caches because the URL path changes.
+            const uniqueFileName = `icon_${Date.now()}.${file.name.split('.').pop() || 'png'}`;
+            const storageRef = ref(storage, `fav-icon/${uniqueFileName}`);
             
-            // Set metadata to help the browser identify the image type
             const metadata = {
                 contentType: file.type || 'image/png',
             };
 
-            // Start Resumable Upload Task for maximum reliability
             const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     setUploadProgress(progress);
-                    console.log(`Upload is ${Math.round(progress)}% done`);
                 }, 
                 (error) => {
                     console.error("Upload error:", error);
                     setIsUploading(false);
-                    toast({ 
-                        title: "Upload Failed", 
-                        description: error.message, 
-                        variant: "destructive" 
-                    });
+                    toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
                 }, 
                 async () => {
-                    // Finalize upload and get public download URL
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                    console.log("File available at:", downloadUrl);
                     
-                    // Update the global branding settings in Firestore
                     const idToken = await user.getIdToken();
                     const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
                     if (result.success) {
                         setUploadSuccess(true);
                         toast({ 
-                            title: "Success!", 
-                            description: "Browser icon updated. Changes will apply shortly.",
+                            title: "Icon Saved! ✅", 
+                            description: "The new website icon has been applied and forced to refresh.",
                         });
-                        // Smooth reset of the upload button state
                         setTimeout(() => {
                             setUploadSuccess(false);
                             setIsUploading(false);
@@ -135,14 +125,14 @@ export default function BrandingAdmin() {
             <CardHeader className="bg-secondary/10 border-b">
                 <CardTitle className="text-xl flex items-center gap-2">
                     <Globe className="h-5 w-5 text-primary" />
-                    Browser Identity (Favicon)
+                    Browser Identity (Fav-icon)
                 </CardTitle>
-                <CardDescription>Upload an image to set your site's tab icon.</CardDescription>
+                <CardDescription>Upload an image to update the site's tab icon instantly.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
                     <div className="space-y-2 shrink-0">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Icon</Label>
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Live Preview</Label>
                         <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner">
                             {faviconUrl ? (
                                 <Image 
@@ -160,9 +150,9 @@ export default function BrandingAdmin() {
 
                     <div className="flex-1 space-y-4">
                         <div className="space-y-1">
-                            <h4 className="font-bold text-base">Select and Upload</h4>
+                            <h4 className="font-bold text-base">Replace & Force Refresh</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Upload a PNG, SVG, or ICO. Maximum size: 5MB.
+                                Uploading a new file will automatically bypass CDN and browser caching.
                             </p>
                         </div>
 
@@ -185,7 +175,7 @@ export default function BrandingAdmin() {
                                 {isUploading ? (
                                     <span className="flex items-center">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Syncing...'}
+                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Processing...'}
                                     </span>
                                 ) : uploadSuccess ? (
                                     <CheckCircle className="h-4 w-4 mr-2" />
