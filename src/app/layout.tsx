@@ -10,71 +10,54 @@ import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { DynamicFavicon } from "@/components/DynamicFavicon";
+import { db } from "@/lib/firebase-admin";
 
-export const metadata: Metadata = {
-  title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
-  description:
-    "Join FireLeagues (Fire Leagues), India's premier skill-based competitive arena. Compete in daily Free Fire tournaments, test your skills, and earn performance rewards. Professional esports matches for mobile gamers.",
-  keywords: [
-    "Fire Leagues", 
-    "FireLeagues", 
-    "FireLeagues.in",
-    "Free Fire Tournaments India", 
-    "Esports India", 
-    "Mobile Gaming Rewards", 
-    "Earn Rewards Gaming", 
-    "Gaming Community", 
-    "Skill-based competition",
-    "Garena Free Fire Matches",
-    "Competitive Arena India"
-  ],
-  metadataBase: new URL("https://fireleagues.in"),
-  openGraph: {
-    title: "Fire Leagues - Ultimate Competitive Arena",
-    description: "Join FireLeagues to compete in daily matches and prove your skills in professional esports leagues.",
-    url: "https://fireleagues.in",
-    siteName: "FireLeagues",
-    locale: "en_IN",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Fire Leagues | Skill-Based Gaming Arena",
-    description: "Daily Free Fire tournaments with real performance rewards.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+export async function generateMetadata(): Promise<Metadata> {
+  let faviconUrl = '/favicon.ico';
+  try {
+    const brandingDoc = await db.collection('settings').doc('branding').get();
+    if (brandingDoc.exists && brandingDoc.data()?.faviconUrl) {
+      faviconUrl = brandingDoc.data()?.faviconUrl;
+    }
+  } catch (e) {
+    console.warn("Metadata: Could not fetch dynamic favicon from Firestore, using default.", e);
+  }
+
+  // Use a timestamp to bypass aggressive browser/CDN caching
+  const bust = Date.now();
+  const finalUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${bust}`;
+
+  return {
+    title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
+    description: "Join FireLeagues (Fire Leagues), India's premier skill-based competitive arena. Compete in daily Free Fire tournaments, test your skills, and earn performance rewards.",
+    keywords: ["Fire Leagues", "FireLeagues", "Free Fire Tournaments India", "Esports India", "Mobile Gaming Rewards"],
+    metadataBase: new URL("https://fireleagues.in"),
+    icons: {
+      icon: finalUrl,
+      shortcut: finalUrl,
+      apple: finalUrl,
     },
-  },
-  // Removed static icons object to let DynamicFavicon take control via client-side DOM injection
-};
+    openGraph: {
+      title: "Fire Leagues - Ultimate Competitive Arena",
+      description: "Join FireLeagues to compete in daily matches and prove your skills in professional esports leagues.",
+      url: "https://fireleagues.in",
+      siteName: "FireLeagues",
+      locale: "en_IN",
+      type: "website",
+    }
+  };
+}
 
-// This script prevents the theme from flickering on page load.
 const antiFlickerScript = `
 (function() {
   try {
     const mode = localStorage.getItem('fireleagues-ui-mode') || 'dark';
     const theme = localStorage.getItem('fireleagues-theme') || 'orange';
     const root = document.documentElement;
-
-    if (mode === 'dark') {
-      root.classList.add('dark');
-    }
-
+    if (mode === 'dark') root.classList.add('dark');
     const allThemes = ['orange', 'violet', 'green', 'pink', 'blue', 'yellow', 'red', 'teal', 'lime', 'cyan', 'indigo', 'grape', 'spring-green'];
-    allThemes.forEach(t => {
-      root.classList.remove('theme-' + t);
-    });
+    allThemes.forEach(t => root.classList.remove('theme-' + t));
     root.classList.add('theme-' + theme);
-
   } catch (e) {}
 })();
 `;
@@ -90,18 +73,10 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <script dangerouslySetInnerHTML={{ __html: antiFlickerScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-          rel="stylesheet"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased")}>
-        <DynamicFavicon />
         <ThemeProvider
           storageKey="fireleagues-theme"
           modeStorageKey="fireleagues-mode"

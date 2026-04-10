@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from "next/image";
@@ -87,32 +86,19 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8 md:gap-16">
-      {/* Hidden SEO Keywords & JSON-LD for Google Crawler */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="sr-only">
-        <h2>Fire Leagues - FireLeagues India</h2>
-        <p>
-          Welcome to Fire Leagues (FireLeagues), the ultimate eSports rewards platform. 
-          If you are searching for Fire Leagues or Fireleagues, you are in the right place. 
-          We offer skill-based competition, entry fee matches, and eSports performance rewards. 
-          FireLeagues.in is optimized for Free Fire players in India looking for a professional arena.
-          Fire Leagues Gaming, Fire Leagues Tournament, Fire Leagues eSports.
-        </p>
-      </div>
       
-      {/* Hero Section & SEO Content */}
+      {/* Hero Section */}
       <section className="container mx-auto px-4 pt-8 md:pt-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-4 text-left">
-                {/* Static SEO Content - Visible to Google */}
                 <h1 className="text-3xl lg:text-5xl font-black tracking-tight leading-tight">
                     FireLeagues - Skill-Based <span className="text-primary">Competitive Gaming</span> Arena
                 </h1>
                 
-                {/* Sublines for Brand Reinforcement */}
                 <div className="flex flex-col gap-1 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
                     <p>• India&apos;s Professional eSports Hub</p>
                     <p>• Verified Competitive Fair Play</p>
@@ -143,7 +129,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Active Lobbies Section (Moved Up) */}
+      {/* 1. Active Lobbies (SWAPPED TO TOP) */}
       <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12">
         <section>
           <div className="flex justify-between items-center mb-8">
@@ -173,7 +159,7 @@ export default function Home() {
         </section>
       </div>
 
-      {/* Feature Section for SEO Keywords (Moved Down) */}
+      {/* 2. Feature Section (SWAPPED TO BOTTOM) */}
       <section className="bg-secondary/30 py-12 md:py-20 border-y border-border/50 mb-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -185,17 +171,16 @@ export default function Home() {
             <div className="flex flex-col items-center text-center p-6 space-y-3">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Shield className="h-8 w-8" /></div>
               <h3 className="text-xl font-bold">Verified Fair Play</h3>
-              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual review process ensure a 100% hacker-free competitive environment.</p>
+              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems ensure a 100% hacker-free competitive environment.</p>
             </div>
             <div className="flex flex-col items-center text-center p-6 space-y-3">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Zap className="h-8 w-8" /></div>
               <h3 className="text-xl font-bold">Expert Support</h3>
-              <p className="text-sm text-muted-foreground">Receive assistance within minutes through our dedicated 24/7 support ticket system and live agent chat.</p>
+              <p className="text-sm text-muted-foreground">Receive assistance within minutes through our dedicated live agent chat.</p>
             </div>
           </div>
         </div>
       </section>
-      
     </div>
   );
 }
