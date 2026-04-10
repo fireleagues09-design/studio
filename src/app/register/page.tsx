@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -74,6 +73,10 @@ export default function RegisterPage() {
                 maintenanceNote: data.maintenanceNote ?? ""
             });
         }
+        setConfigLoading(false);
+        hideLoader();
+    }, (error) => {
+        console.error("Error loading auth config:", error);
         setConfigLoading(false);
         hideLoader();
     });
