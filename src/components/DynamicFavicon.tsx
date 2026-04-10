@@ -8,11 +8,12 @@ import { db } from '@/lib/firebase';
 /**
  * DynamicFavicon Component
  * 
- * Listens to branding settings in Firestore and updates the browser's 
- * favicon link element in real-time with cache-busting logic.
+ * Listens to branding settings in Firestore and renders hoisted link tags
+ * to update the browser's favicon in real-time with aggressive cache-busting.
  */
 export function DynamicFavicon() {
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [updateTrigger, setUpdateTrigger] = useState(0);
 
   useEffect(() => {
     // Listen for branding changes in Firestore
@@ -20,7 +21,10 @@ export function DynamicFavicon() {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data.faviconUrl) {
+          console.log("🔥 New Favicon detected:", data.faviconUrl);
           setFaviconUrl(data.faviconUrl);
+          // Increment trigger to force a re-render of the link tags with a new timestamp
+          setUpdateTrigger(prev => prev + 1);
         }
       }
     }, (error) => {
@@ -29,46 +33,18 @@ export function DynamicFavicon() {
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    if (!faviconUrl) return;
+  if (!faviconUrl) return null;
 
-    // Update the DOM favicon link
-    const updateIcon = () => {
-      // Browsers cache favicons very aggressively. 
-      // We append a version timestamp to force a refresh.
-      const bustCacheUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  // Browsers cache favicons extremely aggressively. 
+  // We use a combination of the URL length and a timestamp trigger to ensure uniqueness.
+  const bustCacheUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${updateTrigger}`;
 
-      // 1. Update Standard Favicon
-      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
-      
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
-      
-      link.href = bustCacheUrl;
-      
-      // 2. Update Apple Touch Icon (for mobile bookmarks)
-      let appleIcon: HTMLLinkElement | null = document.querySelector("link[rel='apple-touch-icon']");
-      if (!appleIcon) {
-        appleIcon = document.createElement('link');
-        appleIcon.rel = 'apple-touch-icon';
-        document.head.appendChild(appleIcon);
-      }
-      appleIcon.href = bustCacheUrl;
-
-      // 3. Update Shortcut Icon (legacy support)
-      let shortcutIcon: HTMLLinkElement | null = document.querySelector("link[rel='shortcut icon']");
-      if (shortcutIcon) {
-        shortcutIcon.href = bustCacheUrl;
-      }
-
-      console.log("Favicon updated with cache-bust:", bustCacheUrl);
-    };
-
-    updateIcon();
-  }, [faviconUrl]);
-
-  return null; // This component doesn't render any visible UI
+  return (
+    <>
+      {/* Next.js hoists these tags to the <head> automatically */}
+      <link rel="icon" href={bustCacheUrl} sizes="any" />
+      <link rel="shortcut icon" href={bustCacheUrl} />
+      <link rel="apple-touch-icon" href={bustCacheUrl} />
+    </>
+  );
 }

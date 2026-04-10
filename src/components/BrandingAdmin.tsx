@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -39,7 +40,7 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Increased limit to 5MB as requested
+        // 5MB Max Limit as requested
         if (file.size > 5 * 1024 * 1024) {
             toast({ 
                 title: "Image too large", 
@@ -58,19 +59,25 @@ export default function BrandingAdmin() {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
             
-            // Refresh token once at the start to ensure speed in rules
+            // Ensure we have a fresh token for storage rules
             await user.getIdToken(true);
 
-            // Using standard fixed path for fast resolution
+            // Using the path specified in your required rules
             const storageRef = ref(storage, `fav-icon/favicon.png`);
             
-            // Start Resumable Upload Task
-            const uploadTask = uploadBytesResumable(storageRef, file);
+            // Set metadata to help the browser identify the image type
+            const metadata = {
+                contentType: file.type || 'image/png',
+            };
+
+            // Start Resumable Upload Task for maximum reliability
+            const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     setUploadProgress(progress);
+                    console.log(`Upload is ${Math.round(progress)}% done`);
                 }, 
                 (error) => {
                     console.error("Upload error:", error);
@@ -82,10 +89,11 @@ export default function BrandingAdmin() {
                     });
                 }, 
                 async () => {
-                    // Finalize upload and get URL
+                    // Finalize upload and get public download URL
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                    console.log("File available at:", downloadUrl);
                     
-                    // Immediately update database
+                    // Update the global branding settings in Firestore
                     const idToken = await user.getIdToken();
                     const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
 
@@ -93,13 +101,13 @@ export default function BrandingAdmin() {
                         setUploadSuccess(true);
                         toast({ 
                             title: "Success!", 
-                            description: "Icon updated successfully.",
+                            description: "Browser icon updated. Changes will apply shortly.",
                         });
-                        // Smooth reset
+                        // Smooth reset of the upload button state
                         setTimeout(() => {
                             setUploadSuccess(false);
                             setIsUploading(false);
-                        }, 2500);
+                        }, 3000);
                     } else {
                         throw new Error(result.message);
                     }
@@ -137,7 +145,13 @@ export default function BrandingAdmin() {
                         <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Current Icon</Label>
                         <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner">
                             {faviconUrl ? (
-                                <Image src={faviconUrl} alt="Favicon" fill className="object-contain p-3" unoptimized />
+                                <Image 
+                                    src={faviconUrl} 
+                                    alt="Favicon" 
+                                    fill 
+                                    className="object-contain p-3" 
+                                    unoptimized 
+                                />
                             ) : (
                                 <Globe className="h-8 w-8 text-muted-foreground/20" />
                             )}
@@ -148,14 +162,14 @@ export default function BrandingAdmin() {
                         <div className="space-y-1">
                             <h4 className="font-bold text-base">Select and Upload</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Upload a PNG or SVG. Max file size: 5MB.
+                                Upload a PNG, SVG, or ICO. Maximum size: 5MB.
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3">
                             <input 
                                 type="file" 
-                                accept="image/png,image/svg+xml,image/x-icon" 
+                                accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon" 
                                 className="hidden" 
                                 ref={fileInputRef} 
                                 onChange={handleFileChange} 
@@ -164,21 +178,21 @@ export default function BrandingAdmin() {
                                 onClick={() => fileInputRef.current?.click()} 
                                 disabled={isUploading}
                                 className={cn(
-                                    "rounded-xl h-11 px-6 font-bold shadow-lg transition-all min-w-[160px]",
+                                    "rounded-xl h-11 px-6 font-bold shadow-lg transition-all min-w-[180px]",
                                     uploadSuccess ? "bg-green-600 hover:bg-green-700" : "shadow-primary/20"
                                 )}
                             >
                                 {isUploading ? (
                                     <span className="flex items-center">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Processing...'}
+                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Syncing...'}
                                     </span>
                                 ) : uploadSuccess ? (
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                 ) : (
                                     <Upload className="h-4 w-4 mr-2" />
                                 )}
-                                {!isUploading && (uploadSuccess ? 'Icon Saved!' : 'Upload New Icon')}
+                                {!isUploading && (uploadSuccess ? 'Icon Applied!' : 'Upload New Icon')}
                             </Button>
                         </div>
                     </div>
