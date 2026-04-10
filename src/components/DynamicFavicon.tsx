@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +8,7 @@ import { db } from '@/lib/firebase';
  * DynamicFavicon Component
  * 
  * Listens to branding settings in Firestore and renders hoisted link tags.
- * Since we now use unique filenames in BrandingAdmin, caching is bypassed automatically.
+ * Uses standard-compliant rel types and sizes for immediate browser detection.
  */
 export function DynamicFavicon() {
   const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
@@ -32,9 +31,13 @@ export function DynamicFavicon() {
 
   return (
     <>
-      {/* 🔧 STEP 4 FIX: Use standard compliant attributes for maximum compatibility */}
+      {/* Primary Favicon - sizes="any" tells the browser this can be scaled */}
       <link rel="icon" href={faviconUrl} sizes="any" type="image/png" />
+      
+      {/* Legacy Support */}
       <link rel="shortcut icon" href={faviconUrl} />
+      
+      {/* Apple Touch Icon - for mobile bookmarks and home screens */}
       <link rel="apple-touch-icon" href={faviconUrl} />
     </>
   );

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -59,10 +58,10 @@ export default function BrandingAdmin() {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
             
+            // Force refresh token to ensure storage permissions are active
             await user.getIdToken(true);
 
-            // 🔥 STEP 3 & 4 FIX: Use a unique filename every time.
-            // This forces the CDN and Browser to bypass ALL caches because the URL path changes.
+            // UNIQUE FILENAME STRATEGY: Forces CDN and Browser to bypass ALL caches
             const uniqueFileName = `icon_${Date.now()}.${file.name.split('.').pop() || 'png'}`;
             const storageRef = ref(storage, `fav-icon/${uniqueFileName}`);
             
@@ -70,12 +69,14 @@ export default function BrandingAdmin() {
                 contentType: file.type || 'image/png',
             };
 
+            console.log("Starting resumable upload for:", uniqueFileName);
             const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     setUploadProgress(progress);
+                    console.log(`Upload progress: ${progress}%`);
                 }, 
                 (error) => {
                     console.error("Upload error:", error);
@@ -84,6 +85,7 @@ export default function BrandingAdmin() {
                 }, 
                 async () => {
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                    console.log("Upload complete. URL:", downloadUrl);
                     
                     const idToken = await user.getIdToken();
                     const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
@@ -91,8 +93,8 @@ export default function BrandingAdmin() {
                     if (result.success) {
                         setUploadSuccess(true);
                         toast({ 
-                            title: "Icon Saved! ✅", 
-                            description: "The new website icon has been applied and forced to refresh.",
+                            title: "Icon Applied! ✅", 
+                            description: "The new website icon has been saved and cache has been bypassed.",
                         });
                         setTimeout(() => {
                             setUploadSuccess(false);
@@ -105,6 +107,7 @@ export default function BrandingAdmin() {
             );
 
         } catch (error: any) {
+            console.error("Upload process error:", error);
             setIsUploading(false);
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
@@ -127,7 +130,7 @@ export default function BrandingAdmin() {
                     <Globe className="h-5 w-5 text-primary" />
                     Browser Identity (Fav-icon)
                 </CardTitle>
-                <CardDescription>Upload an image to update the site's tab icon instantly.</CardDescription>
+                <CardDescription>Upload a PNG or SVG to update the site's tab icon instantly.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
@@ -150,9 +153,9 @@ export default function BrandingAdmin() {
 
                     <div className="flex-1 space-y-4">
                         <div className="space-y-1">
-                            <h4 className="font-bold text-base">Replace & Force Refresh</h4>
+                            <h4 className="font-bold text-base">Force Cache Overwrite</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Uploading a new file will automatically bypass CDN and browser caching.
+                                Our system uses unique path versioning. Every upload is treated as a new file, ensuring the icon updates for all users immediately without cached delays.
                             </p>
                         </div>
 
@@ -175,7 +178,7 @@ export default function BrandingAdmin() {
                                 {isUploading ? (
                                     <span className="flex items-center">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Processing...'}
+                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Uploading...'}
                                     </span>
                                 ) : uploadSuccess ? (
                                     <CheckCircle className="h-4 w-4 mr-2" />

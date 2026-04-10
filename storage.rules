@@ -3,12 +3,12 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ✅ HIGH-SPEED ACCESS FOR BRANDING
+    // ✅ HIGH-SPEED ACCESS FOR BRANDING (Favicon)
     match /fav-icon/{allPaths=**} {
       allow read, write: if true;
     }
 
-    // ✅ HIGH-SPEED ACCESS FOR CONSOLIDATED APP IMAGES
+    // ✅ HIGH-SPEED ACCESS FOR CONSOLIDATED APP IMAGES (Support/Staff)
     match /images/{allPaths=**} {
       allow read, write: if true;
     }
