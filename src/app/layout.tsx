@@ -10,14 +10,40 @@ import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
+import { db } from "@/lib/firebase-admin";
 
-export const metadata: Metadata = {
-  title: "FireLeagues",
-  description: "Gaming platform",
-  icons: {
-    icon: "/favicon.ico",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  let faviconUrl = "/favicon.ico";
+  try {
+    // Fetch the custom dynamic branding from Firestore
+    const brandingDoc = await db.collection('settings').doc('branding').get();
+    if (brandingDoc.exists) {
+      const data = brandingDoc.data();
+      if (data?.faviconUrl) {
+        faviconUrl = data.faviconUrl;
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching metadata branding:", e);
+  }
+
+  // Force cache-busting so browsers see the update instantly
+  const bust = Date.now();
+  const finalUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${bust}`;
+
+  return {
+    title: "FireLeagues",
+    description: "Gaming platform",
+    icons: {
+      icon: [
+        { url: finalUrl, sizes: "any" },
+        { url: finalUrl, type: "image/png" }
+      ],
+      shortcut: finalUrl,
+      apple: finalUrl,
+    },
+  };
+}
 
 export default function RootLayout({
   children,
@@ -31,6 +57,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+        {/* Nuclear Fix: Purge old Service Workers that cache the old favicon */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => reg.unregister());
+              });
+            }
+          `
+        }} />
       </head>
       <body className={cn("font-body antialiased")}>
         <ThemeProvider
