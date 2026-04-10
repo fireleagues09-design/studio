@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
@@ -55,6 +54,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  // Removed static icons object to let DynamicFavicon take control via client-side DOM injection
 };
 
 // This script prevents the theme from flickering on page load.

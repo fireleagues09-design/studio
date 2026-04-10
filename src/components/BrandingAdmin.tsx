@@ -70,7 +70,7 @@ export default function BrandingAdmin() {
             const storageRef = ref(storage, `fav-icon/${uniqueFileName}`);
             
             const metadata = {
-                contentType: file.type || 'image/png',
+                contentType: file.type || 'image/png', // CRITICAL: Sets the browser MIME type
                 cacheControl: 'public,max-age=31536000',
             };
 

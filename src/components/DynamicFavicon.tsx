@@ -51,9 +51,9 @@ export function DynamicFavicon() {
     const bustedUrl = `${url}${url.includes('?') ? '&' : '?'}v=${timestamp}`;
 
     const tags = [
-      { rel: 'icon', href: bustedUrl, type: 'image/png', sizes: 'any' },
+      { rel: 'icon', href: bustedUrl, type: 'image/png', sizes: '32x32' },
       { rel: 'shortcut icon', href: bustedUrl },
-      { rel: 'apple-touch-icon', href: bustedUrl }
+      { rel: 'apple-touch-icon', href: bustedUrl, sizes: '180x180' }
     ];
 
     tags.forEach(tagAttrs => {
