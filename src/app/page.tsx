@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from "next/image";
@@ -142,30 +143,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Feature Section for SEO Keywords */}
-      <section className="bg-secondary/30 py-12 md:py-20 border-y border-border/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center p-6 space-y-3">
-              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Trophy className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Elite Rewards</h3>
-              <p className="text-sm text-muted-foreground">Compete for significant rewards in our daily skill-based matches and grand leagues.</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 space-y-3">
-              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Shield className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Verified Fair Play</h3>
-              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual review process ensure a 100% hacker-free competitive environment.</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 space-y-3">
-              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Zap className="h-8 w-8" /></div>
-              <h3 className="text-xl font-bold">Expert Support</h3>
-              <p className="text-sm text-muted-foreground">Receive assistance within minutes through our dedicated 24/7 support ticket system and live agent chat.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12 pb-16">
+      {/* Active Lobbies Section (Moved Up) */}
+      <div className="container mx-auto px-4 flex flex-col gap-8 md:gap-12">
         <section>
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -193,6 +172,29 @@ export default function Home() {
           }
         </section>
       </div>
+
+      {/* Feature Section for SEO Keywords (Moved Down) */}
+      <section className="bg-secondary/30 py-12 md:py-20 border-y border-border/50 mb-16">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Trophy className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Elite Rewards</h3>
+              <p className="text-sm text-muted-foreground">Compete for significant rewards in our daily skill-based matches and grand leagues.</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Shield className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Verified Fair Play</h3>
+              <p className="text-sm text-muted-foreground">Our advanced anti-cheat systems and manual review process ensure a 100% hacker-free competitive environment.</p>
+            </div>
+            <div className="flex flex-col items-center text-center p-6 space-y-3">
+              <div className="p-4 bg-primary/10 rounded-2xl text-primary"><Zap className="h-8 w-8" /></div>
+              <h3 className="text-xl font-bold">Expert Support</h3>
+              <p className="text-sm text-muted-foreground">Receive assistance within minutes through our dedicated 24/7 support ticket system and live agent chat.</p>
+            </div>
+          </div>
+        </div>
+      </section>
       
     </div>
   );
