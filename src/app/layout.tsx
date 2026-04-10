@@ -33,9 +33,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: ["Fire Leagues", "FireLeagues", "Free Fire Tournaments India", "Esports India", "Mobile Gaming Rewards"],
     metadataBase: new URL("https://fireleagues.in"),
     icons: {
-      icon: finalUrl,
+      icon: [
+        { url: finalUrl, sizes: 'any' },
+        { url: finalUrl, type: 'image/png', sizes: '32x32' }
+      ],
       shortcut: finalUrl,
-      apple: finalUrl,
+      apple: [
+        { url: finalUrl, sizes: '180x180', type: 'image/png' }
+      ],
     },
     openGraph: {
       title: "Fire Leagues - Ultimate Competitive Arena",
@@ -48,9 +53,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const antiFlickerScript = `
+const nuclearCachePurge = `
 (function() {
   try {
+    // 1. Force Theme Persistence
     const mode = localStorage.getItem('fireleagues-ui-mode') || 'dark';
     const theme = localStorage.getItem('fireleagues-theme') || 'orange';
     const root = document.documentElement;
@@ -58,6 +64,16 @@ const antiFlickerScript = `
     const allThemes = ['orange', 'violet', 'green', 'pink', 'blue', 'yellow', 'red', 'teal', 'lime', 'cyan', 'indigo', 'grape', 'spring-green'];
     allThemes.forEach(t => root.classList.remove('theme-' + t));
     root.classList.add('theme-' + theme);
+
+    // 2. Nuclear Service Worker Purge (Fixes aggressive Favicon caching)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('Legacy Service Worker Unregistered');
+        }
+      });
+    }
   } catch (e) {}
 })();
 `;
@@ -71,7 +87,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <script dangerouslySetInnerHTML={{ __html: antiFlickerScript }} />
+        <script dangerouslySetInnerHTML={{ __html: nuclearCachePurge }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />

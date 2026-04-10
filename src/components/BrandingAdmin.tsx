@@ -41,53 +41,33 @@ service firebase.storage {
 }
 
 // ==========================================
-// 2. DYNAMIC FAVICON INJECTOR (Client Component)
-// Location: src/components/DynamicFavicon.tsx
+// 2. SERVER-SIDE METADATA (App Router)
+// Location: src/app/layout.tsx
 // ==========================================
-'use client';
-import { useEffect } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+export async function generateMetadata() {
+  const brandingDoc = await db.collection('settings').doc('branding').get();
+  const faviconUrl = brandingDoc.data()?.faviconUrl || '/favicon.ico';
+  const bust = Date.now();
+  const finalUrl = \`\${faviconUrl}\${faviconUrl.includes('?') ? '&' : '?'}v=\${bust}\`;
 
-export function DynamicFavicon() {
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'branding'), (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        if (data.faviconUrl) applyFavicon(data.faviconUrl);
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  const applyFavicon = (url: string) => {
-    if (typeof window === 'undefined') return;
-    const selectors = ['link[rel="icon"]', 'link[rel="shortcut icon"]', 'link[rel="apple-touch-icon"]'];
-    selectors.forEach(s => document.querySelectorAll(s).forEach(el => el.remove()));
-    const bustedUrl = \`\${url}\${url.includes('?') ? '&' : '?'}v=\${Date.now()}\`;
-    const tags = [
-      { rel: 'icon', href: bustedUrl, type: 'image/png', sizes: '32x32' },
-      { rel: 'shortcut icon', href: bustedUrl },
-      { rel: 'apple-touch-icon', href: bustedUrl, sizes: '180x180' }
-    ];
-    const head = document.getElementsByTagName('head')[0];
-    if (!head) return;
-    tags.forEach(t => {
-      const link = document.createElement('link');
-      Object.entries(t).forEach(([k, v]) => link.setAttribute(k, v));
-      head.appendChild(link);
-    });
+  return {
+    icons: {
+      icon: finalUrl,
+      shortcut: finalUrl,
+      apple: finalUrl,
+    }
   };
-  return null;
 }
 
 // ==========================================
-// 3. ADMIN UPLOAD LOGIC
-// Location: src/components/BrandingAdmin.tsx
+// 3. SERVICE WORKER PURGE (Nuclear Fix)
+// Location: src/app/layout.tsx <script>
 // ==========================================
-// Uses uploadBytesResumable for reliability
-// Generates unique filenames to bypass CDN cache
-// Updates Firestore settings/branding/faviconUrl
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+}
 `;
 
 export default function BrandingAdmin() {
