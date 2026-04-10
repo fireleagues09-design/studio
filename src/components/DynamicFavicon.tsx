@@ -40,9 +40,14 @@ export function DynamicFavicon() {
     ];
     
     // 2. Clear old tags from the DOM to avoid conflicts
+    // Using .remove() is safer than parentNode.removeChild() as it handles detached nodes gracefully
     selectors.forEach(selector => {
       const elements = document.querySelectorAll(selector);
-      elements.forEach(el => el.parentNode?.removeChild(el));
+      elements.forEach(el => {
+        if (el && typeof el.remove === 'function') {
+          el.remove();
+        }
+      });
     });
 
     // 3. Create fresh tags with a cache-busting timestamp
@@ -56,10 +61,13 @@ export function DynamicFavicon() {
       { rel: 'apple-touch-icon', href: bustedUrl, sizes: '180x180' }
     ];
 
+    const head = document.getElementsByTagName('head')[0];
+    if (!head) return;
+
     tags.forEach(tagAttrs => {
       const link = document.createElement('link');
       Object.entries(tagAttrs).forEach(([key, value]) => link.setAttribute(key, value));
-      document.head.appendChild(link);
+      head.appendChild(link);
     });
     
     console.log("Website Icon System: Dynamic update applied", bustedUrl);

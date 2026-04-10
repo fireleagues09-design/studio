@@ -70,10 +70,12 @@ export function DynamicFavicon() {
       { rel: 'shortcut icon', href: bustedUrl },
       { rel: 'apple-touch-icon', href: bustedUrl, sizes: '180x180' }
     ];
+    const head = document.getElementsByTagName('head')[0];
+    if (!head) return;
     tags.forEach(t => {
       const link = document.createElement('link');
       Object.entries(t).forEach(([k, v]) => link.setAttribute(k, v));
-      document.head.appendChild(link);
+      head.appendChild(link);
     });
   };
   return null;
