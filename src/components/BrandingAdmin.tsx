@@ -39,11 +39,11 @@ export default function BrandingAdmin() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 5MB Limit
+        // 5MB Limit per user requirements
         if (file.size > 5 * 1024 * 1024) {
             toast({ 
-                title: "Image too large", 
-                description: "The maximum file size allowed is 5MB.", 
+                title: "File too large", 
+                description: "The maximum favicon size is 5MB.", 
                 variant: "destructive" 
             });
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -58,25 +58,28 @@ export default function BrandingAdmin() {
             const user = auth.currentUser;
             if (!user) throw new Error("Authentication required.");
             
-            // Force refresh token to ensure storage permissions are active
+            // Force refresh token to ensure Storage permissions are up to date
             await user.getIdToken(true);
 
-            // UNIQUE FILENAME STRATEGY: Forces CDN and Browser to bypass ALL caches
-            const uniqueFileName = `icon_${Date.now()}.${file.name.split('.').pop() || 'png'}`;
+            // UNIQUE PATH STRATEGY: Bypasses CDN and Browser caches completely
+            const timestamp = Date.now();
+            const extension = file.name.split('.').pop() || 'png';
+            const uniqueFileName = `icon_${timestamp}.${extension}`;
+            
+            // Files are stored in fav-icon/ folder as requested
             const storageRef = ref(storage, `fav-icon/${uniqueFileName}`);
             
             const metadata = {
                 contentType: file.type || 'image/png',
+                cacheControl: 'public,max-age=31536000',
             };
 
-            console.log("Starting resumable upload for:", uniqueFileName);
             const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
             uploadTask.on('state_changed', 
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                     setUploadProgress(progress);
-                    console.log(`Upload progress: ${progress}%`);
                 }, 
                 (error) => {
                     console.error("Upload error:", error);
@@ -85,7 +88,6 @@ export default function BrandingAdmin() {
                 }, 
                 async () => {
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                    console.log("Upload complete. URL:", downloadUrl);
                     
                     const idToken = await user.getIdToken();
                     const result = await updateBrandingSettings({ faviconUrl: downloadUrl }, idToken);
@@ -93,13 +95,13 @@ export default function BrandingAdmin() {
                     if (result.success) {
                         setUploadSuccess(true);
                         toast({ 
-                            title: "Icon Applied! ✅", 
-                            description: "The new website icon has been saved and cache has been bypassed.",
+                            title: "Success! ✅", 
+                            description: "New website icon applied. It will update for all users immediately.",
                         });
                         setTimeout(() => {
                             setUploadSuccess(false);
                             setIsUploading(false);
-                        }, 3000);
+                        }, 2500);
                     } else {
                         throw new Error(result.message);
                     }
@@ -107,7 +109,7 @@ export default function BrandingAdmin() {
             );
 
         } catch (error: any) {
-            console.error("Upload process error:", error);
+            console.error("Branding update error:", error);
             setIsUploading(false);
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
@@ -128,15 +130,15 @@ export default function BrandingAdmin() {
             <CardHeader className="bg-secondary/10 border-b">
                 <CardTitle className="text-xl flex items-center gap-2">
                     <Globe className="h-5 w-5 text-primary" />
-                    Browser Identity (Fav-icon)
+                    Website Branding (Fav-icon)
                 </CardTitle>
-                <CardDescription>Upload a PNG or SVG to update the site's tab icon instantly.</CardDescription>
+                <CardDescription>Upload a PNG, ICO or SVG to update the site tab icon instantly.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
                 <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-                    <div className="space-y-2 shrink-0">
-                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Live Preview</Label>
-                        <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner">
+                    <div className="space-y-2 shrink-0 text-center">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Icon</Label>
+                        <div className="relative w-24 h-24 bg-background rounded-2xl border-2 border-muted flex items-center justify-center overflow-hidden shadow-inner mx-auto">
                             {faviconUrl ? (
                                 <Image 
                                     src={faviconUrl} 
@@ -153,16 +155,16 @@ export default function BrandingAdmin() {
 
                     <div className="flex-1 space-y-4">
                         <div className="space-y-1">
-                            <h4 className="font-bold text-base">Force Cache Overwrite</h4>
+                            <h4 className="font-bold text-base">Cache-Busting Technology</h4>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Our system uses unique path versioning. Every upload is treated as a new file, ensuring the icon updates for all users immediately without cached delays.
+                                Our system generates unique versions for every upload. This forces the browser to bypass its local cache and display your new icon immediately across all devices.
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3">
                             <input 
                                 type="file" 
-                                accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon" 
+                                accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml" 
                                 className="hidden" 
                                 ref={fileInputRef} 
                                 onChange={handleFileChange} 
@@ -171,14 +173,14 @@ export default function BrandingAdmin() {
                                 onClick={() => fileInputRef.current?.click()} 
                                 disabled={isUploading}
                                 className={cn(
-                                    "rounded-xl h-11 px-6 font-bold shadow-lg transition-all min-w-[180px]",
+                                    "rounded-xl h-11 px-6 font-bold shadow-lg transition-all min-w-[200px]",
                                     uploadSuccess ? "bg-green-600 hover:bg-green-700" : "shadow-primary/20"
                                 )}
                             >
                                 {isUploading ? (
                                     <span className="flex items-center">
                                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Uploading...'}
+                                        {Math.round(uploadProgress)}% Complete
                                     </span>
                                 ) : uploadSuccess ? (
                                     <CheckCircle className="h-4 w-4 mr-2" />
