@@ -12,12 +12,10 @@ import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Fire Leagues | Play Free Fire Tournaments & Earn Rewards",
-  description: "Join FireLeagues, India's premier skill-based competitive arena. Compete in daily Free Fire tournaments and earn performance rewards.",
+  title: "FireLeagues",
+  description: "Gaming platform",
   icons: {
     icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
   },
 };
 
