@@ -5,11 +5,10 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { 
     collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDocs, limit, where, getDoc
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, Image as ImageIcon, X, XCircle, User as UserIcon, Lock } from 'lucide-react';
+import { Send, Loader2, Headset, ArrowLeft, MessageSquare, History, PlusCircle, CheckCircle2, ClipboardList, XCircle, User as UserIcon, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/context/LoadingContext';
 import { cn } from '@/lib/utils';
@@ -41,14 +40,8 @@ export default function SupportPage() {
     const [ticketMessage, setTicketMessage] = useState("");
     const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
     
-    // File States
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
     const chatContainerRef = useRef<HTMLDivElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const chatFileInputRef = useRef<HTMLInputElement>(null);
-    const { hideLoader, showLoader } = useLoading();
+    const { hideLoader } = useLoading();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -165,36 +158,6 @@ export default function SupportPage() {
         setView('chat');
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                toast({ title: "File too large", description: "Please select an image under 5MB.", variant: "destructive" });
-                return;
-            }
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
-        }
-    };
-
-    const uploadImage = async (userId: string, folder: string): Promise<string | null> => {
-        if (!selectedFile) return null;
-        
-        // Refreshed token to avoid storage authorization hang
-        if (auth.currentUser) await auth.currentUser.getIdToken(true);
-        
-        const fileName = `${Date.now()}_${selectedFile.name.replace(/\s+/g, '_')}`;
-        try {
-            // Updated to consolidated 'images/' folder for performance
-            const storageRef = ref(storage, `images/support/${userId}/${folder}/${fileName}`);
-            const snapshot = await uploadBytes(storageRef, selectedFile);
-            return await getDownloadURL(snapshot.ref);
-        } catch (error: any) {
-            console.error("Storage upload error:", error);
-            throw new Error("Failed to upload image. Please check if billing is linked if problems persist.");
-        }
-    };
-
     const handleTicketSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !ticketUsername.trim() || !ticketMessage.trim()) return;
@@ -202,26 +165,18 @@ export default function SupportPage() {
         setIsSubmittingTicket(true);
         try {
             const idToken = await user.getIdToken(true);
-            let uploadedUrl = null;
-            if (selectedFile) {
-                uploadedUrl = await uploadImage(user.uid, 'tickets');
-            }
-
             const encrypted = encryptMessage(ticketMessage.trim());
             
             const result = await submitTicketAction(
                 idToken,
                 ticketUsername.trim(),
-                encrypted,
-                uploadedUrl || undefined
+                encrypted
             );
 
             if (result.success && result.ticketId) {
                 toast({ title: "Ticket Submitted", description: `Reference: #${result.ticketId}` });
                 setIsTicketDialogOpen(false);
                 setTicketMessage("");
-                setSelectedFile(null);
-                setPreviewUrl(null);
                 
                 setChatId(result.ticketId);
                 setIsPendingFirstMessage(false);
@@ -245,18 +200,13 @@ export default function SupportPage() {
             return;
         }
 
-        if ((!text.trim() && !selectedFile) || !user || isSending || activeChat?.status === 'closed') return;
+        if (!text.trim() || !user || isSending || activeChat?.status === 'closed') return;
 
         const messageText = text.trim();
         setIsSending(true);
 
         try {
-            let uploadedUrl = null;
-            if (selectedFile) {
-                uploadedUrl = await uploadImage(user.uid, 'chat');
-            }
-
-            const encrypted = messageText ? encryptMessage(messageText) : "";
+            const encrypted = encryptMessage(messageText);
 
             if (isPendingFirstMessage) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -277,23 +227,12 @@ export default function SupportPage() {
                 if (result.success && result.chatId) {
                     setChatId(result.chatId);
                     setIsPendingFirstMessage(false);
-                    
-                    if (uploadedUrl) {
-                        await addDoc(collection(db, `chats/${result.chatId}/messages`), {
-                            text: "", 
-                            imageUrl: uploadedUrl,
-                            senderId: user.uid,
-                            senderType: 'player',
-                            createdAt: serverTimestamp(),
-                        });
-                    }
                 } else {
                     throw new Error(result.message);
                 }
             } else if (chatId) {
                 await addDoc(collection(db, `chats/${chatId}/messages`), {
                     text: encrypted, 
-                    imageUrl: uploadedUrl || null,
                     senderId: user.uid,
                     senderType: 'player',
                     createdAt: serverTimestamp(),
@@ -305,8 +244,6 @@ export default function SupportPage() {
             }
             
             setText("");
-            setSelectedFile(null);
-            setPreviewUrl(null);
         } catch (err: any) {
             console.error("Send error:", err);
             toast({ title: "Error", description: err.message || "Failed to send message.", variant: "destructive" });
@@ -416,47 +353,10 @@ export default function SupportPage() {
                                             required
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Screenshot / Attachment (Optional)</Label>
-                                        <input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            className="hidden" 
-                                            ref={fileInputRef} 
-                                            onChange={handleFileChange} 
-                                        />
-                                        {!previewUrl ? (
-                                            <Button 
-                                                type="button" 
-                                                variant="outline" 
-                                                className="w-full h-24 border-dashed flex flex-col gap-2"
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                                <span className="text-xs text-muted-foreground">Tap to select image from gallery</span>
-                                            </Button>
-                                        ) : (
-                                            <div className="relative w-full aspect-video rounded-lg border bg-secondary/30 overflow-hidden group">
-                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
-                                                <Button 
-                                                    type="button" 
-                                                    variant="destructive" 
-                                                    size="icon" 
-                                                    className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => {
-                                                        setSelectedFile(null);
-                                                        setPreviewUrl(null);
-                                                    }}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
                                     <DialogFooter className="pt-2">
                                         <Button type="submit" disabled={isSubmittingTicket} className="w-full font-bold">
                                             {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                                            {isSubmittingTicket ? 'Uploading...' : 'Submit Formal Ticket'}
+                                            Submit Formal Ticket
                                         </Button>
                                     </DialogFooter>
                                 </form>
@@ -590,21 +490,6 @@ export default function SupportPage() {
                 ref={chatContainerRef}
                 className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 md:p-6 bg-card border rounded-2xl shadow-inner relative scrollbar-hide"
             >
-                {activeChat?.screenshotUrl && (
-                    <div className="flex justify-center mb-4">
-                        <div className="max-w-xs w-full bg-muted rounded-xl p-2 border border-dashed border-primary/30">
-                            <p className="text-[10px] font-bold uppercase text-center mb-2 text-muted-foreground">Initial Ticket Attachment</p>
-                            <a href={activeChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
-                                <img 
-                                    src={activeChat.screenshotUrl} 
-                                    alt="Screenshot" 
-                                    className="rounded-lg object-contain w-full hover:opacity-90 transition-opacity"
-                                />
-                            </a>
-                        </div>
-                    </div>
-                )}
-
                 {messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-50 text-center py-12">
                         <div className="p-6 bg-secondary rounded-full mb-4">
@@ -661,56 +546,23 @@ export default function SupportPage() {
                                 <p className="text-[10px] text-muted-foreground">Tickets are monitored by staff. Only agents can reply here.</p>
                             </div>
                         ) : (
-                            <>
-                                {previewUrl && (
-                                    <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded-lg w-fit ml-4">
-                                        <div className="relative h-12 w-12 rounded border overflow-hidden">
-                                            <img src={previewUrl} className="h-full w-full object-cover" alt="Selected Preview" />
-                                            <button 
-                                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} 
-                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="h-4 w-4 text-white" />
-                                            </button>
-                                        </div>
-                                        <span className="text-[10px] text-muted-foreground font-medium">Ready to send</span>
-                                    </div>
-                                )}
-                                <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
-                                    <input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        className="hidden" 
-                                        ref={chatFileInputRef} 
-                                        onChange={handleFileChange} 
-                                    />
-                                    <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="rounded-full flex-shrink-0"
-                                        onClick={() => chatFileInputRef.current?.click()}
-                                        disabled={isSending}
-                                    >
-                                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                                    </Button>
-                                    <Input
-                                        value={text}
-                                        onChange={(e) => setText(e.target.value)}
-                                        className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
-                                        placeholder="Type your message..."
-                                        autoComplete="off"
-                                        disabled={isSending}
-                                    />
-                                    <Button 
-                                        type="submit" 
-                                        disabled={(!text.trim() && !selectedFile) || isSending}
-                                        className="rounded-full w-10 h-10 p-0 flex-shrink-0"
-                                    >
-                                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                    </Button>
-                                </form>
-                            </>
+                            <form onSubmit={sendMessage} className="flex gap-2 items-center bg-card p-2 border rounded-full shadow-md">
+                                <Input
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    className="flex-1 border-0 rounded-full px-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    placeholder="Type your message..."
+                                    autoComplete="off"
+                                    disabled={isSending}
+                                />
+                                <Button 
+                                    type="submit" 
+                                    disabled={!text.trim() || isSending}
+                                    className="rounded-full w-10 h-10 p-0 flex-shrink-0"
+                                >
+                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                </Button>
+                            </form>
                         )}
                     </>
                 ) : (
