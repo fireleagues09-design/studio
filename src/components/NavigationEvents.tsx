@@ -10,11 +10,11 @@ export function NavigationEvents() {
   const { hideLoader } = useLoading();
 
   useEffect(() => {
-    // When the path or search params change, it means the navigation has completed
-    // its initial step. We force hide the loader as a fallback.
+    // When the path or search params change, hide the loader quickly.
+    // Reduced from 500ms to 100ms to make transitions feel snappier.
     const timer = setTimeout(() => {
       hideLoader();
-    }, 500); // Small delay to allow the new page component to mount
+    }, 100); 
 
     return () => clearTimeout(timer);
   }, [pathname, searchParams, hideLoader]);

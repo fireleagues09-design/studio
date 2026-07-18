@@ -13,7 +13,7 @@ export function FullScreenLoader() {
     <div
       className={cn(
         'fire-loader',
-        'transition-opacity duration-500',
+        'transition-opacity duration-300',
         isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
     >

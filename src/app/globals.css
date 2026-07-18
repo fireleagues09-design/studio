@@ -183,15 +183,13 @@
   }
 }
 
-/* New Loader CSS */
+/* Optimized Loader CSS */
 .fire-loader {
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   background: hsl(var(--background));
   z-index: 9999;
 }

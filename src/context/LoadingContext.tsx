@@ -18,10 +18,10 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     
-    // Safety net: Automatically hide loader after 10 seconds to prevent permanent lock
+    // Safety net: Automatically hide loader after 3 seconds to prevent perceived slowness
     timeoutRef.current = setTimeout(() => {
       setIsLoading(false);
-    }, 10000);
+    }, 3000);
   }, []);
 
   const hideLoader = useCallback(() => {
@@ -33,10 +33,10 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }, []);
   
   useEffect(() => {
-    // Initial safety net for first load
+    // Initial safety net for first load - reduced to 4s for faster failover
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 12000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
 
