@@ -41,13 +41,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useLoading } from '@/context/LoadingContext';
 
 
-type SoloRegistrationDialogProps = {
+type TournamentRegistrationDialogProps = {
     tournament: Tournament;
     user: FirebaseUser | null;
     onSuccess: () => void;
 }
 
-function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistrationDialogProps) {
+function TournamentRegistrationDialog({ tournament, user, onSuccess }: TournamentRegistrationDialogProps) {
     const [inGameName, setInGameName] = useState('');
     const [inGameUid, setInGameUid] = useState('');
     const [loading, setLoading] = useState(false);
@@ -96,15 +96,17 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="lg" className="w-full font-bold">
-                    Secure Solo Entry
+                <Button size="lg" className="w-full font-bold shadow-lg shadow-primary/20">
+                    Join {tournament.teamType} Lobby
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Join {tournament.name}</DialogTitle>
                     <DialogDescription>
-                        Provide your in-game identification to secure your slot.
+                        {tournament.teamType === 'Solo' 
+                            ? "Provide your in-game details to secure your slot." 
+                            : `Enter your details to join this ${tournament.teamType} lobby.`}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,7 +116,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                             id="in-game-name" 
                             value={inGameName} 
                             onChange={e => setInGameName(e.target.value)} 
-                            placeholder="Gaming alias" 
+                            placeholder="Your FF Name" 
                             required 
                         />
                     </div>
@@ -124,7 +126,7 @@ function SoloRegistrationDialog({ tournament, user, onSuccess }: SoloRegistratio
                             id="in-game-uid" 
                             value={inGameUid} 
                             onChange={e => setInGameUid(e.target.value)} 
-                            placeholder="Unique ID" 
+                            placeholder="Your FF UID" 
                             required 
                         />
                     </div>
@@ -214,11 +216,7 @@ function RoomCredentials({ roomId, roomPassword }: RoomCredentialsProps) {
     );
 }
 
-type TournamentDetailViewProps = {
-    tournamentId: string;
-}
-
-function getButtonState({isRegistered, isFilled, status, teamType}: {isRegistered: boolean, isFilled: boolean, status: string, teamType: string}) {
+function getButtonState({isRegistered, isFilled, status}: {isRegistered: boolean, isFilled: boolean, status: string}) {
     if (isRegistered) {
         return { text: 'Registered', disabled: true };
     }
@@ -229,10 +227,7 @@ function getButtonState({isRegistered, isFilled, status, teamType}: {isRegistere
     if (isFilled) {
         return { text: 'Lobby Full', disabled: true };
     }
-    if (teamType !== 'Solo') {
-        return { text: `Join ${teamType}`, disabled: true, tooltip: 'Team entry coming soon!'};
-    }
-    return { text: `Join ${teamType}`, disabled: false };
+    return { text: `Join Match`, disabled: false };
 };
 
 function Leaderboard({ tournamentId }: { tournamentId: string }) {
@@ -320,7 +315,7 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
     );
 }
 
-function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
+function TournamentDetailView({ tournamentId }: { tournamentId: string }) {
     const [tournament, setTournament] = useState<Tournament | null>(null);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -440,28 +435,9 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             isRegistered,
             isFilled: slotsFilled >= slots,
             status,
-            teamType,
         });
 
         if (buttonState.disabled) {
-            if (buttonState.tooltip) {
-                 return (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="w-full">
-                                    <Button size="lg" className="w-full font-bold" disabled>
-                                        {buttonState.text}
-                                    </Button>
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{buttonState.tooltip}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                );
-            }
              return (
                 <Button size="lg" className="w-full font-bold" variant="secondary" disabled>
                     {buttonState.text}
@@ -469,11 +445,8 @@ function TournamentDetailView({ tournamentId }: TournamentDetailViewProps) {
             );
         }
 
-        if (teamType === 'Solo') {
-            return <SoloRegistrationDialog tournament={tournament} user={user} onSuccess={handleRegistrationSuccess} />;
-        }
-        
-        return null;
+        // Return the registration dialog for all tournament types (Solo, Duo, Squad)
+        return <TournamentRegistrationDialog tournament={tournament} user={user} onSuccess={handleRegistrationSuccess} />;
     };
 
 
