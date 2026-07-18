@@ -10,40 +10,14 @@ import { LoadingProvider } from "@/context/LoadingContext";
 import { FullScreenLoader } from "@/components/FullScreenLoader";
 import { NavigationEvents } from "@/components/NavigationEvents";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { db } from "@/lib/firebase-admin";
 
-export async function generateMetadata(): Promise<Metadata> {
-  let faviconUrl = "/favicon.ico";
-  try {
-    // Fetch the custom dynamic branding from Firestore
-    const brandingDoc = await db.collection('settings').doc('branding').get();
-    if (brandingDoc.exists) {
-      const data = brandingDoc.data();
-      if (data?.faviconUrl) {
-        faviconUrl = data.faviconUrl;
-      }
-    }
-  } catch (e) {
-    console.error("Error fetching metadata branding:", e);
-  }
-
-  // Force cache-busting so browsers see the update instantly
-  const bust = Date.now();
-  const finalUrl = `${faviconUrl}${faviconUrl.includes('?') ? '&' : '?'}v=${bust}`;
-
-  return {
-    title: "FireLeagues",
-    description: "Gaming platform",
-    icons: {
-      icon: [
-        { url: finalUrl, sizes: "any" },
-        { url: finalUrl, type: "image/png" }
-      ],
-      shortcut: finalUrl,
-      apple: finalUrl,
-    },
-  };
-}
+export const metadata: Metadata = {
+  title: "FireLeagues",
+  description: "Gaming platform",
+  icons: {
+    icon: "/favicon.ico",
+  },
+};
 
 export default function RootLayout({
   children,
@@ -57,18 +31,26 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-        {/* Nuclear Fix: Purge old Service Workers that cache the old favicon */}
+        {/* Critical: Preventing the "White Flash" by applying theme/mode classes before the body renders */}
         <script dangerouslySetInnerHTML={{
           __html: `
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(reg => reg.unregister());
-              });
-            }
+            (function() {
+              try {
+                const theme = localStorage.getItem('fireleagues-theme') || 'orange';
+                const mode = localStorage.getItem('fireleagues-mode') || 'dark';
+                const root = document.documentElement;
+                root.classList.add('theme-' + theme);
+                if (mode === 'dark') {
+                  root.classList.add('dark');
+                } else {
+                  root.classList.remove('dark');
+                }
+              } catch (e) {}
+            })();
           `
         }} />
       </head>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn("font-body antialiased bg-background text-foreground min-h-screen")}>
         <ThemeProvider
           storageKey="fireleagues-theme"
           modeStorageKey="fireleagues-mode"
