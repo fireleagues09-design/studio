@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft, Save, Ban, CheckCircle, Users } from 'lucide-react';
+import { ArrowLeft, Save, Ban, CheckCircle, Users, Eye, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,52 @@ type Registration = {
 
 interface RegistrationPageProps {
   params: Promise<{ id: string }>;
+}
+
+function ViewTeamDetailsDialog({ reg }: { reg: Registration }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
+                    <Users className="h-4 w-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-primary" />
+                        Team Roster
+                    </DialogTitle>
+                    <DialogDescription>
+                        Full member details for {reg.inGameName}&apos;s team.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 py-4">
+                    {reg.members && reg.members.length > 0 ? reg.members.map((m, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/50">
+                            <div className="min-w-0">
+                                <p className="font-bold text-sm truncate">{m.inGameName}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-tighter mt-0.5">UID: {m.inGameUid}</p>
+                            </div>
+                            <Badge variant={i === 0 ? "default" : "secondary"} className="text-[8px] uppercase h-5 font-black">
+                                {i === 0 ? "Leader" : `Member ${i + 1}`}
+                            </Badge>
+                        </div>
+                    )) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-muted-foreground gap-2">
+                            <Info className="h-8 w-8 opacity-20" />
+                            <p className="text-xs">No teammate records found.</p>
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="secondary" className="w-full rounded-xl font-bold">Done</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 function SuspendUserDialog({ 
@@ -331,6 +377,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-[50px]"></TableHead>
                                         <TableHead>Competitors</TableHead>
                                         <TableHead>Primary Phone</TableHead>
                                         <TableHead>Rank</TableHead>
@@ -342,6 +389,9 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                 <TableBody>
                                     {registrations.length > 0 ? registrations.map(reg => (
                                         <TableRow key={reg.id} className={reg.isSuspended ? "bg-destructive/10" : ""}>
+                                            <TableCell>
+                                                <ViewTeamDetailsDialog reg={reg} />
+                                            </TableCell>
                                             <TableCell className="font-medium">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
@@ -360,7 +410,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                         </div>
                                                     )}
                                                     
-                                                    <div className="text-[9px] text-muted-foreground italic mt-0.5">UID: {reg.inGameUid}</div>
+                                                    <div className="text-[9px] text-muted-foreground italic mt-0.5 font-mono">UID: {reg.inGameUid}</div>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-xs font-medium tabular-nums">{reg.userPhone}</TableCell>
