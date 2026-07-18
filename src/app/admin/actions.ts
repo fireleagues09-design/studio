@@ -3,7 +3,7 @@
 
 import { auth, db, storage } from '@/lib/firebase-admin';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import type { User } from '@/lib/mock-data';
+import type { User, Tournament as TournamentType } from '@/lib/mock-data';
 
 // This is the single source of truth for admin verification in server actions.
 // It returns a detailed object to help diagnose issues.
@@ -30,6 +30,72 @@ async function verifyAdmin(idToken: string): Promise<{ isAdmin: boolean; message
     } catch (error: any) {
         console.error("Error during admin verification in server action:", error);
         return { isAdmin: false, message: `Server error during admin check: ${error.code || error.message}` };
+    }
+}
+
+export async function updateTournamentAction(
+    tournamentId: string,
+    data: Partial<TournamentType>,
+    idToken: string
+): Promise<{ success: boolean; message: string }> {
+    const adminCheck = await verifyAdmin(idToken);
+    if (!adminCheck.isAdmin) return { success: false, message: adminCheck.message };
+
+    try {
+        const tournamentRef = db.collection('tournaments').doc(tournamentId);
+        
+        await db.runTransaction(async (transaction) => {
+            const tournamentDoc = await transaction.get(tournamentRef);
+            if (!tournamentDoc.exists) throw new Error("Tournament not found");
+            
+            const tData = tournamentDoc.data()!;
+            const oldStatus = tData.status;
+            const newStatus = data.status;
+
+            // Cancellation Logic: Process refunds if status changed to Cancelled
+            if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
+                const regsSnap = await tournamentRef.collection('registrations').get();
+                const entryFee = Number(tData.entryFee || 0);
+
+                if (entryFee > 0 && !regsSnap.empty) {
+                    for (const regDoc of regsSnap.docs) {
+                        const regData = regDoc.data();
+                        const userId = regData.userId;
+                        const userRef = db.collection('users').doc(userId);
+                        
+                        // Increment deposit balance (Refund)
+                        transaction.update(userRef, {
+                            'wallet.deposit': FieldValue.increment(entryFee)
+                        });
+
+                        // Log transaction for the user
+                        const txRef = db.collection('transactions').doc();
+                        transaction.set(txRef, {
+                            userId,
+                            type: 'deposit',
+                            amount: entryFee,
+                            status: 'Completed',
+                            date: Timestamp.now(),
+                            details: {
+                                method: 'system_refund',
+                                note: `Refund for cancelled match: ${tData.name}`,
+                                tournamentId: tournamentId
+                            }
+                        });
+                    }
+                }
+            }
+
+            transaction.update(tournamentRef, data);
+        });
+
+        return { 
+            success: true, 
+            message: data.status === 'Cancelled' ? "Lobby cancelled and fees refunded." : "Lobby details updated." 
+        };
+    } catch (error: any) {
+        console.error("Error updating tournament:", error);
+        return { success: false, message: error.message || "Failed to update record." };
     }
 }
 

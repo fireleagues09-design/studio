@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { updateTournamentAction } from '@/app/admin/actions';
 
 function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     const [name, setName] = useState(tournament.name);
@@ -59,10 +60,13 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) return;
+
         setLoading(true);
         try {
-            const tournamentDocRef = doc(db, 'tournaments', tournament.id);
-            await updateDoc(tournamentDocRef, {
+            const idToken = await user.getIdToken();
+            const result = await updateTournamentAction(tournament.id, {
                 name,
                 date,
                 time,
@@ -72,17 +76,22 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 status,
                 roomId,
                 roomPassword,
-            });
-            toast({
-                title: 'Success',
-                description: `Tournament "${name}" has been updated.`
-            });
-            setOpen(false);
-        } catch (error) {
+            }, idToken);
+
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: result.message
+                });
+                setOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
             console.error("Error updating tournament:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to update tournament. Please try again.',
+                description: error.message || 'Failed to update tournament. Please try again.',
                 variant: 'destructive',
             });
         } finally {
@@ -144,6 +153,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                                    <SelectItem value="Upcoming">Upcoming</SelectItem>
                                    <SelectItem value="Ongoing">Ongoing</SelectItem>
                                    <SelectItem value="Finished">Finished</SelectItem>
+                                   <SelectItem value="Cancelled" className="text-destructive font-bold">Cancelled (Refund All)</SelectItem>
                                </SelectContent>
                            </Select>
                         </div>
@@ -378,6 +388,7 @@ export default function ManagementPage() {
                                             <TableCell>
                                                 <Badge variant={
                                                     tournament.status === 'Finished' ? 'destructive' :
+                                                    tournament.status === 'Cancelled' ? 'outline' :
                                                     tournament.status === 'Ongoing' ? 'default' :
                                                     'secondary'
                                                 }>
@@ -418,5 +429,3 @@ export default function ManagementPage() {
         </div>
     );
 }
-
-    

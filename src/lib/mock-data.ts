@@ -14,7 +14,7 @@ export type Tournament = {
   time: string;
   rules: string[];
   prizeDistribution: { place: string; prize: string }[];
-  status: 'Upcoming' | 'Ongoing' | 'Finished';
+  status: 'Upcoming' | 'Ongoing' | 'Finished' | 'Cancelled';
   roomId?: string;
   roomPassword?: string;
   registeredPlayers?: string[];
@@ -105,7 +105,7 @@ export const tournaments: Tournament[] = [
     entryFee: "FREE",
     slots: 100,
     slotsFilled: 50,
-    image: "https://picsum.photos/600/402",
+    image: "https://picsum.photos/602",
     dataAiHint: "abstract shapes",
     date: "2024-08-18",
     time: "16:00 IST",
@@ -126,7 +126,7 @@ export const tournaments: Tournament[] = [
     entryFee: "250",
     slots: 64,
     slotsFilled: 32,
-    image: "https://picsum.photos/600/403",
+    image: "https://picsum.photos/603",
     dataAiHint: "neon lines",
     date: "2024-08-20",
     time: "19:00 IST",
@@ -147,7 +147,7 @@ export const tournaments: Tournament[] = [
     entryFee: "150",
     slots: 100,
     slotsFilled: 95,
-    image: "https://picsum.photos/600/404",
+    image: "https://picsum.photos/604",
     dataAiHint: "lone wolf",
     date: "2024-08-22",
     time: "17:00 IST",
@@ -169,7 +169,7 @@ export const tournaments: Tournament[] = [
     entryFee: "80",
     slots: 32,
     slotsFilled: 16,
-    image: "https://picsum.photos/600/405",
+    image: "https://picsum.photos/605",
     dataAiHint: "team huddle",
     date: "2024-08-25",
     time: "21:00 IST",

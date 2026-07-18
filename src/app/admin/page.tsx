@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -22,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
-import { updateTransaction, updatePaymentDetails, updateAuthConfig } from './actions';
+import { updateTransaction, updatePaymentDetails, updateAuthConfig, updateTournamentAction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import SliderAdmin from '@/components/SliderAdmin';
@@ -61,10 +62,13 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) return;
+
         setLoading(true);
         try {
-            const tournamentDocRef = doc(db, 'tournaments', tournament.id);
-            await updateDoc(tournamentDocRef, {
+            const idToken = await user.getIdToken();
+            const result = await updateTournamentAction(tournament.id, {
                 name,
                 date,
                 time,
@@ -74,17 +78,22 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                 status,
                 roomId,
                 roomPassword,
-            });
-            toast({
-                title: 'Success',
-                description: `Tournament "${name}" has been updated.`
-            });
-            setOpen(false);
-        } catch (error) {
+            }, idToken);
+
+            if (result.success) {
+                toast({
+                    title: 'Success',
+                    description: result.message
+                });
+                setOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
             console.error("Error updating tournament:", error);
             toast({
                 title: 'Error',
-                description: 'Failed to update lobby. Please try again.',
+                description: error.message || 'Failed to update lobby. Please try again.',
                 variant: 'destructive',
             });
         } finally {
@@ -146,6 +155,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                                    <SelectItem value="Upcoming">Upcoming</SelectItem>
                                    <SelectItem value="Ongoing">Ongoing</SelectItem>
                                    <SelectItem value="Finished">Finished</SelectItem>
+                                   <SelectItem value="Cancelled" className="text-destructive font-bold">Cancelled (Refund All)</SelectItem>
                                </SelectContent>
                            </Select>
                         </div>
@@ -708,7 +718,7 @@ export default function AdminPage() {
                                                     <div>
                                                         <div className="flex justify-between items-start gap-2">
                                                             <h3 className="font-bold text-sm truncate">{t.name}</h3>
-                                                            <Badge className="text-[8px] h-4 scale-90 origin-right px-1.5" variant={t.status === 'Finished' ? 'destructive' : 'default'}>{t.status}</Badge>
+                                                            <Badge className="text-[8px] h-4 scale-90 origin-right px-1.5" variant={t.status === 'Finished' ? 'destructive' : t.status === 'Cancelled' ? 'outline' : 'default'}>{t.status}</Badge>
                                                         </div>
                                                         <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1">
                                                             <div className="flex items-center gap-1 font-bold">
