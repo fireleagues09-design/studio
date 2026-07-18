@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, use } from 'react';
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -24,6 +26,7 @@ import {
   CircleDollarSign,
   Medal,
   AlertTriangle,
+  User,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { doc, onSnapshot, collection, query, orderBy, getDoc } from 'firebase/firestore';
@@ -40,7 +43,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLoading } from '@/context/LoadingContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
+import React from 'react';
 
 type TournamentRegistrationDialogProps = {
     tournament: Tournament;
@@ -259,6 +262,7 @@ function getButtonState({isRegistered, isFilled, status}: {isRegistered: boolean
     if (status !== 'Upcoming') {
          if (status === 'Ongoing') return { text: 'Session Ongoing', disabled: true };
          if (status === 'Finished') return { text: 'Session Concluded', disabled: true };
+         if (status === 'Cancelled') return { text: 'Session Cancelled', disabled: true };
     }
     if (isFilled) {
         return { text: 'Lobby Full', disabled: true };
@@ -309,39 +313,65 @@ function Leaderboard({ tournamentId }: { tournamentId: string }) {
                     Final Standings
                 </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="border rounded-md">
+            <CardContent className="p-0 sm:p-6">
+                <div className="border rounded-lg overflow-hidden">
                     <Table>
-                        <TableHeader>
+                        <TableHeader className="bg-muted/50">
                             <TableRow>
-                                <TableHead>Rank</TableHead>
-                                <TableHead>In-Game Name</TableHead>
+                                <TableHead className="w-16 text-center">Rank</TableHead>
+                                <TableHead>Competitor / Team</TableHead>
                                 <TableHead className="text-center">Kills</TableHead>
-                                <TableHead className="text-right">Rewards Earned</TableHead>
+                                <TableHead className="text-right">Rewards</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {rankings.map((player) => (
-                                <TableRow key={player.id} className={player.isSuspended ? "opacity-60 bg-muted/50" : ""}>
-                                    <TableCell className="font-bold">{player.rank}</TableCell>
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-2">
-                                            <span className={player.isSuspended ? "line-through text-muted-foreground" : "text-primary"}>
-                                                {player.inGameName}
-                                            </span>
-                                            {player.isSuspended && (
-                                                <Badge variant="destructive" className="h-5 px-1 py-0 text-[10px]">
-                                                    <AlertTriangle className="h-3 w-3 mr-1" />
-                                                    Disqualified
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center font-semibold">{player.kills || 0}</TableCell>
-                                    <TableCell className="text-right text-green-500 font-bold">
-                                        {player.isSuspended ? '-' : (player.prizeWon > 0 ? `₹${player.prizeWon}` : '-')}
-                                    </TableCell>
-                                </TableRow>
+                                <React.Fragment key={player.id}>
+                                    <TableRow className={player.isSuspended ? "opacity-60 bg-muted/50" : "bg-primary/5 border-l-4 border-l-primary"}>
+                                        <TableCell className="font-black text-center text-lg">{player.rank}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={player.isSuspended ? "line-through text-muted-foreground font-bold" : "text-primary font-black"}>
+                                                        {player.inGameName}
+                                                    </span>
+                                                    {player.isSuspended && (
+                                                        <Badge variant="destructive" className="h-4 px-1 py-0 text-[8px] uppercase font-bold">
+                                                            DQ
+                                                        </Badge>
+                                                    )}
+                                                    {!player.isSuspended && player.members && player.members.length > 0 && (
+                                                        <Badge variant="secondary" className="h-4 px-1 py-0 text-[8px] uppercase font-black tracking-tighter">Team</Badge>
+                                                    )}
+                                                </div>
+                                                <span className="text-[9px] text-muted-foreground font-mono uppercase">Leader</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center font-bold">{player.kills || 0}</TableCell>
+                                        <TableCell className="text-right text-green-500 font-black">
+                                            {player.isSuspended ? '-' : (player.prizeWon > 0 ? `₹${player.prizeWon}` : '-')}
+                                        </TableCell>
+                                    </TableRow>
+                                    
+                                    {/* Partner Rows in Leaderboard */}
+                                    {!player.isSuspended && player.members && player.members.length > 0 && player.members.map((member: any, mIdx: number) => (
+                                        <TableRow key={`${player.id}-m-${mIdx}`} className="bg-background/40 hover:bg-muted/10 border-l-4 border-l-primary/30">
+                                            <TableCell></TableCell>
+                                            <TableCell className="py-2">
+                                                <div className="flex items-center gap-2 pl-2">
+                                                    <span className="text-xs font-bold text-foreground/70">{member.inGameName}</span>
+                                                    <span className="text-[8px] text-muted-foreground uppercase font-black opacity-40">Partner</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center text-xs font-medium text-muted-foreground">
+                                                {member.kills || 0}
+                                            </TableCell>
+                                            <TableCell className="text-right text-xs font-bold text-green-500/60 tabular-nums">
+                                                ₹{player.prizeWon || 0}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </React.Fragment>
                             ))}
                         </TableBody>
                     </Table>
@@ -489,25 +519,30 @@ function TournamentDetailView({ tournamentId }: { tournamentId: string }) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <Card className="overflow-hidden">
-            <div className="relative h-64 md:h-96 w-full">
+          <Card className="overflow-hidden border-none shadow-2xl">
+            <div className="relative h-64 md:h-[450px] w-full">
               <Image
                 src={image}
                 alt={name}
                 data-ai-hint={dataAiHint}
                 fill
                 className="object-cover"
+                priority
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-              <div className="absolute bottom-0 left-0 p-6">
-                <div className="flex gap-2 mb-2">
-                  <Badge>{category}</Badge>
-                  <Badge variant="outline">{teamType}</Badge>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              <div className="absolute bottom-0 left-0 p-6 md:p-10 w-full">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge className="bg-primary text-primary-foreground font-black uppercase tracking-widest">{category}</Badge>
+                  <Badge variant="outline" className="bg-black/50 text-white border-white/20 font-black uppercase tracking-widest backdrop-blur-sm">{teamType}</Badge>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">
+                <h1 className="text-3xl md:text-5xl font-black text-white leading-none tracking-tighter drop-shadow-2xl">
                   {name}
                 </h1>
-                <p className="text-sm text-primary font-mono mt-1">ID: {id}</p>
+                <div className="flex items-center gap-3 mt-4 text-white/60 font-mono text-[10px] md:text-xs uppercase tracking-widest">
+                    <span className="flex items-center gap-1.5"><Trophy className="h-3 w-3 text-primary" /> Lobby ID: {id}</span>
+                    <span className="h-1 w-1 bg-white/20 rounded-full" />
+                    <span className="flex items-center gap-1.5"><ShieldCheck className="h-3 w-3 text-primary" /> Verified Match</span>
+                </div>
               </div>
             </div>
           </Card>
@@ -545,71 +580,56 @@ function TournamentDetailView({ tournamentId }: { tournamentId: string }) {
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="border-primary/20 shadow-xl shadow-primary/5">
+            <CardHeader className="bg-primary/5 border-b border-primary/10">
+              <CardTitle className="flex items-center gap-2 text-lg uppercase font-black tracking-tighter">
                 <ClipboardList className="h-5 w-5 text-primary" />
-                Session Intel
+                Lobby Statistics
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex items-center justify-between gap-3 p-3 bg-secondary/30 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <Trophy className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Rewards Pool:</span>
+                  <div className="p-2 bg-primary/10 rounded-lg"><Trophy className="h-4 w-4 text-primary" /></div>
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pool</span>
                 </div>
-                <strong className="text-lg">₹{prize}</strong>
+                <strong className="text-xl font-black">₹{prize}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <CircleDollarSign className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Entry Fee:</span>
-                </div>
-                <strong>
-                  {entryFee === 'FREE' || entryFee === '0' ? `FREE` : `₹${entryFee}`}
-                </strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Lobby Type:</span>
-                </div>
-                <strong>{teamType}</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {category === "Clash Squad 4v4" ? (
-                    <Swords className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Map className="h-5 w-5 text-primary" />
-                  )}
-                  <span className="text-muted-foreground">Format:</span>
-                </div>
-                <strong>{category}</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Date:</span>
-                </div>
-                <strong>{date}</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-primary" />
-                  <span className="text-muted-foreground">Reporting:</span>
-                </div>
-                <strong>{time}</strong>
+              
+              <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-secondary/30 rounded-xl space-y-1">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Entry Fee</p>
+                    <p className="font-bold text-primary">{entryFee === 'FREE' || entryFee === '0' ? `FREE` : `₹${entryFee}`}</p>
+                  </div>
+                  <div className="p-3 bg-secondary/30 rounded-xl space-y-1">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Type</p>
+                    <p className="font-bold">{teamType}</p>
+                  </div>
               </div>
 
-              <div className="pt-4">
-                <div className="flex justify-between text-sm text-muted-foreground mb-2">
+              <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-4 w-4" /> <span>Date</span></div>
+                    <span className="font-bold">{date}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-4 w-4" /> <span>Reporting</span></div>
+                    <span className="font-bold">{time}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground"><Swords className="h-4 w-4" /> <span>Mode</span></div>
+                    <span className="font-bold">{category}</span>
+                  </div>
+              </div>
+
+              <div className="pt-4 space-y-2">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                   <span>
-                    {slotsFilled} / {slots} Slots Secured
+                    {slotsFilled} / {slots} Secured
                   </span>
-                  <span className="font-semibold">{Math.round(progress)}%</span>
+                  <span className={cn("font-black", progress > 80 ? "text-destructive" : "text-primary")}>{Math.round(progress)}% Full</span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress value={progress} className="h-2.5 rounded-full" />
               </div>
             </CardContent>
             <div className="p-6 pt-0">
@@ -623,15 +643,17 @@ function TournamentDetailView({ tournamentId }: { tournamentId: string }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                Fair Play Rules
+                Lobby Protocol
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
+              <ul className="space-y-4">
                 {rules?.map((rule, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <span className="text-sm leading-relaxed">{rule}</span>
+                  <li key={index} className="flex items-start gap-3 group">
+                    <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                        <ShieldCheck className="h-3 w-3" />
+                    </div>
+                    <span className="text-sm font-medium leading-relaxed opacity-80 group-hover:opacity-100">{rule}</span>
                   </li>
                 ))}
               </ul>

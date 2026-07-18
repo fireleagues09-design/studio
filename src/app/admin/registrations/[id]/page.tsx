@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, use } from 'react';
@@ -11,15 +12,16 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft, Save, Ban, CheckCircle, Users, Eye, Info } from 'lucide-react';
+import { ArrowLeft, Save, Ban, CheckCircle, Users, Eye, Info, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updateAllPlayerResults, updateUserSuspension } from '../../actions';
+import { updateSingleRegistrationResults, updateUserSuspension } from '../../actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 type Registration = {
     id: string;
@@ -34,57 +36,11 @@ type Registration = {
     kills?: number;
     isSuspended?: boolean;
     suspensionNote?: string;
-    members?: { inGameName: string, inGameUid: string }[];
+    members?: { inGameName: string, inGameUid: string, kills?: number }[];
 };
 
 interface RegistrationPageProps {
   params: Promise<{ id: string }>;
-}
-
-function ViewTeamDetailsDialog({ reg }: { reg: Registration }) {
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
-                    <Users className="h-4 w-4" />
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary" />
-                        Team Roster
-                    </DialogTitle>
-                    <DialogDescription>
-                        Full member details for {reg.inGameName}&apos;s team.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-3 py-4">
-                    {reg.members && reg.members.length > 0 ? reg.members.map((m, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/50">
-                            <div className="min-w-0">
-                                <p className="font-bold text-sm truncate">{m.inGameName}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-tighter mt-0.5">UID: {m.inGameUid}</p>
-                            </div>
-                            <Badge variant={i === 0 ? "default" : "secondary"} className="text-[8px] uppercase h-5 font-black">
-                                {i === 0 ? "Leader" : `Member ${i + 1}`}
-                            </Badge>
-                        </div>
-                    )) : (
-                        <div className="flex flex-col items-center justify-center py-6 text-muted-foreground gap-2">
-                            <Info className="h-8 w-8 opacity-20" />
-                            <p className="text-xs">No teammate records found.</p>
-                        </div>
-                    )}
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="secondary" className="w-full rounded-xl font-bold">Done</Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
 }
 
 function SuspendUserDialog({ 
@@ -127,7 +83,7 @@ function SuspendUserDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className={currentlySuspended ? "text-green-500" : "text-destructive"}>
+                <Button variant="ghost" size="sm" className={currentlySuspended ? "text-green-500 h-8" : "text-destructive h-8"}>
                     {currentlySuspended ? <CheckCircle className="h-4 w-4 mr-1" /> : <Ban className="h-4 w-4 mr-1" />}
                     {currentlySuspended ? "Unsuspend" : "Suspend"}
                 </Button>
@@ -178,10 +134,15 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const [registrations, setRegistrations] = useState<Registration[]>([]);
     const [authLoading, setAuthLoading] = useState(true);
     const [dataLoading, setDataLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const [savingId, setSavingId] = useState<string | null>(null);
     
-    // State for editable results
-    const [results, setResults] = useState<{[key: string]: { rank: string, prize: string, kills: string }}>({});
+    // Results state handles everything for a specific registration
+    const [results, setResults] = useState<{[regId: string]: { 
+        rank: string;
+        prize: string;
+        leaderKills: string;
+        memberKills: string[];
+    }}>({});
 
     const router = useRouter();
     const { hideLoader } = useLoading();
@@ -229,7 +190,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             } else {
                 console.error("Tournament not found!");
                 setTournament(null);
-                 setDataLoading(false);
+                setDataLoading(false);
             }
         }, (error) => {
             console.error("Error fetching tournament:", error);
@@ -249,13 +210,15 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                 registrationsData.map(async (reg) => {
                     const userDocRef = doc(db, 'users', reg.userId);
                     const userDoc = await getDoc(userDocRef);
+                    
                     const initialResults = {
                         rank: reg.rank || '',
                         prize: reg.prizeWon !== undefined ? reg.prizeWon.toString() : '',
-                        kills: reg.kills !== undefined ? reg.kills.toString() : ''
+                        leaderKills: reg.kills !== undefined ? reg.kills.toString() : '',
+                        memberKills: reg.members?.map(m => (m.kills !== undefined ? m.kills.toString() : '')) || []
                     };
                     
-                    setResults(prev => ({ ...prev, [reg.userId]: initialResults }));
+                    setResults(prev => ({ ...prev, [reg.id]: initialResults }));
 
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
@@ -284,40 +247,66 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         };
     }, [isAdmin, tournamentId, authLoading]);
 
-    const handleResultChange = (userId: string, field: 'rank' | 'prize' | 'kills', value: string) => {
+    const handleResultChange = (regId: string, field: 'rank' | 'prize' | 'leaderKills', value: string) => {
         setResults(prev => ({
             ...prev,
-            [userId]: {
-                ...prev[userId],
+            [regId]: {
+                ...prev[regId],
                 [field]: value
             }
         }));
     };
 
-    const handleSaveAllResults = async () => {
+    const handleMemberKillChange = (regId: string, memberIdx: number, value: string) => {
+        setResults(prev => {
+            const currentMemberKills = [...(prev[regId]?.memberKills || [])];
+            currentMemberKills[memberIdx] = value;
+            return {
+                ...prev,
+                [regId]: {
+                    ...prev[regId],
+                    memberKills: currentMemberKills
+                }
+            }
+        });
+    }
+
+    const handleSaveRowResults = async (reg: Registration) => {
         if (!user) return;
         
-        setSaving(true);
+        const rowResults = results[reg.id];
+        if (!rowResults) return;
+
+        setSavingId(reg.id);
         try {
             const idToken = await user.getIdToken();
-            const resultsToSave = Object.entries(results).map(([userId, data]) => ({
-                userId,
-                rank: data.rank,
-                prizeWon: Number(data.prize || 0),
-                kills: Number(data.kills || 0)
+            
+            const membersWithKills = (reg.members || []).map((m, idx) => ({
+                ...m,
+                kills: Number(rowResults.memberKills[idx] || 0)
             }));
 
-            const result = await updateAllPlayerResults(tournamentId, resultsToSave, idToken);
+            const result = await updateSingleRegistrationResults(
+                tournamentId, 
+                reg.id, 
+                {
+                    rank: rowResults.rank,
+                    prizeWon: Number(rowResults.prize || 0),
+                    kills: Number(rowResults.leaderKills || 0),
+                    membersWithKills
+                },
+                idToken
+            );
+
             if (result.success) {
-                toast({ title: 'Success', description: 'All player results updated successfully.' });
+                toast({ title: 'Saved!', description: `Results updated for ${reg.inGameName}` });
             } else {
                 throw new Error(result.message);
             }
         } catch (error: any) {
             toast({ title: 'Error', description: error.message, variant: 'destructive' });
         } finally {
-            setSaving(true); // Short delay to prevent double clicks
-            setTimeout(() => setSaving(false), 500);
+            setSavingId(null);
         }
     };
 
@@ -347,112 +336,141 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                     Back to Dashboard
                 </Link>
             </Button>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-4xl font-bold tracking-tight">{tournament.name}</h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <p className="text-muted-foreground">Registrations List</p>
-                        <Badge variant={tournament.status === 'Finished' ? 'destructive' : 'default'}>{tournament.status}</Badge>
-                    </div>
+            
+            <header className="mb-8">
+                <h1 className="text-4xl font-bold tracking-tight">{tournament.name}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                    <p className="text-muted-foreground text-sm">Registrations & Result Manager</p>
+                    <Badge variant={tournament.status === 'Finished' ? 'destructive' : 'default'} className="h-5 text-[10px]">{tournament.status}</Badge>
                 </div>
-                <Button 
-                    onClick={handleSaveAllResults} 
-                    disabled={saving || registrations.length === 0}
-                    className="md:w-auto w-full font-bold"
-                >
-                    <Save className="mr-2 h-4 w-4" />
-                    {saving ? 'Saving...' : 'Save All Results'}
-                </Button>
-            </div>
+            </header>
 
-             <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle>Registered Players ({registrations.length} / {tournament.slots})</CardTitle>
+             <Card>
+                    <CardHeader className="bg-muted/5 border-b">
+                        <CardTitle className="text-xl">Lobby Entries ({registrations.length} / {tournament.slots})</CardTitle>
                         <CardDescription>
-                            List of all players who have registered. You can rank players and assign prizes if the tournament is finished.
+                            Individual kill tracking is enabled for all teammates. The "Prize Won" is applied to the entire entry.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="border rounded-md overflow-x-auto">
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="bg-muted/30">
                                     <TableRow>
-                                        <TableHead className="w-[50px]"></TableHead>
-                                        <TableHead>Competitors</TableHead>
-                                        <TableHead>Primary Phone</TableHead>
-                                        <TableHead>Rank</TableHead>
-                                        <TableHead>Kills</TableHead>
-                                        <TableHead>Prize Won (₹)</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
+                                        <TableHead className="w-12"></TableHead>
+                                        <TableHead>Competitor Details</TableHead>
+                                        <TableHead className="w-24 text-center">Rank</TableHead>
+                                        <TableHead className="w-24 text-center">Kills</TableHead>
+                                        <TableHead className="w-32 text-right">Prize Won (₹)</TableHead>
+                                        <TableHead className="w-24 text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {registrations.length > 0 ? registrations.map(reg => (
-                                        <TableRow key={reg.id} className={reg.isSuspended ? "bg-destructive/10" : ""}>
-                                            <TableCell>
-                                                <ViewTeamDetailsDialog reg={reg} />
-                                            </TableCell>
-                                            <TableCell className="font-medium">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-primary font-bold">{reg.inGameName}</span>
-                                                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Leader</span>
-                                                        {reg.isSuspended && <Badge variant="destructive" className="h-4 text-[8px] uppercase">Suspended</Badge>}
+                                        <React.Fragment key={reg.id}>
+                                            <TableRow className={cn(reg.isSuspended ? "bg-destructive/5" : "bg-primary/5")}>
+                                                <TableCell className="text-center">
+                                                    <div className="p-2 bg-primary/10 rounded-full w-fit mx-auto">
+                                                        <UserRound className="h-4 w-4 text-primary" />
                                                     </div>
-                                                    
-                                                    {reg.members && reg.members.length > 1 && (
-                                                        <div className="flex flex-wrap gap-1.5 mt-1">
-                                                            {reg.members.slice(1).map((m, i) => (
-                                                                <Badge key={i} variant="secondary" className="text-[9px] font-medium h-4 bg-primary/5 text-primary border-primary/10">
-                                                                    {m.inGameName}
-                                                                </Badge>
-                                                            ))}
+                                                </TableCell>
+                                                <TableCell className="py-4">
+                                                    <div className="space-y-0.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-primary text-base">{reg.inGameName}</span>
+                                                            <Badge variant="outline" className="text-[8px] font-black uppercase h-4 border-primary/20 text-primary">Leader</Badge>
                                                         </div>
-                                                    )}
-                                                    
-                                                    <div className="text-[9px] text-muted-foreground italic mt-0.5 font-mono">UID: {reg.inGameUid}</div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-xs font-medium tabular-nums">{reg.userPhone}</TableCell>
-                                            <TableCell>
-                                                <Input 
-                                                    className="w-20 h-8"
-                                                    placeholder="Rank"
-                                                    value={results[reg.userId]?.rank ?? ''}
-                                                    onChange={(e) => handleResultChange(reg.userId, 'rank', e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input 
-                                                    className="w-16 h-8"
-                                                    type="number"
-                                                    placeholder="Kills"
-                                                    value={results[reg.userId]?.kills ?? ''}
-                                                    onChange={(e) => handleResultChange(reg.userId, 'kills', e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Input 
-                                                    className="w-24 h-8"
-                                                    type="number"
-                                                    placeholder="Prize"
-                                                    value={results[reg.userId]?.prize ?? ''}
-                                                    onChange={(e) => handleResultChange(reg.userId, 'prize', e.target.value)}
-                                                />
-                                            </TableCell>
-                                            <TableCell className="text-right flex items-center justify-end gap-1">
-                                                <SuspendUserDialog 
-                                                    userId={reg.userId} 
-                                                    username={reg.username || 'N/A'} 
-                                                    currentlySuspended={reg.isSuspended || false}
-                                                    onSuccess={() => {}} // Snapshot will update UI
-                                                />
-                                            </TableCell>
-                                        </TableRow>
+                                                        <div className="flex items-center gap-3">
+                                                            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">UID: {reg.inGameUid}</p>
+                                                            <p className="text-[10px] text-muted-foreground font-bold">Tel: {reg.userPhone}</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        className="w-16 h-10 mx-auto text-center font-bold border-primary/20"
+                                                        placeholder="#"
+                                                        value={results[reg.id]?.rank ?? ''}
+                                                        onChange={(e) => handleResultChange(reg.id, 'rank', e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        className="w-16 h-10 mx-auto text-center font-bold border-primary/20"
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={results[reg.id]?.leaderKills ?? ''}
+                                                        onChange={(e) => handleResultChange(reg.id, 'leaderKills', e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Input 
+                                                        className="w-28 h-10 ml-auto text-right font-bold text-green-600 border-primary/20"
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={results[reg.id]?.prize ?? ''}
+                                                        onChange={(e) => handleResultChange(reg.id, 'prize', e.target.value)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-full" 
+                                                            onClick={() => handleSaveRowResults(reg)}
+                                                            disabled={savingId === reg.id}
+                                                        >
+                                                            {savingId === reg.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                                        </Button>
+                                                        <SuspendUserDialog 
+                                                            userId={reg.userId} 
+                                                            username={reg.username || 'N/A'} 
+                                                            currentlySuspended={reg.isSuspended || false}
+                                                            onSuccess={() => {}} 
+                                                        />
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+
+                                            {/* Teammate Rows */}
+                                            {reg.members && reg.members.length > 0 && reg.members.map((member, mIdx) => (
+                                                <TableRow key={`${reg.id}-m-${mIdx}`} className="bg-background/50 hover:bg-muted/20 border-l-4 border-l-primary/30">
+                                                    <TableCell className="text-center opacity-40">
+                                                        <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full mx-auto" />
+                                                    </TableCell>
+                                                    <TableCell className="py-3">
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-sm text-foreground/80">{member.inGameName}</span>
+                                                                <Badge variant="secondary" className="text-[7px] font-black uppercase h-3.5 tracking-tighter opacity-60">Partner {mIdx + 1}</Badge>
+                                                            </div>
+                                                            <p className="text-[9px] text-muted-foreground font-mono uppercase">UID: {member.inGameUid}</p>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Shared</div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Input 
+                                                            className="w-14 h-8 mx-auto text-center text-xs font-bold bg-secondary/50 border-transparent focus:border-primary/20"
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={results[reg.id]?.memberKills[mIdx] ?? ''}
+                                                            onChange={(e) => handleMemberKillChange(reg.id, mIdx, e.target.value)}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Synced</div>
+                                                    </TableCell>
+                                                    <TableCell></TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </React.Fragment>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                                                No entries for this tournament yet.
+                                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground italic">
+                                                <Info className="h-8 w-8 mx-auto opacity-10 mb-2" />
+                                                No competitors registered for this lobby yet.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -463,4 +481,8 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                 </Card>
         </div>
     );
+}
+
+function Loader2({ className }: { className?: string }) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 }
