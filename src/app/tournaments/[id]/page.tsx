@@ -34,11 +34,12 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { registerSoloPlayer } from '@/app/actions';
+import { registerTournamentEntry } from '@/app/actions';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLoading } from '@/context/LoadingContext';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 type TournamentRegistrationDialogProps = {
@@ -48,12 +49,24 @@ type TournamentRegistrationDialogProps = {
 }
 
 function TournamentRegistrationDialog({ tournament, user, onSuccess }: TournamentRegistrationDialogProps) {
-    const [inGameName, setInGameName] = useState('');
-    const [inGameUid, setInGameUid] = useState('');
+    const memberCount = tournament.teamType === 'Solo' ? 1 : (tournament.teamType === 'Duo' ? 2 : 4);
+    const [members, setMembers] = useState(Array.from({ length: memberCount }, () => ({ inGameName: '', inGameUid: '' })));
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
+
+    useEffect(() => {
+        if (open) {
+            setMembers(Array.from({ length: memberCount }, () => ({ inGameName: '', inGameUid: '' })));
+        }
+    }, [open, memberCount]);
+
+    const handleMemberChange = (index: number, field: 'inGameName' | 'inGameUid', value: string) => {
+        const updated = [...members];
+        updated[index] = { ...updated[index], [field]: value };
+        setMembers(updated);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,15 +75,18 @@ function TournamentRegistrationDialog({ tournament, user, onSuccess }: Tournamen
              router.push('/login');
              return;
         }
-        if (!inGameName || !inGameUid) {
-            toast({ title: 'Error', description: 'Provide all in-game details.', variant: 'destructive' });
+
+        const isValid = members.every(m => m.inGameName.trim() && m.inGameUid.trim());
+        if (!isValid) {
+            toast({ title: 'Error', description: 'Provide all teammate details.', variant: 'destructive' });
             return;
         }
+
         setLoading(true);
 
         try {
             const idToken = await user.getIdToken();
-            const result = await registerSoloPlayer(tournament.id, inGameName, inGameUid, idToken);
+            const result = await registerTournamentEntry(tournament.id, members, idToken);
             if (result.success) {
                 toast({
                     title: 'Registration Successful!',
@@ -100,45 +116,59 @@ function TournamentRegistrationDialog({ tournament, user, onSuccess }: Tournamen
                     Join {tournament.teamType} Lobby
                 </Button>
             </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
+            <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-0">
                     <DialogTitle>Join {tournament.name}</DialogTitle>
                     <DialogDescription>
                         {tournament.teamType === 'Solo' 
                             ? "Provide your in-game details to secure your slot." 
-                            : `Enter your details to join this ${tournament.teamType} lobby.`}
+                            : `Enter details for all ${memberCount} members of your ${tournament.teamType}.`}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="in-game-name">In-Game Name</Label>
-                        <Input 
-                            id="in-game-name" 
-                            value={inGameName} 
-                            onChange={e => setInGameName(e.target.value)} 
-                            placeholder="Your FF Name" 
-                            required 
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="in-game-uid">In-Game UID</Label>
-                        <Input 
-                            id="in-game-uid" 
-                            value={inGameUid} 
-                            onChange={e => setInGameUid(e.target.value)} 
-                            placeholder="Your FF UID" 
-                            required 
-                        />
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="secondary">Cancel</Button>
-                        </DialogClose>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? 'Processing...' : 'Confirm Entry'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                <ScrollArea className="flex-1 p-6">
+                    <form id="team-reg-form" onSubmit={handleSubmit} className="space-y-6">
+                        {members.map((member, idx) => (
+                            <div key={idx} className="space-y-4 p-4 border rounded-xl bg-secondary/30">
+                                <h4 className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2">
+                                    <span className="h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[8px]">{idx + 1}</span>
+                                    {idx === 0 ? "Member 1 (Leader / You)" : `Member ${idx + 1} (${tournament.teamType === 'Duo' ? 'Partner' : 'Teammate'})`}
+                                </h4>
+                                <div className="grid gap-3">
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor={`name-${idx}`} className="text-xs">In-Game Name</Label>
+                                        <Input 
+                                            id={`name-${idx}`} 
+                                            value={member.inGameName} 
+                                            onChange={e => handleMemberChange(idx, 'inGameName', e.target.value)} 
+                                            placeholder={idx === 0 ? "Your FF Name" : "Teammate FF Name"} 
+                                            className="h-9"
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor={`uid-${idx}`} className="text-xs">In-Game UID</Label>
+                                        <Input 
+                                            id={`uid-${idx}`} 
+                                            value={member.inGameUid} 
+                                            onChange={e => handleMemberChange(idx, 'inGameUid', e.target.value)} 
+                                            placeholder={idx === 0 ? "Your FF UID" : "Teammate FF UID"} 
+                                            className="h-9"
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </form>
+                </ScrollArea>
+                <DialogFooter className="p-6 pt-2 border-t bg-secondary/10">
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit" form="team-reg-form" disabled={loading}>
+                        {loading ? 'Processing...' : 'Confirm Entry'}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     )

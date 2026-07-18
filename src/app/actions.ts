@@ -4,10 +4,13 @@ import { auth, db } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 
-export async function registerSoloPlayer(
+/**
+ * Registers a user (and their team if applicable) for a tournament.
+ * Handles Solo, Duo, and Squad logic.
+ */
+export async function registerTournamentEntry(
     tournamentId: string, 
-    inGameName: string, 
-    inGameUid: string,
+    members: { inGameName: string, inGameUid: string }[],
     idToken: string
 ): Promise<{success: boolean; message: string}> {
     if (!idToken) {
@@ -40,11 +43,12 @@ export async function registerSoloPlayer(
                 throw new Error("You are already registered for this tournament.");
             }
 
-            // Add user to the registrations subcollection
+            // Add team to the registrations subcollection
             transaction.set(registrationDocRef, {
                 userId,
-                inGameName,
-                inGameUid,
+                members, // Full team member data
+                inGameName: members[0].inGameName, // Primary name for tables
+                inGameUid: members[0].inGameUid,
                 registeredAt: Timestamp.now(),
             });
 
@@ -58,7 +62,7 @@ export async function registerSoloPlayer(
 
         return { success: true, message: 'Registration successful!' };
     } catch (error: any) {
-        console.error('Error registering solo player:', error);
+        console.error('Error registering for tournament:', error);
         return { success: false, message: error.message || 'An unknown error occurred during registration.' };
     }
 }

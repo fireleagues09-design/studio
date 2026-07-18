@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, use } from 'react';
@@ -12,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft, Save, Ban, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Save, Ban, CheckCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
@@ -35,6 +34,7 @@ type Registration = {
     kills?: number;
     isSuspended?: boolean;
     suspensionNote?: string;
+    members?: { inGameName: string, inGameUid: string }[];
 };
 
 interface RegistrationPageProps {
@@ -275,12 +275,6 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
         }
     };
 
-     const formatDate = (timestamp: any) => {
-        if (!timestamp) return 'N/A';
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp.seconds * 1000);
-        return format(date, 'PPp');
-    };
-
     if (authLoading || dataLoading) {
         return null;
     }
@@ -337,9 +331,8 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Username</TableHead>
-                                        <TableHead>In-Game Name</TableHead>
-                                        <TableHead>Phone</TableHead>
+                                        <TableHead>Competitors</TableHead>
+                                        <TableHead>Primary Phone</TableHead>
                                         <TableHead>Rank</TableHead>
                                         <TableHead>Kills</TableHead>
                                         <TableHead>Prize Won (₹)</TableHead>
@@ -349,14 +342,28 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                 <TableBody>
                                     {registrations.length > 0 ? registrations.map(reg => (
                                         <TableRow key={reg.id} className={reg.isSuspended ? "bg-destructive/10" : ""}>
-                                            <TableCell className="font-medium text-primary">
-                                                <div className="flex flex-col">
-                                                    <span>{reg.username}</span>
-                                                    {reg.isSuspended && <Badge variant="destructive" className="w-fit scale-75 -ml-2">Suspended</Badge>}
+                                            <TableCell className="font-medium">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-primary font-bold">{reg.inGameName}</span>
+                                                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Leader</span>
+                                                        {reg.isSuspended && <Badge variant="destructive" className="h-4 text-[8px] uppercase">Suspended</Badge>}
+                                                    </div>
+                                                    
+                                                    {reg.members && reg.members.length > 1 && (
+                                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                                            {reg.members.slice(1).map((m, i) => (
+                                                                <Badge key={i} variant="secondary" className="text-[9px] font-medium h-4 bg-primary/5 text-primary border-primary/10">
+                                                                    {m.inGameName}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="text-[9px] text-muted-foreground italic mt-0.5">UID: {reg.inGameUid}</div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{reg.inGameName}</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">{reg.userPhone}</TableCell>
+                                            <TableCell className="text-xs font-medium tabular-nums">{reg.userPhone}</TableCell>
                                             <TableCell>
                                                 <Input 
                                                     className="w-20 h-8"
@@ -394,8 +401,8 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center">
-                                                No players have registered for this tournament yet.
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                                No entries for this tournament yet.
                                             </TableCell>
                                         </TableRow>
                                     )}
