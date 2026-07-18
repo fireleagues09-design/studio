@@ -116,43 +116,44 @@ function TournamentRegistrationDialog({ tournament, user, onSuccess }: Tournamen
                     Join {tournament.teamType} Lobby
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-0">
-                    <DialogTitle>Join {tournament.name}</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="sm:max-w-md max-h-[95vh] flex flex-col p-0 overflow-hidden rounded-t-3xl sm:rounded-3xl">
+                <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0 bg-background border-b z-20">
+                    <DialogTitle className="text-xl sm:text-2xl">Join {tournament.name}</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                         {tournament.teamType === 'Solo' 
-                            ? "Provide your in-game details to secure your slot." 
+                            ? "Confirm your details to secure your slot." 
                             : `Enter details for all ${memberCount} members of your ${tournament.teamType}.`}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="flex-1 p-6">
-                    <form id="team-reg-form" onSubmit={handleSubmit} className="space-y-6">
+                
+                <ScrollArea className="flex-1 px-4 sm:px-6 py-4">
+                    <form id="team-reg-form" onSubmit={handleSubmit} className="space-y-4">
                         {members.map((member, idx) => (
-                            <div key={idx} className="space-y-4 p-4 border rounded-xl bg-secondary/30">
-                                <h4 className="font-black text-[10px] text-primary uppercase tracking-widest flex items-center gap-2">
+                            <div key={idx} className="space-y-3 p-3 sm:p-4 border border-primary/10 rounded-2xl bg-secondary/20 transition-all hover:bg-secondary/30">
+                                <h4 className="font-black text-[9px] sm:text-[10px] text-primary uppercase tracking-widest flex items-center gap-2">
                                     <span className="h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[8px]">{idx + 1}</span>
                                     {idx === 0 ? "Member 1 (Leader / You)" : `Member ${idx + 1} (${tournament.teamType === 'Duo' ? 'Partner' : 'Teammate'})`}
                                 </h4>
-                                <div className="grid gap-3">
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor={`name-${idx}`} className="text-xs">In-Game Name</Label>
+                                <div className="grid grid-cols-1 gap-2.5">
+                                    <div className="grid gap-1">
+                                        <Label htmlFor={`name-${idx}`} className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase ml-1">In-Game Name</Label>
                                         <Input 
                                             id={`name-${idx}`} 
                                             value={member.inGameName} 
                                             onChange={e => handleMemberChange(idx, 'inGameName', e.target.value)} 
                                             placeholder={idx === 0 ? "Your FF Name" : "Teammate FF Name"} 
-                                            className="h-9"
+                                            className="h-10 sm:h-11 rounded-xl bg-background border-primary/5 focus:border-primary transition-all"
                                             required 
                                         />
                                     </div>
-                                    <div className="grid gap-1.5">
-                                        <Label htmlFor={`uid-${idx}`} className="text-xs">In-Game UID</Label>
+                                    <div className="grid gap-1">
+                                        <Label htmlFor={`uid-${idx}`} className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase ml-1">In-Game UID</Label>
                                         <Input 
                                             id={`uid-${idx}`} 
                                             value={member.inGameUid} 
                                             onChange={e => handleMemberChange(idx, 'inGameUid', e.target.value)} 
                                             placeholder={idx === 0 ? "Your FF UID" : "Teammate FF UID"} 
-                                            className="h-9"
+                                            className="h-10 sm:h-11 rounded-xl bg-background border-primary/5 focus:border-primary transition-all"
                                             required 
                                         />
                                     </div>
@@ -161,17 +162,22 @@ function TournamentRegistrationDialog({ tournament, user, onSuccess }: Tournamen
                         ))}
                     </form>
                 </ScrollArea>
-                <DialogFooter className="p-6 pt-2 border-t bg-secondary/10">
+                
+                <DialogFooter className="p-4 sm:p-6 pt-2 border-t bg-secondary/10 shrink-0 gap-3">
                     <DialogClose asChild>
-                        <Button type="button" variant="secondary">Cancel</Button>
+                        <Button type="button" variant="secondary" className="flex-1 rounded-xl h-12 font-bold">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit" form="team-reg-form" disabled={loading}>
-                        {loading ? 'Processing...' : 'Confirm Entry'}
+                    <Button type="submit" form="team-reg-form" disabled={loading} className="flex-[2] rounded-xl h-12 font-bold shadow-lg shadow-primary/20">
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Entry'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     )
+}
+
+function Loader2({ className }: { className?: string }) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 }
 
 
