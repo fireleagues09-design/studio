@@ -13,9 +13,11 @@ import { ThemeProvider } from "@/context/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "FireLeagues",
-  description: "Gaming platform",
+  description: "India's Premier Skill-Based Gaming Arena",
   icons: {
-    icon: "/favicon.ico",
+    icon: "https://ik.imagekit.io/rexa7788/Fire%20Leagues%20logo.png",
+    shortcut: "https://ik.imagekit.io/rexa7788/Fire%20Leagues%20logo.png",
+    apple: "https://ik.imagekit.io/rexa7788/Fire%20Leagues%20logo.png",
   },
 };
 
