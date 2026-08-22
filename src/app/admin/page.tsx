@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { onSnapshot, collection, query, orderBy, doc, getDoc, deleteDoc, where, getCountFromServer } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, DollarSign, Activity, Pencil, Trash, UsersRound, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, Gift, MessageSquare, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Lock } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, UsersRound, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, Gift, MessageSquare, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Lock, Clock } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -43,9 +43,13 @@ type Transaction = {
 };
 
 function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
+    const timeStr = tournament.time || '';
+    const match = timeStr.match(/^(\d{1,2}:\d{2})\s*(AM|PM)?/i);
+    
     const [name, setName] = useState(tournament.name);
     const [date, setDate] = useState(tournament.date);
-    const [time, setTime] = useState(tournament.time);
+    const [time, setTime] = useState(match ? match[1] : (timeStr.split(' ')[0] || ''));
+    const [period, setPeriod] = useState(match && match[2] ? match[2].toUpperCase() : 'AM');
     const [entryFee, setEntryFee] = useState(tournament.entryFee);
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
@@ -67,7 +71,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
             const result = await updateTournamentAction(tournament.id, {
                 name,
                 date,
-                time,
+                time: `${time} ${period} IST`,
                 entryFee,
                 prize,
                 slots: Number(slots),
@@ -122,8 +126,25 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                             <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="time">Time</Label>
-                            <Input id="time" type="time" value={time} onChange={e => setTime(e.target.value)} />
+                            <Label htmlFor="time">Reporting Time</Label>
+                            <div className="flex gap-2">
+                                <Input 
+                                    id="time" 
+                                    type="text" 
+                                    value={time} 
+                                    onChange={e => setTime(e.target.value)} 
+                                    className="flex-1"
+                                />
+                                <Select value={period} onValueChange={setPeriod}>
+                                    <SelectTrigger className="w-[80px]">
+                                        <SelectValue placeholder="Period" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="AM">AM</SelectItem>
+                                        <SelectItem value="PM">PM</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                      <div className="grid grid-cols-2 gap-4">

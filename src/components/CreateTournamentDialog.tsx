@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -11,13 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { FULL_MAP_RULES } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, MinusCircle as MinusCircleIcon } from 'lucide-react';
+import { PlusCircle, MinusCircle as MinusCircleIcon, Clock } from 'lucide-react';
 import { createTournamentAction } from '@/app/management/actions';
 
 export function CreateTournamentDialog() {
     const [name, setName] = useState('');
     const [date, setDate] = useState('');
-    const [time, setTime] = useState('');
+    const [time, setTime] = useState('08:00');
+    const [period, setPeriod] = useState('AM');
     const [entryFee, setEntryFee] = useState('');
     const [prize, setPrize] = useState('');
     const [slots, setSlots] = useState('');
@@ -50,7 +50,8 @@ export function CreateTournamentDialog() {
     const resetForm = () => {
         setName('');
         setDate('');
-        setTime('');
+        setTime('08:00');
+        setPeriod('AM');
         setEntryFee('');
         setPrize('');
         setSlots('');
@@ -80,8 +81,8 @@ export function CreateTournamentDialog() {
         const finalImageUrl = imageUrl.trim() || `https://picsum.photos/seed/${Math.random()}/600/400`;
         const dataAiHint = 'gaming abstract';
         
-        // Use the corrected standardized rules for all tournament types
         const rules = FULL_MAP_RULES;
+        const finalTime = `${time} ${period} IST`;
 
         try {
             const finalPrizeDistribution = prizeDistribution.filter(p => p.place && p.prize);
@@ -92,7 +93,7 @@ export function CreateTournamentDialog() {
             const tournamentData = {
                 name,
                 date,
-                time,
+                time: finalTime,
                 entryFee,
                 prize,
                 slots: Number(slots),
@@ -163,8 +164,27 @@ export function CreateTournamentDialog() {
                             <Input id="create-date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="create-time">Time</Label>
-                            <Input id="create-time" type="time" value={time} onChange={e => setTime(e.target.value)} required/>
+                            <Label htmlFor="create-time">Reporting Time</Label>
+                            <div className="flex gap-2">
+                                <Input 
+                                    id="create-time" 
+                                    type="text" 
+                                    placeholder="08:00" 
+                                    value={time} 
+                                    onChange={e => setTime(e.target.value)} 
+                                    className="flex-1"
+                                    required
+                                />
+                                <Select value={period} onValueChange={setPeriod}>
+                                    <SelectTrigger className="w-[85px] h-10">
+                                        <SelectValue placeholder="P" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="AM">AM</SelectItem>
+                                        <SelectItem value="PM">PM</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                     
@@ -243,6 +263,7 @@ export function CreateTournamentDialog() {
                                 <SelectItem value="Upcoming">Upcoming</SelectItem>
                                 <SelectItem value="Ongoing">Ongoing</SelectItem>
                                 <SelectItem value="Finished">Finished</SelectItem>
+                                <SelectItem value="Cancelled" className="text-destructive font-bold">Cancelled (Refund All)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

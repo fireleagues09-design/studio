@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { useLoading } from '@/context/LoadingContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, Pencil, TrophyIcon, Users } from 'lucide-react';
+import { Briefcase, Pencil, TrophyIcon, Users, Clock } from 'lucide-react';
 import { CreateTournamentDialog } from '@/components/CreateTournamentDialog';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
@@ -45,9 +44,13 @@ import Link from 'next/link';
 import { updateTournamentAction } from '@/app/admin/actions';
 
 function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
+    const timeStr = tournament.time || '';
+    const match = timeStr.match(/^(\d{1,2}:\d{2})\s*(AM|PM)?/i);
+
     const [name, setName] = useState(tournament.name);
     const [date, setDate] = useState(tournament.date);
-    const [time, setTime] = useState(tournament.time);
+    const [time, setTime] = useState(match ? match[1] : (timeStr.split(' ')[0] || ''));
+    const [period, setPeriod] = useState(match && match[2] ? match[2].toUpperCase() : 'AM');
     const [entryFee, setEntryFee] = useState(tournament.entryFee);
     const [prize, setPrize] = useState(tournament.prize);
     const [slots, setSlots] = useState(tournament.slots.toString());
@@ -69,7 +72,7 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
             const result = await updateTournamentAction(tournament.id, {
                 name,
                 date,
-                time,
+                time: `${time} ${period} IST`,
                 entryFee,
                 prize,
                 slots: Number(slots),
@@ -124,8 +127,25 @@ function EditTournamentDialog({ tournament }: { tournament: TournamentType }) {
                             <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="time">Time</Label>
-                            <Input id="time" type="time" value={time} onChange={e => setTime(e.target.value)} />
+                            <Label htmlFor="time">Reporting Time</Label>
+                            <div className="flex gap-2">
+                                <Input 
+                                    id="time" 
+                                    type="text" 
+                                    value={time} 
+                                    onChange={e => setTime(e.target.value)} 
+                                    className="flex-1"
+                                />
+                                <Select value={period} onValueChange={setPeriod}>
+                                    <SelectTrigger className="w-[80px]">
+                                        <SelectValue placeholder="P" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="AM">AM</SelectItem>
+                                        <SelectItem value="PM">PM</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
                      <div className="grid grid-cols-2 gap-4">
@@ -209,15 +229,12 @@ export default function ManagementPage() {
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 const userData = userDoc.data();
-                // isEmployee now means "has management access"
                 if (userDoc.exists() && (userData?.isEmployee || userData?.isAdmin)) {
                     setIsEmployee(true);
                 } else {
-                    // If not an employee or admin, redirect to home
                     router.push('/');
                 }
             } else {
-                // If not logged in, redirect to login
                 router.push('/login');
             }
             setAuthLoading(false);
@@ -265,7 +282,7 @@ export default function ManagementPage() {
         const unsubscribeFinished = onSnapshot(finishedQuery, async () => {
             const countSnapshot = await getCountFromServer(finishedQuery);
             setFinishedTournaments(countSnapshot.data().count);
-            setDataLoading(false); // Set loading to false after the last fetch completes
+            setDataLoading(false);
         }, (error) => {
             console.error("Error fetching tournament counts:", error);
             setDataLoading(false);
@@ -282,18 +299,15 @@ export default function ManagementPage() {
     }, [isEmployee, authLoading, toast]);
 
     useEffect(() => {
-        // This effect will run when auth and data checks are complete.
         if (!authLoading && !dataLoading) {
             hideLoader();
         }
     }, [authLoading, dataLoading, hideLoader]);
 
-    // The FullScreenLoader is active until hideLoader() is called.
     if (authLoading || dataLoading) {
         return null;
     }
 
-    // If the user is not an employee, they will be redirected. Show a message while that happens.
     if (!isEmployee) {
         return (
             <div className="container mx-auto px-4 py-8 md:py-12 space-y-8">
@@ -304,7 +318,6 @@ export default function ManagementPage() {
         );
     }
     
-    // Render the actual page content for employees
     return (
         <div className="container mx-auto px-4 py-8 md:py-12 space-y-12">
             <div>
