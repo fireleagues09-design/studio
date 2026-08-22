@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -498,7 +499,13 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top)]">
         <div className="container flex h-16 items-center px-4">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Flame className="h-6 w-6 text-primary" />
+              <Image 
+                src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20Logo.jpeg" 
+                alt="FireLeagues Logo" 
+                width={32} 
+                height={32} 
+                className="rounded-md object-contain"
+              />
               <span className="font-bold text-lg">FireLeagues</span>
           </Link>
           
@@ -612,7 +619,13 @@ export function Header() {
                     <SheetTitle>
                        <SheetClose asChild>
                           <Link href="/" className="flex items-center space-x-2">
-                            <Flame className="h-6 w-6 text-primary" />
+                            <Image 
+                              src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20Logo.jpeg" 
+                              alt="FireLeagues Logo" 
+                              width={28} 
+                              height={28} 
+                              className="rounded-md object-contain"
+                            />
                             <span className="font-bold text-lg">FireLeagues</span>
                           </Link>
                       </SheetClose>
