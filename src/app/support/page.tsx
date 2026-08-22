@@ -518,13 +518,6 @@ export default function SupportPage() {
                                             : "bg-secondary text-foreground rounded-tl-none border"
                                     )}>
                                         {m.text && <p className="leading-relaxed break-words whitespace-pre-wrap">{decryptMessage(m.text)}</p>}
-                                        {m.imageUrl && (
-                                            <div className={cn("rounded-lg overflow-hidden border", m.text && "mt-2")}>
-                                                <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
-                                                    <img src={m.imageUrl} alt="Attached" className="max-w-full h-auto max-h-60 object-contain" />
-                                                </a>
-                                            </div>
-                                        )}
                                     </div>
                                     <span className="text-[9px] text-muted-foreground mt-1 px-1">
                                         {m.createdAt ? format(m.createdAt.toDate(), 'p') : 'Sending...'}

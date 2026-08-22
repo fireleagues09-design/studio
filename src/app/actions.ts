@@ -139,8 +139,7 @@ export async function startSupportChatAction(
 export async function submitTicketAction(
     idToken: string,
     username: string,
-    message: string,
-    screenshotUrl?: string
+    message: string
 ): Promise<{ success: boolean; ticketId?: string; message?: string }> {
     if (!idToken) return { success: false, message: 'Authorization required.' };
 
@@ -175,7 +174,6 @@ export async function submitTicketAction(
                 userId,
                 status: "waiting",
                 type: "ticket",
-                screenshotUrl: screenshotUrl || null,
                 createdAt: FieldValue.serverTimestamp(),
                 lastMessageTime: FieldValue.serverTimestamp()
             });

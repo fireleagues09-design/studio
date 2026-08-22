@@ -376,20 +376,6 @@ export default function SupportPanel() {
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto flex flex-col gap-4 p-6 bg-muted/5 scrollbar-hide"
             >
-              {selectedChat.screenshotUrl && (
-                  <div className="flex justify-start mb-6">
-                      <div className="max-w-xs w-full bg-card rounded-xl p-3 border shadow-sm">
-                          <div className="flex items-center gap-2 mb-2 text-blue-500">
-                              <UserIcon className="h-3.5 w-3.5" />
-                              <span className="text-[10px] font-black uppercase tracking-widest">Initial Ticket Attachment</span>
-                          </div>
-                          <a href={selectedChat.screenshotUrl} target="_blank" rel="noopener noreferrer">
-                              <img src={selectedChat.screenshotUrl} alt="Screenshot" className="rounded-lg object-contain w-full hover:brightness-90 transition-all cursor-zoom-in" />
-                          </a>
-                      </div>
-                  </div>
-              )}
-
               {messages.map((m, idx) => {
                   const isMe = m.senderType === 'admin';
                   return (
@@ -414,13 +400,6 @@ export default function SupportPanel() {
                                     : "bg-card border text-foreground rounded-tl-none"
                             )}>
                                 {m.text && <p className="whitespace-pre-wrap leading-relaxed">{decryptMessage(m.text)}</p>}
-                                {m.imageUrl && (
-                                    <div className={cn("rounded-lg overflow-hidden border", m.text && "mt-2")}>
-                                        <a href={m.imageUrl} target="_blank" rel="noopener noreferrer">
-                                            <img src={m.imageUrl} alt="Staff attachment" className="max-w-full h-auto max-h-60 object-contain" />
-                                        </a>
-                                    </div>
-                                )}
                             </div>
                             <span className="text-[9px] text-muted-foreground mt-1 px-1 font-medium">
                                 {m.createdAt ? format(m.createdAt.toDate(), 'p') : '...'}
