@@ -1,14 +1,10 @@
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { onSnapshot, collection, query, orderBy, doc, getDoc, updateDoc, setDoc, deleteDoc, serverTimestamp, addDoc, where, limit, getDocs, getCountFromServer } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { onSnapshot, collection, query, orderBy, doc, getDoc, deleteDoc, where, getCountFromServer } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Users, DollarSign, Activity, Pencil, Trash, PlusCircle, MinusCircle as MinusCircleIcon, UsersRound, Search, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, SlidersHorizontal, Gift, CreditCard, MessageSquare, ChevronRight, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Key, Lock, Settings, Globe } from 'lucide-react';
+import { Users, DollarSign, Activity, Pencil, Trash, UsersRound, CheckCircle, XCircle, TrophyIcon, ArrowUpRight, ArrowDownLeft, Gift, MessageSquare, User as UserIcon, Calendar, Hash, ShieldCheck, Wallet, Ban, Lock } from 'lucide-react';
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -25,10 +21,10 @@ import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { updateTransaction, updatePaymentDetails, updateAuthConfig, updateTournamentAction } from './actions';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import SliderAdmin from '@/components/SliderAdmin';
 import BrandingAdmin from '@/components/BrandingAdmin';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useLoading } from '@/context/LoadingContext';
 import { Switch } from '@/components/ui/switch';
 import { CreateTournamentDialog } from '@/components/CreateTournamentDialog';
@@ -247,7 +243,6 @@ export default function AdminPage() {
     const [suspendedUsersCount, setSuspendedUsersCount] = useState(0);
 
     const [activeTab, setActiveTab] = useState('transactions');
-    const [isMounted, setIsMounted] = useState(false);
     
     const [upiId, setUpiId] = useState('');
     const [upiQrCodeUrl, setUpiQrCodeUrl] = useState('');
@@ -269,7 +264,6 @@ export default function AdminPage() {
     
 
     useEffect(() => {
-        setIsMounted(true);
         const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
@@ -831,8 +825,8 @@ export default function AdminPage() {
                                             {upiQrCodeUrl && (
                                                 <div className="text-center space-y-2">
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Live Preview</p>
-                                                    <div className="relative w-48 h-48 mx-auto border-4 border-muted rounded-3xl p-4 bg-white shadow-inner overflow-hidden">
-                                                        <Image src={upiQrCodeUrl} alt="QR Preview" fill className="object-contain p-2" />
+                                                    <div className="relative w-48 h-48 mx-auto border border-primary/10 rounded-3xl bg-secondary/30 shadow-inner overflow-hidden flex items-center justify-center">
+                                                        <Image src={upiQrCodeUrl} alt="QR Preview" fill className="object-contain p-2" unoptimized />
                                                     </div>
                                                 </div>
                                             )}

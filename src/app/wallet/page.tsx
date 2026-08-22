@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, limit, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, orderBy, Timestamp, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -156,70 +156,80 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                 <div className="space-y-3">
                     <div className="p-3 bg-secondary rounded-lg text-center space-y-2">
                         <div>
-                            <h3 className="font-semibold">Transfer Instructions</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <h3 className="font-semibold text-sm">Transfer Instructions</h3>
+                            <p className="text-[10px] text-muted-foreground">
                                 Scan the QR code or use the UPI ID below, then submit your reference number.
                             </p>
                         </div>
 
                         {upiQrCodeUrl ? (
-                            <div className="relative w-40 h-40 mx-auto border rounded-md p-2 bg-white">
+                            <div className="relative w-44 h-44 mx-auto rounded-xl overflow-hidden bg-background/50 border border-primary/10 shadow-inner">
                                 <Image
                                     src={upiQrCodeUrl}
                                     alt="Scan to pay"
                                     fill
-                                    className="object-contain"
+                                    className="object-contain p-1"
+                                    unoptimized
                                 />
                             </div>
                         ) : (
-                            <div className="w-40 h-40 mx-auto border rounded-md bg-background flex items-center justify-center">
-                                <p className="text-xs text-muted-foreground text-center p-2">Admin has not set a QR Code yet.</p>
+                            <div className="w-40 h-40 mx-auto border border-dashed rounded-xl bg-background flex items-center justify-center">
+                                <p className="text-[10px] text-muted-foreground text-center p-4">Admin has not configured a QR Code yet.</p>
                             </div>
                         )}
                         
                         {upiId ? (
-                            <div className="flex items-center justify-between p-2 bg-background rounded-md">
-                                <p className="font-mono text-primary break-all">{upiId}</p>
-                                <Button variant="ghost" size="icon" onClick={handleCopyUpi}>
-                                    <Copy className="h-4 w-4" />
+                            <div className="flex items-center justify-between p-2 bg-background/80 rounded-lg border border-border/50">
+                                <p className="font-mono text-primary text-xs break-all text-left flex-1 font-bold">{upiId}</p>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyUpi}>
+                                    <Copy className="h-3 w-3" />
                                 </Button>
                             </div>
                         ) : (
                              <div className="flex items-center justify-center p-2 bg-background rounded-md">
-                                <p className="text-sm text-muted-foreground">UPI ID not set by admin.</p>
+                                <p className="text-xs text-muted-foreground italic">UPI ID not set by admin.</p>
                             </div>
                         )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-3 px-1">
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Amount (INR)</Label>
+                            <Label htmlFor="amount" className="text-xs">Amount (INR)</Label>
                             <Input 
                                 id="amount"
                                 type="number"
+                                min="0"
                                 placeholder="Min: ₹20"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || Number(val) >= 0) setAmount(val);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                                }}
+                                className="h-10 rounded-xl"
                                 required 
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="transactionId">Reference ID / UTR</Label>
+                            <Label htmlFor="transactionId" className="text-xs">Reference ID / UTR</Label>
                             <Input 
                                 id="transactionId"
                                 type="text"
                                 placeholder="Enter the 12-digit reference number"
                                 value={transactionId}
                                 onChange={(e) => setTransactionId(e.target.value)}
+                                className="h-10 rounded-xl"
                                 required 
                             />
                         </div>
-                         <DialogFooter>
+                         <DialogFooter className="pt-2">
                             <DialogClose asChild>
-                                <Button type="button" variant="secondary">Cancel</Button>
+                                <Button type="button" variant="secondary" className="rounded-xl flex-1">Cancel</Button>
                             </DialogClose>
-                            <Button type="submit" disabled={loading}>
-                                {loading ? 'Submitting...' : 'Submit Request'}
+                            <Button type="submit" disabled={loading} className="rounded-xl flex-[2] font-bold">
+                                {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : 'Submit Request'}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -344,9 +354,16 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                         <Input
                             id="withdraw-amount"
                             type="number"
+                            min="0"
                             placeholder={`Available Rewards: ₹${winnings.toFixed(2)}`}
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || Number(val) >= 0) setAmount(val);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                            }}
                             required
                         />
                     </div>
@@ -458,6 +475,7 @@ export default function WalletPage() {
         } else if (!loading) {
             setLoadingTransactions(false);
         }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
      }, [user, dateRange, loading]);
 
     useEffect(() => {
