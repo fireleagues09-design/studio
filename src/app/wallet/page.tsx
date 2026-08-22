@@ -163,12 +163,12 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                         </div>
 
                         {upiQrCodeUrl ? (
-                            <div className="relative w-44 h-44 mx-auto rounded-xl overflow-hidden bg-background/50 border border-primary/10 shadow-inner">
+                            <div className="relative w-44 h-44 mx-auto overflow-hidden">
                                 <Image
                                     src={upiQrCodeUrl}
                                     alt="Scan to pay"
                                     fill
-                                    className="object-contain p-1"
+                                    className="object-contain"
                                     unoptimized
                                 />
                             </div>
@@ -201,13 +201,7 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 min="0"
                                 placeholder="Min: ₹20"
                                 value={amount}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === '' || Number(val) >= 0) setAmount(val);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
-                                }}
+                                onChange={(e) => setAmount(e.target.value)}
                                 className="h-10 rounded-xl"
                                 required 
                             />
@@ -357,13 +351,7 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                             min="0"
                             placeholder={`Available Rewards: ₹${winnings.toFixed(2)}`}
                             value={amount}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '' || Number(val) >= 0) setAmount(val);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === '-' || e.key === 'e' || e.key === 'E') e.preventDefault();
-                            }}
+                            onChange={(e) => setAmount(e.target.value)}
                             required
                         />
                     </div>

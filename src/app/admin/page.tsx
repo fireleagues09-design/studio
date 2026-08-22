@@ -825,8 +825,8 @@ export default function AdminPage() {
                                             {upiQrCodeUrl && (
                                                 <div className="text-center space-y-2">
                                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Live Preview</p>
-                                                    <div className="relative w-48 h-48 mx-auto border border-primary/10 rounded-3xl bg-secondary/30 shadow-inner overflow-hidden flex items-center justify-center">
-                                                        <Image src={upiQrCodeUrl} alt="QR Preview" fill className="object-contain p-2" unoptimized />
+                                                    <div className="relative w-48 h-48 mx-auto rounded-3xl overflow-hidden flex items-center justify-center">
+                                                        <Image src={upiQrCodeUrl} alt="QR Preview" fill className="object-contain" unoptimized />
                                                     </div>
                                                 </div>
                                             )}
