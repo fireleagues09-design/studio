@@ -146,24 +146,24 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                     Add Funds
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-sm">
-                <DialogHeader>
-                    <DialogTitle>Add Funds to Wallet</DialogTitle>
-                    <DialogDescription>
-                        Complete an offline transfer and submit the details here.
+            <DialogContent className="max-w-[95vw] sm:max-w-[360px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+                <DialogHeader className="mb-2">
+                    <DialogTitle className="text-lg">Add Funds to Wallet</DialogTitle>
+                    <DialogDescription className="text-xs">
+                        Complete transfer & submit details.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-3">
-                    <div className="p-3 bg-secondary rounded-lg text-center space-y-2">
-                        <div>
-                            <h3 className="font-semibold text-sm">Transfer Instructions</h3>
-                            <p className="text-[10px] text-muted-foreground">
-                                Scan the QR code or use the UPI ID below, then submit your reference number.
+                <div className="space-y-4">
+                    <div className="text-center space-y-3">
+                        <div className="px-2">
+                            <h3 className="font-bold text-xs uppercase tracking-wider">Transfer Instructions</h3>
+                            <p className="text-[10px] text-muted-foreground leading-tight mt-1">
+                                Scan the code or use the ID below, then submit reference.
                             </p>
                         </div>
 
                         {upiQrCodeUrl ? (
-                            <div className="relative w-44 h-44 mx-auto overflow-hidden">
+                            <div className="relative w-32 h-32 mx-auto bg-transparent flex items-center justify-center">
                                 <Image
                                     src={upiQrCodeUrl}
                                     alt="Scan to pay"
@@ -173,57 +173,56 @@ function AddFundsDialog({ paymentDetails }: { paymentDetails: PaymentDetails | n
                                 />
                             </div>
                         ) : (
-                            <div className="w-40 h-40 mx-auto border border-dashed rounded-xl bg-background flex items-center justify-center">
-                                <p className="text-[10px] text-muted-foreground text-center p-4">Admin has not configured a QR Code yet.</p>
+                            <div className="w-32 h-32 mx-auto border border-dashed rounded-xl bg-muted/20 flex items-center justify-center">
+                                <p className="text-[9px] text-muted-foreground text-center p-2 italic">QR not configured.</p>
                             </div>
                         )}
                         
                         {upiId ? (
-                            <div className="flex items-center justify-between p-2 bg-background/80 rounded-lg border border-border/50">
-                                <p className="font-mono text-primary text-xs break-all text-left flex-1 font-bold">{upiId}</p>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCopyUpi}>
+                            <div className="flex items-center justify-between p-1.5 bg-secondary/50 rounded-lg border border-border/40 max-w-[280px] mx-auto">
+                                <p className="font-mono text-primary text-[10px] break-all text-left flex-1 font-bold pl-2">{upiId}</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleCopyUpi}>
                                     <Copy className="h-3 w-3" />
                                 </Button>
                             </div>
                         ) : (
-                             <div className="flex items-center justify-center p-2 bg-background rounded-md">
-                                <p className="text-xs text-muted-foreground italic">UPI ID not set by admin.</p>
+                             <div className="flex items-center justify-center p-1.5 bg-muted/10 rounded-md max-w-[280px] mx-auto">
+                                <p className="text-[10px] text-muted-foreground italic">UPI ID not set.</p>
                             </div>
                         )}
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-3 px-1">
-                        <div className="grid gap-2">
-                            <Label htmlFor="amount" className="text-xs">Amount (INR)</Label>
+                    <form onSubmit={handleSubmit} className="space-y-3">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="amount" className="text-[10px] font-bold uppercase ml-1 opacity-70">Amount (INR)</Label>
                             <Input 
                                 id="amount"
                                 type="number"
-                                min="0"
                                 placeholder="Min: ₹20"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                className="h-10 rounded-xl"
+                                className="h-10 rounded-xl bg-background"
                                 required 
                             />
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="transactionId" className="text-xs">Reference ID / UTR</Label>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="transactionId" className="text-[10px] font-bold uppercase ml-1 opacity-70">Reference ID / UTR</Label>
                             <Input 
                                 id="transactionId"
                                 type="text"
-                                placeholder="Enter the 12-digit reference number"
+                                placeholder="12-digit reference number"
                                 value={transactionId}
                                 onChange={(e) => setTransactionId(e.target.value)}
-                                className="h-10 rounded-xl"
+                                className="h-10 rounded-xl bg-background"
                                 required 
                             />
                         </div>
-                         <DialogFooter className="pt-2">
+                         <DialogFooter className="pt-2 gap-2 flex-row">
                             <DialogClose asChild>
-                                <Button type="button" variant="secondary" className="rounded-xl flex-1">Cancel</Button>
+                                <Button type="button" variant="secondary" className="rounded-xl flex-1 h-10 text-xs">Cancel</Button>
                             </DialogClose>
-                            <Button type="submit" disabled={loading} className="rounded-xl flex-[2] font-bold">
-                                {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : 'Submit Request'}
+                            <Button type="submit" disabled={loading} className="rounded-xl flex-[1.5] h-10 font-bold text-xs">
+                                {loading ? <RefreshCw className="h-3 w-3 animate-spin mr-2" /> : 'Submit'}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -327,78 +326,76 @@ function WithdrawFundsDialog({ user, winnings }: { user: FirebaseUser | null, wi
                     Withdraw
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Withdraw Rewards</DialogTitle>
-                    <DialogDescription>
-                        Transfer your performance rewards to your bank account or UPI.
+            <DialogContent className="max-w-[95vw] sm:max-w-[360px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+                <DialogHeader className="mb-2">
+                    <DialogTitle className="text-lg">Withdraw Rewards</DialogTitle>
+                    <DialogDescription className="text-xs">
+                        Transfer winnings to bank or UPI.
                     </DialogDescription>
                 </DialogHeader>
                 
-                 <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                        Withdrawals are processed from your Rewards balance (₹30 - ₹30,000 per request).
+                 <Alert className="py-2 px-3 mb-4">
+                    <Info className="h-3 w-3" />
+                    <AlertDescription className="text-[10px] leading-tight">
+                        Winnings only (₹30 - ₹30k). Manual verification applied.
                     </AlertDescription>
                 </Alert>
 
-                <div className="grid gap-4 pt-2">
-                    <div className="grid gap-2">
-                        <Label htmlFor="withdraw-amount">Amount to Withdraw (INR)</Label>
+                <div className="grid gap-3 pt-1">
+                    <div className="grid gap-1.5">
+                        <Label htmlFor="withdraw-amount" className="text-[10px] font-bold uppercase ml-1 opacity-70">Amount (INR)</Label>
                         <Input
                             id="withdraw-amount"
                             type="number"
-                            min="0"
-                            placeholder={`Available Rewards: ₹${winnings.toFixed(2)}`}
+                            placeholder={`Available: ₹${winnings.toFixed(0)}`}
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
+                            className="h-10 rounded-xl"
                             required
                         />
                     </div>
                 </div>
 
-                <Tabs defaultValue="upi">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="upi">UPI</TabsTrigger>
-                        <TabsTrigger value="bank">Bank Transfer</TabsTrigger>
+                <Tabs defaultValue="upi" className="mt-4">
+                    <TabsList className="grid w-full grid-cols-2 h-9">
+                        <TabsTrigger value="upi" className="text-[10px] font-bold">UPI</TabsTrigger>
+                        <TabsTrigger value="bank" className="text-[10px] font-bold">Bank</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="upi">
-                        <div className="space-y-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="upi-name">Your Name</Label>
-                                <Input id="upi-name" placeholder="Full name" value={upiName} onChange={e => setUpiName(e.target.value)} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="upi-id">UPI ID</Label>
-                                <Input id="upi-id" placeholder="yourname@bank" value={upiId} onChange={e => setUpiId(e.target.value)} />
-                            </div>
-                            <Button onClick={() => handleSubmit('upi')} disabled={loading} className="w-full">
-                                {loading ? 'Submitting...' : 'Request Transfer'}
-                            </Button>
+                    <TabsContent value="upi" className="space-y-3 pt-3">
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="upi-name" className="text-[10px] font-bold opacity-70">Your Name</Label>
+                            <Input id="upi-name" placeholder="Full name" value={upiName} onChange={e => setUpiName(e.target.value)} className="h-9 text-xs" />
                         </div>
+                        <div className="grid gap-1.5">
+                            <Label htmlFor="upi-id" className="text-[10px] font-bold opacity-70">UPI ID</Label>
+                            <Input id="upi-id" placeholder="yourname@bank" value={upiId} onChange={e => setUpiId(e.target.value)} className="h-9 text-xs" />
+                        </div>
+                        <Button onClick={() => handleSubmit('upi')} disabled={loading} className="w-full h-10 mt-2 font-bold text-xs">
+                            {loading ? 'Processing...' : 'Request Transfer'}
+                        </Button>
                     </TabsContent>
-                    <TabsContent value="bank">
-                         <div className="space-y-4 py-4">
-                             <div className="grid gap-2">
-                                <Label htmlFor="bank-name-holder">Account Holder Name</Label>
-                                <Input id="bank-name-holder" placeholder="Full name as per bank" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)} />
+                    <TabsContent value="bank" className="space-y-2.5 pt-3">
+                        <div className="grid grid-cols-1 gap-2.5">
+                             <div className="grid gap-1">
+                                <Label htmlFor="bank-name-holder" className="text-[10px] font-bold opacity-70">Account Holder</Label>
+                                <Input id="bank-name-holder" placeholder="Name as per bank" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)} className="h-9 text-xs" />
                             </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="bank-name">Bank Name</Label>
-                                <Input id="bank-name" placeholder="e.g. State Bank of India" value={bankName} onChange={e => setBankName(e.target.value)} />
+                             <div className="grid gap-1">
+                                <Label htmlFor="bank-name" className="text-[10px] font-bold opacity-70">Bank Name</Label>
+                                <Input id="bank-name" placeholder="e.g. SBI" value={bankName} onChange={e => setBankName(e.target.value)} className="h-9 text-xs" />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="account-number">Account Number</Label>
-                                <Input id="account-number" placeholder="Enter account number" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                            <div className="grid gap-1">
+                                <Label htmlFor="account-number" className="text-[10px] font-bold opacity-70">Account Number</Label>
+                                <Input id="account-number" placeholder="Enter number" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} className="h-9 text-xs" />
                             </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="ifsc-code">IFSC Code</Label>
-                                <Input id="ifsc-code" placeholder="Enter IFSC code" value={ifscCode} onChange={e => setIfscCode(e.target.value)} />
+                             <div className="grid gap-1">
+                                <Label htmlFor="ifsc-code" className="text-[10px] font-bold opacity-70">IFSC Code</Label>
+                                <Input id="ifsc-code" placeholder="Enter IFSC" value={ifscCode} onChange={e => setIfscCode(e.target.value)} className="h-9 text-xs" />
                             </div>
-                             <Button onClick={() => handleSubmit('bank')} disabled={loading} className="w-full">
-                                {loading ? 'Submitting...' : 'Request Transfer'}
-                            </Button>
                         </div>
+                        <Button onClick={() => handleSubmit('bank')} disabled={loading} className="w-full h-10 mt-3 font-bold text-xs">
+                            {loading ? 'Processing...' : 'Request Transfer'}
+                        </Button>
                     </TabsContent>
                 </Tabs>
             </DialogContent>
