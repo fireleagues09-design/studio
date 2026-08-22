@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -500,7 +499,7 @@ export function Header() {
         <div className="container flex h-16 items-center px-4">
           <Link href="/" className="mr-6 flex items-center space-x-2">
               <Image 
-                src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20Logo.jpeg" 
+                src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20logo.png" 
                 alt="FireLeagues Logo" 
                 width={32} 
                 height={32} 
@@ -620,7 +619,7 @@ export function Header() {
                        <SheetClose asChild>
                           <Link href="/" className="flex items-center space-x-2">
                             <Image 
-                              src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20Logo.jpeg" 
+                              src="https://ik.imagekit.io/rexa7788/Fire%20Leagues%20logo.png" 
                               alt="FireLeagues Logo" 
                               width={28} 
                               height={28} 
