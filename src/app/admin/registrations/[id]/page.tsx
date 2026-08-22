@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import type { Tournament as TournamentType } from '@/lib/mock-data';
-import { ArrowLeft, Save, Ban, CheckCircle, Users, Eye, Info, UserRound } from 'lucide-react';
+import { ArrowLeft, Save, Ban, CheckCircle, Users, Eye, Info, UserRound, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLoading } from '@/context/LoadingContext';
 import { Input } from '@/components/ui/input';
@@ -251,7 +251,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
             ...prev,
             [regId]: {
                 ...prev[regId],
-                [field]: value
+                [field]: field === 'rank' ? value : value.replace(/[^0-9.]/g, '')
             }
         }));
     };
@@ -259,7 +259,7 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
     const handleMemberKillChange = (regId: string, memberIdx: number, value: string) => {
         setResults(prev => {
             const currentMemberKills = [...(prev[regId]?.memberKills || [])];
-            currentMemberKills[memberIdx] = value;
+            currentMemberKills[memberIdx] = value.replace(/[^0-9]/g, '');
             return {
                 ...prev,
                 [regId]: {
@@ -358,9 +358,9 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                     <TableRow>
                                         <TableHead className="w-12"></TableHead>
                                         <TableHead>Competitor Details</TableHead>
-                                        <TableHead className="w-24 text-center">Rank</TableHead>
-                                        <TableHead className="w-24 text-center">Kills</TableHead>
-                                        <TableHead className="w-32 text-right">Prize Won (₹)</TableHead>
+                                        <TableHead className="w-32">Rank</TableHead>
+                                        <TableHead className="w-32">Kills</TableHead>
+                                        <TableHead className="w-40">Prize Won (₹)</TableHead>
                                         <TableHead className="w-24 text-right">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -387,26 +387,26 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input 
-                                                        className="w-16 h-10 mx-auto text-center font-bold border-primary/20"
-                                                        placeholder="#"
+                                                        className="w-24 h-10 font-bold border-primary/20 bg-background"
+                                                        placeholder="Rank #"
                                                         value={results[reg.id]?.rank ?? ''}
                                                         onChange={(e) => handleResultChange(reg.id, 'rank', e.target.value)}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input 
-                                                        className="w-16 h-10 mx-auto text-center font-bold border-primary/20"
+                                                        className="w-24 h-10 font-bold border-primary/20 bg-background"
                                                         type="number"
-                                                        placeholder="0"
+                                                        placeholder="Kills"
                                                         value={results[reg.id]?.leaderKills ?? ''}
                                                         onChange={(e) => handleResultChange(reg.id, 'leaderKills', e.target.value)}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
                                                     <Input 
-                                                        className="w-28 h-10 ml-auto text-right font-bold text-green-600 border-primary/20"
+                                                        className="w-36 h-10 font-bold text-green-600 border-primary/20 bg-background"
                                                         type="number"
-                                                        placeholder="0"
+                                                        placeholder="Prize INR"
                                                         value={results[reg.id]?.prize ?? ''}
                                                         onChange={(e) => handleResultChange(reg.id, 'prize', e.target.value)}
                                                     />
@@ -447,19 +447,19 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-center">
-                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Shared</div>
+                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40 text-left">Shared Result</div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Input 
-                                                            className="w-14 h-8 mx-auto text-center text-xs font-bold bg-secondary/50 border-transparent focus:border-primary/20"
+                                                            className="w-20 h-9 text-xs font-bold bg-secondary/50 border-transparent focus:border-primary/20"
                                                             type="number"
-                                                            placeholder="0"
+                                                            placeholder="Kills"
                                                             value={results[reg.id]?.memberKills[mIdx] ?? ''}
                                                             onChange={(e) => handleMemberKillChange(reg.id, mIdx, e.target.value)}
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Synced</div>
+                                                    <TableCell>
+                                                        <div className="text-[10px] font-black text-muted-foreground uppercase opacity-40">Synced Prize</div>
                                                     </TableCell>
                                                     <TableCell></TableCell>
                                                 </TableRow>
@@ -480,8 +480,4 @@ export default function RegistrationsPage({ params }: RegistrationPageProps) {
                 </Card>
         </div>
     );
-}
-
-function Loader2({ className }: { className?: string }) {
-    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 }
